@@ -165,7 +165,7 @@ class SephiaBot implements IRCListener {
 		User user = data.getUserByHost(host);
 		int totalMessages = 0;
 		Message messages[] = data.getMessagesByReceiver(nick, user);
-		Reminder reminders[] = data.getRemindersByReceiver(nick, user);
+		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
 
 		if (messages.length > 0 && reminders.length > 0)
 			ircio.privmsg(recipient, nick + ", you have messages and reminders!");
@@ -224,6 +224,7 @@ class SephiaBot implements IRCListener {
 		data.findNextReminderTime();
 	}
 	
+	/*
 	public void processReminder(String sender, String target, String msg) {
 		StringTokenizer tok = new StringTokenizer(msg, " ");
 		if (!tok.hasMoreElements())
@@ -258,6 +259,7 @@ class SephiaBot implements IRCListener {
 	public void sendReminder(String sender, String target, String message, String goalTime) {
 //		data.addReminder(target, message, sender, goalTime);
 	}
+	*/
 	
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
@@ -674,10 +676,13 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String target = tok.nextToken(" ");
+					boolean myself = false;
 					String sender = nick;
 					target = data.removePunctuation(target, ".!,");
-					if (iregex("(me|myself)", target))
+					if (iregex("(me|myself)", target)) {
+						myself = true;
 						target = nick;
+					}
 					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
 					User targetUser = getUserByNick(target);
 					if (targetUser != null)
@@ -691,10 +696,14 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					try {
-						Reminder reminder = new Reminder(target, tok.nextToken("").substring(1), sender);
-						ircio.privmsg(recipient, "OK, I'll remind you " + reminder.message);
+						Reminder reminder = data.addReminder(target, tok.nextToken("").substring(1), sender);
+
+					ircio.privmsg(recipient, "OK, I'll remind " + 
+							(myself?"you":target) +" "+ reminder.getTimeExpression());
 					} catch (WTFException wtf) {
-						ircio.privmsg(recipient, "Um, when was that?");
+						ircio.privmsg(recipient, wtf.getMessage().substring(14));
+					} catch (NumberFormatException nfe) {
+						ircio.privmsg(recipient, nfe.getMessage().substring(23));
 					}
 					
 					/*

@@ -51,6 +51,34 @@ class SephiaBotData {
 		setDefaults();
 	}
 
+	//Performs a case-insensitive regexp match of string against pattern.
+	public static String iregexFind(String pattern, String string) {
+		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+		Matcher m = p.matcher(string);
+		if (m.find())
+			return m.group();
+		else
+			return null;
+	}
+	
+	//Performs a case-insensitive regexp match of string against pattern.
+	public static boolean iregex(String pattern, String string) {
+		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+		Matcher m = p.matcher(string);
+		return m.find();
+	}
+	
+	//Performs a case-insensitive string comparison.
+	public static boolean iequals(String str1, String str2) {
+		if (str1 == null && str2 == null) {
+			return true;
+		} else if (str1 == null || str2 == null) {
+			return false;
+		} else {
+			return str1.toLowerCase().equals(str2.toLowerCase());
+		}
+	}
+
 	private void setDefaults() {
 		//Set Defaults
 		this.name = "SephiaBot";
@@ -414,24 +442,6 @@ lineLoop:
 		return greeting;
 	}
 	
-	//Performs a case-insensitive regexp match of string against pattern.
-	boolean iregex(String pattern, String string) {
-		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-		Matcher m = p.matcher(string);
-		return m.find();
-	}
-	
-	//Performs a case-insensitive string comparison.
-	boolean iequals(String str1, String str2) {
-		if (str1 == null && str2 == null) {
-			return true;
-		} else if (str1 == null || str2 == null) {
-			return false;
-		} else {
-			return str1.toLowerCase().equals(str2.toLowerCase());
-		}
-	}
-
 	String removePunctuation(String msg, String remove) {
 		while (iregex("[" + remove + "]$", msg))
 			msg = msg.substring(0, msg.length()-1);
@@ -571,13 +581,14 @@ lineLoop:
 		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
 	}
 
-	Reminder[] getRemindersByReceiver(String receiver, User user) {
+	Reminder[] getRemindersByReceiver(String receiver, User user, boolean activeOnly) {
 		if (receiver == null)
 			return new Reminder[0];
 		Vector reminders = new Vector(10);
 		for (Reminder curr = firstReminder; curr != null; curr = curr.next) {
 			if (iequals(curr.target, receiver) || (user != null && iequals(user.userName, curr.target))) {
-				reminders.add(curr);
+				if (!activeOnly || curr.timeToArrive < System.currentTimeMillis())
+					reminders.add(curr);
 			}
 		}
 		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
@@ -616,17 +627,18 @@ lineLoop:
 		return false;
 	}
 	
-	void addReminder(String target, String message, String nick, long time) {
+	//Adds a reminder to the list, and returns a "pointer" to it.
+	Reminder addReminder(String target, String message, String nick) throws WTFException, NumberFormatException {
 		if (firstReminder == null) {
-			firstReminder = new Reminder(target, message, nick, time);
+			firstReminder = new Reminder(target, message, nick);
 		} else {
-			Reminder curr = firstReminder;
-			while (curr.next != null)
-				curr = curr.next;
-			curr.next = new Reminder(target, message, nick, time);
+			Reminder curr = new Reminder(target, message, nick);
+			curr.next = firstReminder;
+			firstReminder = curr;
 		}
 		findNextReminderTime();
 		writeData();
+		return firstReminder;
 	}
 	
 	void findNextReminderTime() {
