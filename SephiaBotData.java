@@ -664,6 +664,7 @@ lineLoop:
 	}
 	
 	//Called ten times a second, so must be relatively fast.
+	//This method returns Unnotified Reminders that are ready for notification.
 	Reminder[] getUnnotifiedReminders() {
 		if (System.currentTimeMillis() < nextReminder || nextReminder == 0)
 			return new Reminder[0];

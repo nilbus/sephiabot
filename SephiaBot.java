@@ -639,6 +639,7 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "Tell who what?");
 						return;
 					}
+
 					String target = tok.nextToken(" ");
 					String sender = nick;
 					target = data.removePunctuation(target, ".!,");
@@ -650,6 +651,7 @@ class SephiaBot implements IRCListener {
 					User senderUser = data.getUserByHost(host);
 					if (senderUser != null)
 						sender = senderUser.userName;
+
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "Tell " + target + " what?");
 						return;
@@ -663,9 +665,10 @@ class SephiaBot implements IRCListener {
 					data.writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^remind(er)?$", cmd)) {
-					// Bit, remind [person] (at [time] on [day]) OR (in [duration]) OR (every [timespan]) [do this]
+					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that] [something]
+					// Bit, remind [person] [to OR that] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Remind who when what?");
+						ircio.privmsg(recipient, "Remind who what when?");
 						return;
 					}
 					String target = tok.nextToken(" ");
@@ -685,20 +688,15 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "Remind " + target + " when what?");
 						return;
 					}
-					String when = tok.nextToken(" ");
-					String message = null;
-					long goalTime = 0;
-					if (iequals(when, "in")) {
-					} else if (iequals(when, "on")) {
-					} else if (iequals(when, "at")) {
-					} else if (iequals(when, "on")) {
-//					} else if (iequals(when, "every")) {
-					} else {
-						message = when;
-						//Default to five seconds.
-						goalTime = System.currentTimeMillis() + 1000*5;
+					try {
+						Reminder reminder = new Reminder(target, tok.nextToken("").substring(1), sender);
+						ircio.privmsg(recipient, "OK, I'll remind you " + reminder.message);
+					} catch (WTFException wtf) {
+						ircio.privmsg(recipient, "Um, when was that?");
 					}
-					goalTime = System.currentTimeMillis() + 1000*5;
+					
+					/*
+					long goalTime = System.currentTimeMillis() + 1000*5;
 					if (message == null) {
 						if (!tok.hasMoreElements()) {
 							ircio.privmsg(recipient, "Remind " + target + " what?");
@@ -710,6 +708,7 @@ class SephiaBot implements IRCListener {
 					}
 					data.addReminder(target, message, sender, goalTime);
 					ircio.privmsg(recipient, "OK, I won't forget.");
+					*/
 				} else if (iregex("^(butt?)?se(x|ck[sz])$", cmd)) {
 					if (!tok.hasMoreElements()) {
 						ircio.privemote(recipient, "anally rapes " + nick + ".");
