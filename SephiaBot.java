@@ -444,7 +444,8 @@ class SephiaBot implements IRCListener {
 				}
 			} else if (!censor() && iregex("wan(na |t to )cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					if (data.isVino(host) || iequals(getUserByNick(nick).userName, "Yukie")) {
+					User user = getUserByNick(nick);
+					if (data.isVino(host) || user != null && iequals(user.userName, "Yukie")) {
 						ircio.privmsg(recipient, "Take me, " + nick + "!");
 					} else {
 						ircio.privmsg(recipient, "Fuck no.");
