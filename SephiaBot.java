@@ -278,6 +278,8 @@ class SephiaBot implements IRCListener {
 			if (iregex("hugs " + data.getName(), msg)) {
 				if (data.isVino(host))
 					ircio.privemote(recipient, "hugs Vino!");
+				else if (censor())
+					ircio.privemote(recipient, "hugs " + nick + "!");
 				else
 					ircio.privmsg(recipient, "Get the fuck off.");
 			} else if (iregex("pets " + data.getName(), msg)) {
@@ -359,7 +361,7 @@ class SephiaBot implements IRCListener {
 			if (iequals("who are you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I am an advanced SephiaBot channel bot.");
-					ircio.privmsg(recipient, "I'll kick your ass in days that end in 'y'.");
+					ircio.privmsg(recipient, "I'll kick your " + (censor()?"butt":"ass") + " in days that end in 'y'.");
 					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
