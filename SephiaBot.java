@@ -1,5 +1,6 @@
 //TODO: Better handling of dropped connections, etc.
 //TODO: Write variables to disk and load at startup so memory isn't lost.
+//TODO: Greeting doesn't work on freenode
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -53,7 +54,6 @@ class SephiaBot implements IRCListener {
 
 		if (args != null && args.length > 0) {
 			for (int i = 0; i < args.length; i++) {
-				System.out.println("Args["+i+"]="+args[i]);
 				if (args[i].equals("--help")) {
 					System.out.println(usage);
 					System.exit(0);
@@ -93,13 +93,13 @@ class SephiaBot implements IRCListener {
 		this.nextWho = 0;
 		this.nextHi = 0;
 		
-		log("-----------------------------------------\nSephiaBot Started!");
+		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);
 
 		try {
 			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
 		} catch (IOException ioe) {
-			logerror("Couldn't open syslog file.");
+			logerror("Couldn't open syslog file:\n" + ioe.getMessage());
 		}
 
 		log("Network: " + network + " " + port + " : " + name);
@@ -813,8 +813,10 @@ class SephiaBot implements IRCListener {
 			if (!log.endsWith("\n"))
 				syslogBuffer += "\n";
 		} else {
-			if (syslogBuffer != null && syslogBuffer.length() > 0)
+			if (syslogBuffer != null && syslogBuffer.length() > 0) {
 				log = syslogBuffer + log;
+				syslogBuffer = null;
+			}
 			try {
 				syslog.write(log, 0, log.length());
 				if (!log.endsWith("\n")) {
