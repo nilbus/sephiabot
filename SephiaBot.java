@@ -780,7 +780,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("where is vino", msg)) {
+			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))? vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (vino.away == null) {
 						ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
@@ -790,7 +790,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("where is", msg)) {
+			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))?", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
 					while (targetName.endsWith("!") || targetName.endsWith("?") || targetName.endsWith(","))
