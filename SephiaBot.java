@@ -824,7 +824,7 @@ class SephiaBot implements IRCListener {
 					if (target.away == null) {
 						ircio.privmsg(recipient, "I don't know.");
 					} else {
-						ircio.privmsg(recipient, targetName + " said, \"I'm " + target.away + ".\"  " + targetName + " has been away for " + makeTime(target.leavetime) + ".");
+						ircio.privmsg(recipient, targetName + " is " + target.away + ".  " + targetName + " has been gone for " + makeTime(target.leavetime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
