@@ -383,7 +383,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who wrote you", msg)) {
+			} else if (iregex("who (wrote|made) you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
 					ircio.privmsg(recipient, "Nilbus helped too.");
