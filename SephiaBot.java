@@ -1,6 +1,8 @@
 /*
+TODO: Reminders
 TODO: Better handling of dropped connections, etc.
 TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
+TODO: Track nick changes so who is here works.
 */
 import java.net.*;
 import java.io.*;
@@ -40,7 +42,7 @@ class SephiaBot implements IRCListener {
 	private String spell;
 	private String hellos[];
 	private String logdir;
-	private String sephiadir; //Location of sephiabot. Quote files here
+	private String sephiadir; //Location of sephiabot. Quote, data files here
 
 	private Message firstMessage = null;
 
@@ -152,10 +154,9 @@ class SephiaBot implements IRCListener {
 		BufferedReader dataFileReader;
 
 		try {
-			dataFileReader = new BufferedReader(new FileReader(filename));
+			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
 		} catch (IOException ioe) {
-			logerror("Couldn't open data file " + filename + ".");
-			return;
+			return;  //Assume no datafile has been created if it doesn't exist
 		}
 
 		try {
@@ -209,9 +210,9 @@ class SephiaBot implements IRCListener {
 		BufferedWriter dataFileWriter;
 
 		try {
-			dataFileWriter = new BufferedWriter(new FileWriter(filename, false));
+			dataFileWriter = new BufferedWriter(new FileWriter(new File(sephiadir, filename), false));
 		} catch (IOException ioe) {
-			logerror("Couldn't open data file " + filename + ".");
+			logerror("Couldn't open data file " + filename + " for writing:\n" + ioe.getMessage());
 			return;
 		}
 
@@ -460,7 +461,7 @@ class SephiaBot implements IRCListener {
 			}
 
 			//Remove punctuation from the end
-			while (msg.endsWith(".") || msg.endsWith("?") || msg.endsWith("!")) {
+			while (msg.endsWith(".") || msg.endsWith("?") || msg.endsWith("!")){
 				msg = msg.substring(0, msg.length()-1);
 			}
 
@@ -499,7 +500,8 @@ class SephiaBot implements IRCListener {
 							buf.append(" " + current.name);
 							current = current.next;
 						}
-						ircio.privmsg("Nilbus", buf.toString()); //XXX hack!
+						//ircio.privmsg(recipient, buf.toString());
+						ircio.privmsg("Nilbus", buf.toString()); //XXX: debug
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
@@ -663,14 +665,17 @@ class SephiaBot implements IRCListener {
 					if (isVino(host)) {
 						ircio.privmsg(recipient, "Be right back.");
 						System.exit(1);
-						return;
-					}
+					} else
+						ircio.privmsg(recipient, "No.");
+					return;
 				} else if (cmd.toLowerCase().equals("shutdown")) {
 					if (isVino(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
 						System.exit(0);
-						return;
+					} else {
+						ircio.privmsg(recipient, "No.");
 					}
+					return;
 				} else if (cmd.toLowerCase().equals("login")) {
 					if (tok.countTokens() < 1) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");

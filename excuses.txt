@@ -1,3 +1,4 @@
+That is beyond the scope of this document.
 Firewall melted
 Train crash in the SSH tunnel
 Solar flares
