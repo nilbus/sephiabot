@@ -1,5 +1,6 @@
 /*
 TODO: Reminders
+TODO: Allow multiple hosts to log in
 TODO: Better handling of dropped connections, etc.
 TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
 TODO: Track nick changes so who is here works.
@@ -60,6 +61,9 @@ class SephiaBot implements IRCListener {
 
 	private long nextWho;
 	private long nextHi;
+
+	private boolean freenode() { return iregex("freenode", network); }
+	private boolean gamesurge() { return iregex("gamesurge", network); }
 
 	public static void main(String args[]) {
 		String cfgPath = "sephiabot.cfg";
@@ -360,15 +364,33 @@ class SephiaBot implements IRCListener {
 
 	}
 
+	//Performs a case-insensitive regexp match of string against pattern.
+	private boolean iregex(String pattern, String string) {
+		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+		Matcher m = p.matcher(string);
+		return m.matches();
+	}
+	
+	//Performs a case-insensitive string comparison.
+	private boolean iequals(String str1, String str2) {
+		if (str1 == null && str2 == null)
+			return true;
+		else if (str1 == null || str2 == null)
+			return false;
+		else
+			return str1.toLowerCase().equals(str2.toLowerCase());
+	}
+
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
+		boolean pm = false;
 		String log;
 
-		if (recipient.toLowerCase().equals(name.toLowerCase())) {
+		if (iequals(recipient, name)) {
 			recipient = nick;
-			log("received private message");
+			pm = true;
 		}
 
-		if (msg.indexOf("ACTION") == 1) {
+		if (iregex("^.ACTION", msg) {
 			log = "* " + nick + " ";
 			log += msg.substring(8, msg.length()-1);
 		} else {
@@ -385,7 +407,7 @@ class SephiaBot implements IRCListener {
 		Message lastMsg = null;
 		int numberSent = 0;
 		while (currMsg != null) {
-			if (currMsg.target.toLowerCase().equals(nick.toLowerCase())) {
+			if (iequals(currMsg.target, nick)) {
 				if (numberSent == 0) {
 					ircio.privmsg(recipient, nick + ", you have messages!");
 				} else if (numberSent >= 5) {
@@ -406,20 +428,20 @@ class SephiaBot implements IRCListener {
 		}
 
 		//Bot has been mentioned?
-		if (msg.toLowerCase().indexOf(name.toLowerCase()) != -1) {
-			if (msg.toLowerCase().indexOf("fuck you") != -1) {
+		if (iregex(name, msg) && gamesurge()) {
+			if (iregex("fuck you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Fuck you too, buddy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("screw you") != -1) {
+			} else if (iregex("screw you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Screw you too, buddy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("you suck") != -1) {
+			} else if (iregex("you suck", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
 					nextWho = System.currentTimeMillis() + 5000;
@@ -430,11 +452,11 @@ class SephiaBot implements IRCListener {
 
 		//Say hello!
 		int nameEnd = name.length() < 4 ? name.length() : 4;
-		if (msg.toLowerCase().indexOf(name.substring(0, nameEnd).toLowerCase()) != -1) {
+		if (iregex(name.substring(0, nameEnd), msg)) {
 			for (int i = 0; i < hellos.length; i++) {
-				if (msg.toLowerCase().startsWith(hellos[i])) {
+				if (iregex("^"+hellos[i], msg)) {
 					if (System.currentTimeMillis() > nextHi) {	//!spam
-						ircio.privmsg(recipient, "Yo.");
+						ircio.privmsg(recipient, hellos[Random.nextInt(hellos.length)]);
 						nextHi = System.currentTimeMillis() + 500;
 						return;
 					}
@@ -450,12 +472,12 @@ class SephiaBot implements IRCListener {
 			botname = "";
 		}
 
-		if (talkingToMe(msg)) {
+		if (pm || talkingToMe(msg)) {
 
 			//Remove the bot's name
 			msg = msg.substring(msg.indexOf(" ")+1);
 
-			if (msg.toLowerCase().indexOf("bring out the strapon") != -1) {
+			if (iregex("bring out the strapon", msg)) {
 				ircio.privmsg(recipient, "\u0001ACTION steps forward with a large strapon and begins mashing potatoes.\u0001");
 				return;
 			}
@@ -465,7 +487,7 @@ class SephiaBot implements IRCListener {
 				msg = msg.substring(0, msg.length()-1);
 			}
 
-			if (msg.toLowerCase().equals("who are you")) {
+			if (iequals("who are you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I am an advanced SephiaBot channel bot.");
 					ircio.privmsg(recipient, "I'll kick your ass in days that end in 'y'.");
@@ -473,23 +495,23 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("what does marsellus wallace look like") != -1) {
+			} else if (gamesurge() && iregex("what does marsellus wallace look like", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "He's black.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("who wrote you") != -1) {
+			} else if (iregex("who wrote you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().equals("who is here") && nick.equals("Nilbus")) {
+			} else if (iregex("who is here", msg) && nick.equals("Nilbus")) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 
 					int channum = channelNumber(recipient);
-					if (channum == -1) {
+					if (channum == -1 || pm) {
 						ircio.privmsg(recipient, "It's just you and me in a PM, buddy.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
@@ -506,27 +528,26 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 				}
-			} else if (msg.toLowerCase().indexOf("who is vino") != -1) {
+			} else if (iregex("who is vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "A dirty cuban.");
 					ircio.privmsg(recipient, "And my daddy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("who is") != -1) {
+			} else if (iregex("who is", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Nobody important.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("are you sexy") != -1 ||
-					msg.toLowerCase().indexOf("are you hot") != -1) {
+			} else if (gamesurge() && iregex("are you (sexy|hot)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Fuck yes.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("want to cyber") != -1) {
+			} else if (gamesurge() && iregex("want to cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (!isVino(host)) {
 						ircio.privmsg(recipient, "Fuck no.");
@@ -536,7 +557,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("where is vino") != -1) {
+			} else if (iregex("where is vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (vinoaway == null) {
 						ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
@@ -546,7 +567,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("who am i") != -1) {
+			} else if (iregex("who am i", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (!isVino(host)) {
 						ircio.privmsg(recipient, "Nobody important.");
@@ -557,25 +578,25 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("who's your daddy") != -1) {
+			} else if (iregex("who('| i)s your daddy", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Vino's my daddy, ugh! Spank me again Vino!");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("knock knock") != -1) {
+			} else if (iregex("knock knock", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Who's there?");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("i suck dick") != -1) {
+			} else if (gamesurge() && iregex("i suck dick", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
 					ircio.privmsg(recipient, "Yeah, we know you do.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("words of wisdom") != -1) {
+			} else if (gamesurge() && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String phrase = randomPhrase(new File(sephiadir, "wordsofwisdom.txt"));
 					if (phrase != null)
@@ -583,7 +604,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().indexOf("roll the dice") != -1) {
+			} else if (iregex("roll (the )?dice", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					Random rand = new Random();
 					int dice = rand.nextInt(5)+2;
@@ -602,7 +623,7 @@ class SephiaBot implements IRCListener {
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
 					cmd = tok.nextToken(" ");
 				}
-				if (cmd.toLowerCase().equals("kill")) {
+				if (iequals(cmd, "kill")) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "KILL! KILL! KILL!");
 						return;
@@ -621,7 +642,7 @@ class SephiaBot implements IRCListener {
 						ircio.kick(recipient, killed, "You have been bitched by " + name + ". Have a nice day.");
 						return;
 					}
-				} else if (cmd.toLowerCase().equals("tell")) {
+				} else if (iequals(cmd, "tell")) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "Tell who what?");
 						return;
@@ -642,16 +663,13 @@ class SephiaBot implements IRCListener {
 					}
 					writeData(dataFileName);
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
-				} else if (cmd.toLowerCase().equals("sex") ||
-						cmd.toLowerCase().equals("secks") ||
-						cmd.toLowerCase().equals("buttsecks") ||
-						cmd.toLowerCase().equals("buttsex")) {
+				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "\u0001ACTION anally rapes " + nick + ".\u0001");
 						return;
 					}
 					String sexed = tok.nextToken(" ");
-					if (sexed.toLowerCase().equals("vino")) {
+					if (iequals("vino", sexed)) {
 						ircio.privmsg(recipient, "\u0001ACTION screams as Vino penetrates every orifice of her body!\u0001");
 					} else {
 						int sexedAccess = getAccess(sexed, channelNumber(recipient));
@@ -661,14 +679,14 @@ class SephiaBot implements IRCListener {
 							ircio.privmsg(recipient, "\u0001ACTION anally rapes " + sexed + ".\u0001");
 						}
 					}
-				} else if (cmd.toLowerCase().equals("reboot")) {
+				} else if (iequals(cmd, "reboot")) {
 					if (isVino(host)) {
 						ircio.privmsg(recipient, "Be right back.");
 						System.exit(1);
 					} else
 						ircio.privmsg(recipient, "No.");
 					return;
-				} else if (cmd.toLowerCase().equals("shutdown")) {
+				} else if (iequals(cmd, "shutdown")) {
 					if (isVino(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
 						System.exit(0);
@@ -676,7 +694,7 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
-				} else if (cmd.toLowerCase().equals("login")) {
+				} else if (iequals(cmd, "login")) {
 					if (tok.countTokens() < 1) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
 						return;
@@ -690,8 +708,7 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(nick, "You aint fuckin Vino, prick.");
 						return;
 					}
-				} else if (cmd.toLowerCase().equals("i'm") || 
-						cmd.toLowerCase().equals("vino's")) {
+				} else if (iequals(cmd, "i'm")) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "You're what?");
 						return;
@@ -701,7 +718,7 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String location = tok.nextToken("").trim();
-					if (location.toLowerCase().equals("back")) {
+					if (iequals(location, "back")) {
 						if (vinoaway == null) {
 							ircio.privmsg(recipient, "Of course you are honey.");
 						} else {
@@ -715,7 +732,7 @@ class SephiaBot implements IRCListener {
 					}
 					writeData(dataFileName);
 					return;
-				} else if (cmd.toLowerCase().equals("say")) {
+				} else if (iequals(cmd, "say")) {
 					if (!isVino(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
@@ -725,13 +742,13 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String inchannel = recipient;
-					if (tok.nextToken().toLowerCase().equals("in")) {
+					if (iequals("in", tok.nextToken()) {
 						inchannel = tok.nextToken();
 					}
 					ircio.privmsg(inchannel, tok.nextToken("").substring(1));
 					return;
 				//TODO: Make mode setting colloquial
-				} else if (cmd.toLowerCase().equals("mode")) {
+				} else if (iequals(cmd, "mode")) {
 					if (!isVino(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
@@ -755,7 +772,7 @@ class SephiaBot implements IRCListener {
 					System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
 					ircio.setMode(who, inchannel, mode);
 					return;
-				} else if (msg.toLowerCase().indexOf("excuse") != -1) {
+				} else if (iregex("excuse", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
 						String excuse = randomPhrase(new File(sephiadir, "excuses.txt"));
 						if (excuse != null)
@@ -790,12 +807,12 @@ class SephiaBot implements IRCListener {
 	}
 
 	public boolean isVino(String host) {
-		return (vinohost != null && host.equals(vinohost));
+		return (iequals(host, vinohost));
 	}
 
 	public boolean talkingToMe(String msg) {
 		int nameEnd = name.length() < 4 ? name.length() : 4;
-		return (msg.startsWith(name.substring(0, nameEnd)) || msg.startsWith(name.toLowerCase().substring(0, nameEnd)));
+		return iregex("^"+name.substring(0, nameEnd), msg);
 	}
 
 	public boolean spelledMyNameWrong(String msg) {
@@ -813,7 +830,7 @@ class SephiaBot implements IRCListener {
 		}
 		IRCUser current = server.channels[channum].users;
 		for (int i = 0; i < server.channels[channum].numusers; i++) {
-			if (user.equalsIgnoreCase(current.name)) {
+			if (iequals(user, current.name)) {
 				log (current.name + " access " + current.access); //XXX: debug
 				return current.access;
 			}
@@ -832,11 +849,11 @@ class SephiaBot implements IRCListener {
 		logfile(channel, log);
 
 		//Say something as you enter the channel!
-		if (nick.equals(name)) {
+		if (iequals(nick, name)) {
 			ircio.privmsg(channel, greeting);
 		}
 
-		if (nick.toLowerCase().equals("metapod\\")) {
+		if (iequals(nick, "metapod\\")) {
 			ircio.privmsg(channel, "Heya meta.");
 		}
 
