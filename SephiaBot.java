@@ -369,7 +369,7 @@ class SephiaBot implements IRCListener {
 
 			//BEGIN COLLOQUIAL COMMANDS
 			//These commands can be used anywhere if the bot's name is spoken first.
-			if (iequals("who are you", msg)) {
+			if (iregex("^who are you\\W+$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I am an advanced SephiaBot channel bot.");
 					ircio.privmsg(recipient, "I'll kick your " + (censor()?"butt":"ass") + " in days that end in 'y'.");
