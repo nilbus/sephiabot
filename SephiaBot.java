@@ -282,7 +282,7 @@ class SephiaBot implements IRCListener {
 					ircio.privemote(recipient, "hugs " + nick + "!");
 				else
 					ircio.privmsg(recipient, "Get the fuck off.");
-			} else if (iregex("pets " + data.getName(), msg)) {
+			} else if (iregex("p(e|a)ts " + data.getName(), msg)) {
 				ircio.privemote(recipient, "purrs.");
 			}
 	
