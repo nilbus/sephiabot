@@ -41,6 +41,7 @@ class SephiaBotData {
 	private String usersFileName;
 	
 	public static final int USER_VINO = 0;
+	public static final int REMINDER_STALE_DUR = 120000; //2 min
 
 	private SephiaBotData() {
 	}
@@ -581,6 +582,14 @@ lineLoop:
 		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
 	}
 
+	//Removes reminders that are just past their notification time, for a specific person
+	void removeRecentReminders(String receiver, User user) {
+		for (Reminder curr = firstReminder; curr != null; curr = curr.next)
+			if (iequals(curr.target, receiver) || (user != null && iequals(user.userName, curr.target)))
+				if (System.currentTimeMillis() < curr.timeToArrive + REMINDER_STALE_DUR)
+					removeReminder(curr);
+	}
+	
 	Reminder[] getRemindersByReceiver(String receiver, User user, boolean activeOnly) {
 		if (receiver == null)
 			return new Reminder[0];

@@ -165,6 +165,7 @@ class SephiaBot implements IRCListener {
 		User user = data.getUserByHost(host);
 		int totalMessages = 0;
 		Message messages[] = data.getMessagesByReceiver(nick, user);
+		data.removeRecentReminders(nick, user);
 		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
 
 		if (messages.length > 0 && reminders.length > 0)
@@ -172,7 +173,7 @@ class SephiaBot implements IRCListener {
 		else if (messages.length > 0)
 			ircio.privmsg(recipient, nick + ", you have messages!");
 		else if (reminders.length > 0)
-			ircio.privmsg(recipient, nick + ", you have reminders!");
+			ircio.privmsg(recipient, nick + ", you had reminders!");
 		else
 			return;
 		
