@@ -93,7 +93,7 @@ class SephiaBot implements IRCListener {
 		this.nextWho = 0;
 		this.nextHi = 0;
 
-		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN, new String[10], "", 0);
+		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN, new String[10], null, 0);
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);

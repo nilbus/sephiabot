@@ -11,6 +11,7 @@ kali remind me on day at time to do this
 kali reminders/messages
 kali kill message/reminder #
 kali kill person bans for 30s to avoid autorejoiners.
+Kali where am I? / Kali where is vino? (same person who said it.)
 
 hug vino back
 - words in the hello list (don't trigger responses)
