@@ -14,11 +14,20 @@ class IRCServer {
     this.network = network;
     this.port = port;
     this.channels = new IRCChannel[channels.length];
+	// It is important to maintain the order of the channels here, because the positions of
+	// the channels are also their index when calling into SephiaBotData (if that made any
+	// sense.)
     for (int i = 0; i < channels.length; i++) {
       this.channels[i] = new IRCChannel(channels[i]);
     }
   }
 
+  int getChannelIndex(String channel) {
+	  for (int i = 0; i < channels.length; i++)
+		  if (channels[i].name.equals(channel))
+			  return i;
+	  return -1;
+  }
 }
 
 class IRCChannel {

@@ -11,11 +11,6 @@ import org.w3c.dom.*;
 
 class SephiaBotData {
 
-	private String network;
-	private int port;
-	private String name;
-	private String channels[];
-	private String greeting;
 	private String spell;
 	private String hellos[];
 	private String helloreplies[];
@@ -23,7 +18,9 @@ class SephiaBotData {
 	private String sephiadir; //Location of sephiabot. Quote, data files here
 	private String blacklist[];
 	private String config;
-	private boolean censor;
+
+	private ServerConfig servers[];
+	private GlobalConfig globals;
 
 	private XMLParser parser;
 	private Message firstMessage = null;
@@ -47,6 +44,7 @@ class SephiaBotData {
 	}
 	
 	SephiaBotData(String config) {
+		this.globals = new GlobalConfig();
 		this.config = config;
 		this.parser = new XMLParser(this);
 		setDefaults();
@@ -82,11 +80,9 @@ class SephiaBotData {
 
 	private void setDefaults() {
 		//Set Defaults
-		this.name = "SephiaBot";
-		this.network = "irc.us.freenode.net";
-		this.port = 6667;
-		this.channels = new String[] {"#sephiabot"};
-		this.greeting = "Hello, I am %n, the channel bot. You all suck.";
+		globals.greeting = "Hello, I am %n, the channel bot. You all suck.";
+		globals.censor = new Boolean(true);
+		this.servers = new ServerConfig[0];
 		this.hellos = new String[] {"hi[hy2]?", "yo[^u]", "hey", "greetings\\b", "kon{1,2}ichiwa", "hola\\b", "sup", "morning\\b", "(y\\s)?h[aeu]l{1,2}o"};
 		this.helloreplies = new String[] {"Yo."};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
@@ -94,7 +90,6 @@ class SephiaBotData {
 		this.dataFileName = "sephiabot.dat";
 		this.usersFileName = "users.xml";
 		this.blacklist = new String[] {};
-		this.censor = true;
 		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
 		this.nextReminder = 0;
 	}
@@ -432,15 +427,15 @@ lineLoop:
 		return 0;
 	}
 	
-	private StringBuffer replaceKeywords(StringBuffer greeting) {
-		int keyindex = greeting.indexOf("%n");
+	private StringBuffer replaceKeywords(StringBuffer string, String find, String replace) {
+		int keyindex = string.indexOf(find);
 	
 		if (keyindex > -1) {
-			greeting.delete(keyindex, keyindex+2);
-			greeting.insert(keyindex, name);
+			string.delete(keyindex, keyindex+find.length());
+			string.insert(keyindex, replace);
 		}
 		
-		return greeting;
+		return string;
 	}
 	
 	String removePunctuation(String msg, String remove) {
@@ -832,34 +827,58 @@ lineLoop:
 		return (to - from)/1000/60/60/24/7;
 	}
 	
-	String getName() {
-		return name;
+	String getName(int server) {
+		return servers[server].name;
 	}
 
-	String getNetwork() {
-		return network;
-	}
-
-	int getPort() {
-		return port;
+	int getNumNetworks() {
+		return servers.length;
 	}
 	
-	String getGreeting() {
-		return new String(replaceKeywords(new StringBuffer(greeting)));
+	String getNetwork(int server) {
+		return servers[server].network;
 	}
 
-	void setGreeting(String greeting, int server, int channel) {
-		if (server != -1 || channel != -1)
-			return;
-		this.greeting = greeting;
+	int getPort(int server) {
+		return servers[server].port;
 	}
 	
-	int getNumChannels() {
-		return channels.length;
+	String getGreeting(int serverID, int channelID) {
+		String greeting = "";
+		if (serverID < 0 || serverID >= servers.length)
+			// Can't return greeting, because we don't know which server we want the greeting for!
+			return globals.greeting;
+		else {
+			if (channelID < 0 || channelID >= servers[serverID].channels.length) {
+				// Why would you request a server greeting but not a channel one? NO REASON!
+				greeting = globals.greeting;
+			} else {
+				if (servers[serverID].channels[channelID].globals.greeting != null)
+					greeting = servers[serverID].channels[channelID].globals.greeting;
+				else if (servers[serverID].globals.greeting != null)
+					greeting = servers[serverID].globals.greeting;
+				else
+					greeting = globals.greeting;
+			}
+			return new String(replaceKeywords(new StringBuffer(greeting), "%n", servers[serverID].name));
+		}
 	}
 
-	String getChannel(int i) {
-		return channels[i];
+	void setGreeting(String greeting, int serverID, int channelID) {
+		if (serverID < 0 || serverID >= servers.length)
+			globals.greeting = greeting;
+		else if (channelID < 0 || channelID >= servers[serverID].channels.length)
+			servers[serverID].globals.greeting = greeting;
+		else 
+			servers[serverID].channels[channelID].globals.greeting = greeting;
+	}
+	
+	int getNumChannels(int serverID) {
+		return servers[serverID].channels.length;
+	}
+
+	String getChannel(int serverID, int i) {
+		return servers[serverID].channels[i].name;
 	}
 
 	String getRandomHelloReply() {
@@ -886,15 +905,34 @@ lineLoop:
 		}
 	}
 	
-	boolean getCensor() {
-		return censor;
+	boolean getCensor(int serverID, int channelID) {
+		if (serverID < 0 || serverID >= servers.length)
+			return globals.censor.booleanValue();
+		else {
+			if (channelID < 0 || channelID >= servers[serverID].channels.length) {
+				if (servers[serverID].globals.censor != null)
+					return servers[serverID].globals.censor.booleanValue();
+				else
+					return globals.censor.booleanValue();
+			} else {
+				if (servers[serverID].channels[channelID].globals.censor != null)
+					return servers[serverID].channels[channelID].globals.censor.booleanValue();
+				else if (servers[serverID].globals.censor != null)
+					return servers[serverID].globals.censor.booleanValue();
+				else
+					return globals.censor.booleanValue();
+			}
+		}
 	}
 
-	void setCensor(boolean censor, int server, int channel) {
-		if (server != -1 || channel != -1)
-			return;
+	void setCensor(boolean censor, int serverID, int channelID) {
+		if (serverID < 0 || serverID >= servers.length)
+			globals.censor = new Boolean(censor);
+		else if (channelID < 0 || channelID >= servers[serverID].channels.length)
+			servers[serverID].globals.censor = new Boolean(censor);
+		else 
+			servers[serverID].channels[channelID].globals.censor = new Boolean(censor);
 		log("censor changed to " + censor);
-		this.censor = censor;
 	}
 
 	String getLogdir() {
@@ -928,39 +966,75 @@ lineLoop:
 		}
 	}
 
-	void setChannelInfo(int server, int channel, String name) {
-		if (server != 0)
+	void setChannelInfo(int serverID, int channelID, String name) {
+		if (serverID < 0 || serverID >= servers.length)
+			return;
+		if (channelID < 0 || channelID >= servers[serverID].channels.length)
 			return;
 		log("channel added: " + name);
-		String newChannelList[] = new String[this.channels.length+1];
-		newChannelList[0] = name;
-		for (int i = 1; i < newChannelList.length; i++) {
-			newChannelList[i] = channels[i-1];
-		}
-		this.channels = newChannelList;
-		
+		servers[serverID].channels[channelID].name = name;
 	}
 	
 	int addServer() {
-		this.channels = new String[0];
-		return 0;
+		ServerConfig servers[] = this.servers;
+		this.servers = new ServerConfig[servers.length+1];
+		for (int i = 0; i < servers.length; i++) {
+			this.servers[i] = servers[i];
+		}
+		this.servers[this.servers.length-1] = new ServerConfig();
+		return this.servers.length-1;
 	}
 	
-	int addChannel(int server) {
-		return 0;
+	int addChannel(int serverID) {
+		ServerConfig server = servers[serverID];
+		ChannelConfig channels[] = server.channels;
+		server.channels = new ChannelConfig[channels.length+1];
+		for (int i = 0; i < channels.length; i++) {
+			server.channels[i] = channels[i];
+		}
+		server.channels[server.channels.length-1] = new ChannelConfig();
+		return server.channels.length-1;
 	}
 	
-	void setServerInfo(int server, String host, String port, String nick) {
-		if (server != 0)	//ignore all but the first server for now.
-			return;
+	void setServerInfo(int serverID, String host, String port, String nick) {
+		ServerConfig server = servers[serverID];
 		if (host.trim().length() > 0)
-			this.network = host;
+			server.network = host;
 		if (nick.trim().length() > 0)
-			this.name = nick;
+			server.name = nick;
 		if (port.trim().length() > 0)
-			this.port = Integer.parseInt(port);
-		log("network changed to " + this.network);
-		log("nick changed to " + this.name);
-		log("port changed to " + this.port);
+			server.port = Integer.parseInt(port);
+		log("network changed to " + server.network);
+		log("nick changed to " + server.name);
+		log("port changed to " + server.port);
 	}
+}
+
+class GlobalConfig {
+	//Don't use basic data types here (like boolean or int) because null means that this particular option is not set.
+	//Also be sure to default them all in setDefaults()
+	Boolean censor = null;
+	String greeting = null;
+}
+
+class ServerConfig {
+	String network;
+	String name;
+	int port;
+	
+	ChannelConfig channels[];
+	GlobalConfig globals;
+
+	ServerConfig( ) {
+		globals = new GlobalConfig();
+		channels = new ChannelConfig[0];
+		name = "SephiaBot";
+		network = "irc.us.freenode.net";
+		port = 6667;
+	}
+}
+
+class ChannelConfig {
+	String name;
+	GlobalConfig globals = new GlobalConfig();
 }

@@ -4,26 +4,19 @@ TODO: Better handling of dropped connections, etc.
 TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
 TODO: Track nick changes so who is here works.
 */
-import java.io.*;
 import java.util.*;
 
-class SephiaBot implements IRCListener {
+class SephiaBot implements IRCConnectionListener {
 
 	private SephiaBotData data;
 	
-	private int historySize;
-	private String historyNick[];
-	private String historyText[];
-	private String lastRepeat;
-
-	private IRCIO ircio;
-	private BufferedWriter logOut[];
-	private IRCServer server;
+	private IRCConnection connections[];
 
 	private long nextWho;
 	private long nextHi;
 
-	private boolean censor() { return data.getCensor(); }
+	// For every place censor() is used, IRCConnection must set currChannel higher in the stack for it to work correctly.
+	private boolean censor(IRCConnection con) { return data.getCensor(con.getIndex(), con.getCurrentChannel()); }
 
 	public static void main(String args[]) {
 		String cfgPath = "sephiabot.xml";
@@ -60,10 +53,6 @@ class SephiaBot implements IRCListener {
 
 	public SephiaBot(String config) {
 
-		this.historySize = 3;
-		this.historyNick = new String[this.historySize];
-		this.historyText = new String[this.historySize];
-
 		this.nextWho = 0;
 		this.nextHi = 0;
 
@@ -73,17 +62,8 @@ class SephiaBot implements IRCListener {
 		
 		data.parseConfig();
 
-		log("Network: " + data.getNetwork() + " " + data.getPort() + " : " + data.getName());
-
-		try {
-			logOut = new BufferedWriter[data.getNumChannels()];
-			for (int i = 0; i < data.getNumChannels(); i++) {
-				logOut[i] = new BufferedWriter(new FileWriter(data.getLogdir() +
-						"/log-" + data.getChannel(i) + ".txt", true));
-			}
-		} catch (IOException ioe) {
-			logerror("Couldn't open log file.");
-		}
+		// this must happen after config parsing.
+		this.connections = new IRCConnection[data.getNumNetworks()];
 	}
 
 	String makeTime(long formerTime) {
@@ -115,21 +95,27 @@ class SephiaBot implements IRCListener {
 
 	void connect() {
 
-		//Quickly build a channel list.
-		String[] channels = new String[data.getNumChannels()];
-		for (int i = 0; i < channels.length; i++)
-			channels[i] = data.getChannel(i);
+		String[] channels;
+		for (int i = 0; i < data.getNumNetworks(); i++) {
+			log("Network: " + data.getNetwork(i) + " " + data.getPort(i) + " : " + data.getName(i));
+			
+			//Quickly build a channel list.
+			channels = new String[data.getNumChannels(i)];
+			for (int j = 0; j < channels.length; j++)
+				channels[j] = data.getChannel(i, j);
 
-		ircio = new IRCIO(this, data.getNetwork(), data.getPort());
-		ircio.login(channels, data.getName());
-		server = new IRCServer(data.getNetwork(), data.getPort(), channels);
-
+			connections[i] = new IRCConnection(this, i);
+			connections[i].connect(channels, data.getNetwork(i), data.getPort(i), data.getName(i));
+		}
+		
 	}
 
 	void poll() {
-		ircio.poll();
+		for (int i = 0; i < connections.length; i++) {
+			connections[i].getIRCIO().poll();
 
-		checkForReminders();
+			checkForReminders(connections[i]);
+		}
 		
 		try {
 			Thread.sleep(100);
@@ -149,9 +135,9 @@ class SephiaBot implements IRCListener {
 	//Find a user by his IRC nick. If an IRC nick is found matching the specified nick, any users logged in
 	// with that host are returned. Otherwise, any user names matching the specified nick are returned. Note
 	// that if someone's occupies a nick but is not logged in as that nick, this function will return null.
-	public User getUserByNick(String name) {
-		for (int i = 0; i < server.channels.length; i++) {
-			for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+	public User getUserByNick(IRCConnection con, String name) {
+		for (int i = 0; i < con.getServer().channels.length; i++) {
+			for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
 				if (curr.name.equals(name)) {
 					return data.getUserByHost(curr.host);
 				}
@@ -160,7 +146,7 @@ class SephiaBot implements IRCListener {
 		return data.getUserByName(name);
 	}
 	
-	public void checkForMessages(String nick, String host, String recipient) {
+	public void checkForMessages(IRCConnection con, String nick, String host, String recipient) {
 		//Check if this person has any messages.
 		User user = data.getUserByHost(host);
 		int totalMessages = 0;
@@ -169,22 +155,22 @@ class SephiaBot implements IRCListener {
 		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
 
 		if (messages.length > 0 && reminders.length > 0)
-			ircio.privmsg(recipient, nick + ", you have messages and reminders!");
+			con.getIRCIO().privmsg(recipient, nick + ", you have messages and reminders!");
 		else if (messages.length > 0)
-			ircio.privmsg(recipient, nick + ", you have messages!");
+			con.getIRCIO().privmsg(recipient, nick + ", you have messages!");
 		else if (reminders.length > 0)
-			ircio.privmsg(recipient, nick + ", you had reminders!");
+			con.getIRCIO().privmsg(recipient, nick + ", you had reminders!");
 		else
 			return;
 		
 		for (int i = 0; i < messages.length; i++) {
 			Message message = messages[i];
 			if (totalMessages >= 5) {
-				ircio.privmsg(recipient, "You have more messages.");
+				con.getIRCIO().privmsg(recipient, "You have more messages.");
 				return;
 			}
 			totalMessages++;
-			ircio.privmsg(recipient, "Message from " + message.sender + " [" + makeTime(message.time) + " ago]:" + message.message);
+			con.getIRCIO().privmsg(recipient, "Message from " + message.sender + " [" + makeTime(message.time) + " ago]:" + message.message);
 			data.removeMessage(message);
 		}
 		
@@ -193,32 +179,32 @@ class SephiaBot implements IRCListener {
 			if (!reminder.notified)
 				continue;
 			if (totalMessages >= 5) {
-				ircio.privmsg(recipient, "You have more reminders.");
+				con.getIRCIO().privmsg(recipient, "You have more reminders.");
 				return;
 			}
 			totalMessages++;
 			String sender = reminder.sender;
 			if (iequals(reminder.sender, reminder.target))
 				sender = "yourself";
-			ircio.privmsg(recipient, "Reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+			con.getIRCIO().privmsg(recipient, "Reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 			data.removeReminder(reminder);
 		}
 	}
 
-	public void checkForReminders() {
+	public void checkForReminders(IRCConnection con) {
 		Reminder reminders[] = data.getUnnotifiedReminders();
 		if (reminders.length <= 0)
 			return;
 		for (int i = 0; i < reminders.length; i++) {
 			Reminder reminder = reminders[i];
 			reminder.notified = true;
-			for (int j = 0; j < server.channels.length; j++) {
-				if (!server.channels[j].userInChannel(reminder.target))
+			for (int j = 0; j < con.getServer().channels.length; j++) {
+				if (!con.getServer().channels[j].userInChannel(reminder.target))
 					continue;
 				String sender = reminder.sender;
 				if (iequals(reminder.sender, reminder.target))
 					sender = "yourself";
-				ircio.privmsg(server.channels[j].name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+				con.getIRCIO().privmsg(con.getServer().channels[j].name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 			}
 		}
 		data.writeData();
@@ -262,38 +248,38 @@ class SephiaBot implements IRCListener {
 	}
 	*/
 	
-	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
+	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg) {
 		String log;
 		
 		log = "* " + nick + " " + msg;
 
-		logfile(recipient, log);
+		con.logfile(recipient, log);
 		
 		msg = msg.trim();
 
 		data.updateUserTimes(nick, host);
-		checkForMessages(nick, host, recipient);
-		checkForBlacklist(nick, host, recipient);
+		checkForMessages(con, nick, host, recipient);
+		checkForBlacklist(con, nick, host, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
 						
-			if (iregex("hugs " + data.getName(), msg)) {
+			if (iregex("hugs " + data.getName(con.getIndex()), msg)) {
 				if (data.isVino(host))
-					ircio.privemote(recipient, "hugs Vino!");
-				else if (censor())
-					ircio.privemote(recipient, "hugs " + nick + "!");
+					con.getIRCIO().privemote(recipient, "hugs Vino!");
+				else if (censor(con))
+					con.getIRCIO().privemote(recipient, "hugs " + nick + "!");
 				else
-					ircio.privmsg(recipient, "Get the fuck off.");
-			} else if (iregex("p[ea]ts " + data.getName(), msg)) {
-				ircio.privemote(recipient, "purrs.");
-			} else if (iregex("pokes " + data.getName(), msg)) {
+					con.getIRCIO().privmsg(recipient, "Get the fuck off.");
+			} else if (iregex("p[ea]ts " + data.getName(con.getIndex()), msg)) {
+				con.getIRCIO().privemote(recipient, "purrs.");
+			} else if (iregex("pokes " + data.getName(con.getIndex()), msg)) {
 				boolean tickle = new Random().nextBoolean();
 				if (tickle == true) {
-					ircio.privemote(recipient, "laughs.");
+					con.getIRCIO().privemote(recipient, "laughs.");
 				}
 				else {
-					ircio.privmsg(recipient, "Ouch!"); 
+					con.getIRCIO().privmsg(recipient, "Ouch!"); 
 				}
 			}
 	
@@ -301,21 +287,12 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
-	public void updateHistory (String nick, String msg) {
-		for (int i = this.historySize - 1; i > 0; i--) {
-			historyNick[i] = historyNick[i-1];
-			historyText[i] = historyText[i-1];
-		}
-		historyNick[0] = nick;
-		historyText[0] = msg;
-	}
-
-	public void messagePrivMsg(String nick, String host, String recipient, String origmsg) {
+	public void messagePrivMsg(IRCConnection con, String nick, String host, String recipient, String origmsg) {
 		boolean pm = false;
 		String log;
 		String msg = origmsg;
 
-		if (iequals(recipient, data.getName())) {
+		if (iequals(recipient, data.getName(con.getIndex()))) {
 			recipient = nick;
 			pm = true;
 		}
@@ -323,23 +300,23 @@ class SephiaBot implements IRCListener {
 		log = "<" + nick + "> ";
 		log += msg.substring(0, msg.length());
 
-		logfile(recipient, log);
+		con.logfile(recipient, log);
 
 		msg = msg.trim();
 
 		data.updateUserTimes(nick, host);
-		checkForMessages(nick, host, recipient);
-		checkForBlacklist(nick, host, recipient);
-		updateHistory(nick, msg);
+		checkForMessages(con, nick, host, recipient);
+		checkForBlacklist(con, nick, host, recipient);
+		con.updateHistory(nick, msg);
 		
-		String name = data.getName();
+		String name = data.getName(con.getIndex());
 
 		//Say hello!
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		if (iregex(name.substring(0, nameEnd), msg)) {
 			if (data.matchHellos(msg)) {
 				if (System.currentTimeMillis() > nextHi) {  //!spam
-					ircio.privmsg(recipient, data.getRandomHelloReply());
+					con.getIRCIO().privmsg(recipient, data.getRandomHelloReply());
 					nextHi = System.currentTimeMillis() + 500;
 					return;
 				}
@@ -354,14 +331,14 @@ class SephiaBot implements IRCListener {
 			botname = "";
 		}
 
-		if (pm || talkingToMe(msg)) {
+		if (pm || talkingToMe(msg, data.getName(con.getIndex()))) {
 
 			//Remove the bot's name
 			if (!pm)
 				msg = msg.substring(msg.indexOf(" ")+1);
 
 			if (iregex("bring out the strapon", msg)) {
-				ircio.privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
+				con.getIRCIO().privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
 				return;
 			}
 
@@ -371,58 +348,58 @@ class SephiaBot implements IRCListener {
 			//These commands can be used anywhere if the bot's name is spoken first.
 			if (iregex("^who are you\\W+$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "I am an advanced SephiaBot channel bot.");
-					ircio.privmsg(recipient, "I'll kick your " + (censor()?"butt":"ass") + " in days that end in 'y'.");
-					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
+					con.getIRCIO().privmsg(recipient, "I am an advanced SephiaBot channel bot.");
+					con.getIRCIO().privmsg(recipient, "I'll kick your " + (censor(con)?"butt":"ass") + " in days that end in 'y'.");
+					con.getIRCIO().privmsg(recipient, "I was written by Vino. Vino rocks.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if ( iregex("what does marsellus wallace look like", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "He's black.");
+					con.getIRCIO().privmsg(recipient, "He's black.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("who (wrote|made) you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
-					ircio.privmsg(recipient, "Nilbus helped too.");
+					con.getIRCIO().privmsg(recipient, "I was written by Vino. Vino rocks.");
+					con.getIRCIO().privmsg(recipient, "Nilbus helped too.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("who is here", msg) && nick.equals("Nilbus")) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 
-					int channum = channelNumber(recipient);
+					int channum = channelNumber(con.getIndex(), recipient);
 					if (channum == -1 || pm) {
-						ircio.privmsg(recipient, "It's just you and me in a PM, buddy.");
+						con.getIRCIO().privmsg(recipient, "It's just you and me in a PM, buddy.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					} else {
 						StringBuffer buf = new StringBuffer("Users in this channel:");
-						IRCUser current = server.channels[channum].users;
-						for (int i = 0; i < server.channels[channum].numusers; i++) {
+						IRCUser current = con.getServer().channels[channum].users;
+						for (int i = 0; i < con.getServer().channels[channum].numusers; i++) {
 							buf.append(" " + current.name);
 							current = current.next;
 						}
-						//ircio.privmsg(recipient, buf.toString());
-						ircio.privmsg("Nilbus", buf.toString()); //XXX: debug
+						//con.getIRCIO().privmsg(recipient, buf.toString());
+						con.getIRCIO().privmsg("Nilbus", buf.toString()); //XXX: debug
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
 				}
 			} else if (iregex("who is vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "A dirty cuban.");
-					ircio.privmsg(recipient, "And my daddy.");
+					con.getIRCIO().privmsg(recipient, "A dirty cuban.");
+					con.getIRCIO().privmsg(recipient, "And my daddy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("who is remy", msg)
 					|| iregex("who is luckyremy",msg)) {
 				if (System.currentTimeMillis() > nextWho) {     //!spam
-					ircio.privmsg(recipient, "Father of the Black Sheep.");
-					ircio.privmsg(recipient, "Harbinger of Doom.");
+					con.getIRCIO().privmsg(recipient, "Father of the Black Sheep.");
+					con.getIRCIO().privmsg(recipient, "Harbinger of Doom.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -430,25 +407,25 @@ class SephiaBot implements IRCListener {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User target = data.getUserByName(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
 					if (target == null)
-						ircio.privmsg(recipient, "Nobody important.");
+						con.getIRCIO().privmsg(recipient, "Nobody important.");
 					else
-						ircio.privmsg(recipient, target.description);
+						con.getIRCIO().privmsg(recipient, target.description);
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (!censor() && iregex("are you (sexy|hot)", msg)) {
+			} else if (!censor(con) && iregex("are you (sexy|hot)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Fuck yes.");
+					con.getIRCIO().privmsg(recipient, "Fuck yes.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (!censor() && iregex("wan(na |t to )cyber", msg)) {
+			} else if (!censor(con) && iregex("wan(na |t to )cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User user = getUserByNick(nick);
+					User user = getUserByNick(con, nick);
 					if (data.isVino(host) || user != null && iequals(user.userName, "Yukie")) {
-						ircio.privmsg(recipient, "Take me, " + nick + "!");
+						con.getIRCIO().privmsg(recipient, "Take me, " + nick + "!");
 					} else {
-						ircio.privmsg(recipient, "Fuck no.");
+						con.getIRCIO().privmsg(recipient, "Fuck no.");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -458,11 +435,11 @@ class SephiaBot implements IRCListener {
 					User vino = data.getUser(SephiaBotData.USER_VINO);
 					if (vino.away == null) {
 						if (vino.lastTalked > 0)
-							ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone. The last time he said anything was " + makeTime(vino.lastTalked) + " ago.");
+							con.getIRCIO().privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone. The last time he said anything was " + makeTime(vino.lastTalked) + " ago.");
 						else
-							ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
+							con.getIRCIO().privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
 					} else {
-						ircio.privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leaveTime) + ".");
+						con.getIRCIO().privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -478,29 +455,29 @@ class SephiaBot implements IRCListener {
 							User user = data.getUser(i);
 							//Do not display away message if the person has not logged in for a while.
 							if (user.away != null && data.timeInWeeks(user.lastTalked, System.currentTimeMillis()) < 1) {
-								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leaveTime) + ".");
+								con.getIRCIO().privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leaveTime) + ".");
 								foundAway = true;
 							}
 						}
 						if (!foundAway)
-							ircio.privmsg(recipient, "Everyone is present and accounted for.");
+							con.getIRCIO().privmsg(recipient, "Everyone is present and accounted for.");
 						return;
 					}
 					if (iequals(targetName, botname))
 						return;
-					User target = getUserByNick(targetName);
+					User target = getUserByNick(con, targetName);
 					if (target == null) {
-						ircio.privmsg(recipient, "Like I know.");
+						con.getIRCIO().privmsg(recipient, "Like I know.");
 						return;
 					} else
 						targetName = target.userName; //use correct caps
 					if (target.away == null) {
 						if (target.lastTalked > 0)
-							ircio.privmsg(recipient, "I don't know, the last time they said anything was " + makeTime(target.lastTalked) + " ago.");
+							con.getIRCIO().privmsg(recipient, "I don't know, the last time they said anything was " + makeTime(target.lastTalked) + " ago.");
 						else
-							ircio.privmsg(recipient, "I don't know.");
+							con.getIRCIO().privmsg(recipient, "I don't know.");
 					} else {
-						ircio.privmsg(recipient, targetName + " is " + target.away + ". " + targetName + " has been gone for " + makeTime(target.leaveTime) + ".");
+						con.getIRCIO().privmsg(recipient, targetName + " is " + target.away + ". " + targetName + " has been gone for " + makeTime(target.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -509,39 +486,39 @@ class SephiaBot implements IRCListener {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User target = data.getUserByHost(host);
 					if (data.isVino(host)) {
-						ircio.privmsg(recipient, "Daddy!");
-						ircio.privemote(recipient, "hugs " + nick + ".");
+						con.getIRCIO().privmsg(recipient, "Daddy!");
+						con.getIRCIO().privemote(recipient, "hugs " + nick + ".");
 					} else if (target != null) {
-						ircio.privmsg(recipient, "Someone I know.");
+						con.getIRCIO().privmsg(recipient, "Someone I know.");
 					} else {
-						ircio.privmsg(recipient, "Nobody important.");
+						con.getIRCIO().privmsg(recipient, "Nobody important.");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("who('| i)?s your daddy", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Vino's my daddy, ugh! Spank me again Vino!");
+					con.getIRCIO().privmsg(recipient, "Vino's my daddy, ugh! Spank me again Vino!");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("knock knock", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Who's there?");
+					con.getIRCIO().privmsg(recipient, "Who's there?");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (!censor() && iregex("i suck dick", msg)) {
+			} else if (!censor(con) && iregex("i suck dick", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
-					ircio.privmsg(recipient, "Yeah, we know you do.");
+					con.getIRCIO().privmsg(recipient, "Yeah, we know you do.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (!censor() && iregex("words of wisdom", msg)) {
+			} else if (!censor(con) && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String phrase = data.randomPhrase("wordsofwisdom.txt");
 					if (phrase != null)
-						ircio.privmsg(recipient, phrase);
+						con.getIRCIO().privmsg(recipient, phrase);
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -550,18 +527,18 @@ class SephiaBot implements IRCListener {
 					Random rand = new Random();
 					int dice = rand.nextInt(5)+2;
 					int sides = rand.nextInt(5)+6;
-					ircio.privemote(recipient, "rolls " + dice + "d" + sides + " dice and gets " + (dice*sides+1) + ".");
+					con.getIRCIO().privemote(recipient, "rolls " + dice + "d" + sides + " dice and gets " + (dice*sides+1) + ".");
 					if (!data.isVino(host)) {
-						ircio.privemote(recipient, "kills " + nick + ".");
+						con.getIRCIO().privemote(recipient, "kills " + nick + ".");
 					} else {
-						ircio.privemote(recipient, "hugs " + nick + ".");
+						con.getIRCIO().privemote(recipient, "hugs " + nick + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("do a little dance", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privemote(recipient, "makes a little love.");
+					con.getIRCIO().privemote(recipient, "makes a little love.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -569,7 +546,7 @@ class SephiaBot implements IRCListener {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
-						ircio.privmsg(recipient, "Your excuse is: " + excuse);
+						con.getIRCIO().privmsg(recipient, "Your excuse is: " + excuse);
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -583,26 +560,26 @@ class SephiaBot implements IRCListener {
 				}
 				if (iequals(cmd, "kill")) {
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "KILL! KILL! KILL!");
+						con.getIRCIO().privmsg(recipient, "KILL! KILL! KILL!");
 						return;
 					}
 					String killed = tok.nextToken(" ");
 					User killerUser = data.getUserByHost(host);
-					User killedUser = getUserByNick(killed);
+					User killedUser = getUserByNick(con, killed);
 					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !data.isVino(host)) {
-						ircio.privemote(recipient, "giggles at " + nick);
+						con.getIRCIO().privemote(recipient, "giggles at " + nick);
 					} else if (iequals(killed, botname)) {
-						ircio.privmsg(recipient, ":(");
+						con.getIRCIO().privmsg(recipient, ":(");
 					} else {
 						if (data.isVino(host))
 							killerUser = data.getUser(SephiaBotData.USER_VINO);
-						int killedAccess = getAccess(killed, channelNumber(recipient));
+						int killedAccess = con.getAccess(killed, channelNumber(con.getIndex(), recipient));
 						if (killedAccess != -1) {
-							ircio.privmsg(recipient, "It would be my pleasure.");
-							ircio.kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
+							con.getIRCIO().privmsg(recipient, "It would be my pleasure.");
+							con.getIRCIO().kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
 						} else if (killed.equalsIgnoreCase("message")) {
 							if (!tok.hasMoreElements()) {
-								ircio.privmsg(recipient, "Which message? I need a number");
+								con.getIRCIO().privmsg(recipient, "Which message? I need a number");
 								return;
 							}
 							try {
@@ -610,18 +587,18 @@ class SephiaBot implements IRCListener {
 								User user = data.getUserByHost(host);
 								Message messages[] = data.getMessagesBySender(nick, user);
 								if (msgIndex >= messages.length || msgIndex < 0) {
-									ircio.privmsg(recipient, "You don't have that many messages.");
+									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 									return;
 								}
-								ircio.privmsg(recipient, "Message removed from " + messages[msgIndex].sender + " to " + messages[msgIndex].target + " " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
+								con.getIRCIO().privmsg(recipient, "Message removed from " + messages[msgIndex].sender + " to " + messages[msgIndex].target + " " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
 								data.removeMessage(messages[msgIndex]);
 							} catch (NumberFormatException nfe) {
-								ircio.privmsg(recipient, "...if you can call that a number.");
+								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
 							}
 							return;
 						} else if (killed.equalsIgnoreCase("reminder")) {
 							if (!tok.hasMoreElements()) {
-								ircio.privmsg(recipient, "Which reminder? I need a number");
+								con.getIRCIO().privmsg(recipient, "Which reminder? I need a number");
 								return;
 							}
 							try {
@@ -629,7 +606,7 @@ class SephiaBot implements IRCListener {
 								User user = data.getUserByHost(host);
 								Reminder reminders[] = data.getRemindersBySender(nick, user);
 								if (msgIndex >= reminders.length || msgIndex < 0) {
-									ircio.privmsg(recipient, "You don't have that many reminders.");
+									con.getIRCIO().privmsg(recipient, "You don't have that many reminders.");
 									return;
 								}
 								Reminder reminder = reminders[msgIndex];
@@ -638,19 +615,19 @@ class SephiaBot implements IRCListener {
 									timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 								else
 									timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-								ircio.privmsg(recipient, "Reminder removed from " + reminder.sender + " to " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+								con.getIRCIO().privmsg(recipient, "Reminder removed from " + reminder.sender + " to " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 								data.removeReminder(reminder);
 							} catch (NumberFormatException nfe) {
-								ircio.privmsg(recipient, "...if you can call that a number.");
+								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
 							}
 							return;
 						} else
-							ircio.privmsg(recipient, "Kill who what now?"); 
+							con.getIRCIO().privmsg(recipient, "Kill who what now?"); 
 						return;
 					}
 				} else if (iequals(cmd, "tell")) {
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Tell who what?");
+						con.getIRCIO().privmsg(recipient, "Tell who what?");
 						return;
 					}
 
@@ -658,7 +635,7 @@ class SephiaBot implements IRCListener {
 					String sender = nick;
 					target = data.removePunctuation(target, ".!,");
 					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
-					User targetUser = getUserByNick(target);
+					User targetUser = getUserByNick(con, target);
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the message as his username instead so that all the messages are sent by the same user.
@@ -667,7 +644,7 @@ class SephiaBot implements IRCListener {
 						sender = senderUser.userName;
 
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Tell " + target + " what?");
+						con.getIRCIO().privmsg(recipient, "Tell " + target + " what?");
 						return;
 					}
 					String message = tok.nextToken("");
@@ -677,12 +654,12 @@ class SephiaBot implements IRCListener {
 					else
 						data.addMessage(target, message, sender);
 					data.writeData();
-					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
+					con.getIRCIO().privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^remind(er)?$", cmd)) {
 					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that] [something]
 					// Bit, remind [person] [to OR that] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Remind who what when?");
+						con.getIRCIO().privmsg(recipient, "Remind who what when?");
 						return;
 					}
 					String target = tok.nextToken(" ");
@@ -694,7 +671,7 @@ class SephiaBot implements IRCListener {
 						target = nick;
 					}
 					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
-					User targetUser = getUserByNick(target);
+					User targetUser = getUserByNick(con, target);
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the reminders as his username instead so that all the reminders are sent by the same user.
@@ -702,25 +679,25 @@ class SephiaBot implements IRCListener {
 					if (senderUser != null)
 						sender = senderUser.userName;
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Remind " + target + " when what?");
+						con.getIRCIO().privmsg(recipient, "Remind " + target + " when what?");
 						return;
 					}
 					try {
 						Reminder reminder = data.addReminder(target, tok.nextToken("").substring(1), sender);
 
-					ircio.privmsg(recipient, "OK, I'll remind " + 
+						con.getIRCIO().privmsg(recipient, "OK, I'll remind " + 
 							(myself?"you":target) +" "+ reminder.getTimeExpression());
 					} catch (WTFException wtf) {
-						ircio.privmsg(recipient, wtf.getMessage().substring(14));
+						con.getIRCIO().privmsg(recipient, wtf.getMessage().substring(14));
 					} catch (NumberFormatException nfe) {
-						ircio.privmsg(recipient, nfe.getMessage());
+						con.getIRCIO().privmsg(recipient, nfe.getMessage());
 					}
 					
 					/*
 					long goalTime = System.currentTimeMillis() + 1000*5;
 					if (message == null) {
 						if (!tok.hasMoreElements()) {
-							ircio.privmsg(recipient, "Remind " + target + " what?");
+							con.getIRCIO().privmsg(recipient, "Remind " + target + " what?");
 							return;
 						}
 						message = tok.nextToken("");
@@ -728,56 +705,56 @@ class SephiaBot implements IRCListener {
 						message += tok.nextToken("");
 					}
 					data.addReminder(target, message, sender, goalTime);
-					ircio.privmsg(recipient, "OK, I won't forget.");
+					con.getIRCIO().privmsg(recipient, "OK, I won't forget.");
 					*/
 				} else if (iregex("^(butt?)?se(x|ck[sz])$", cmd)) {
 					if (!tok.hasMoreElements()) {
-						ircio.privemote(recipient, "anally rapes " + nick + ".");
+						con.getIRCIO().privemote(recipient, "anally rapes " + nick + ".");
 						return;
 					}
 					String sexed = tok.nextToken(" ");
 					if (iregex("^vino", sexed)) {
-						ircio.privemote(recipient, "screams as Vino penetrates every orifice of her body!");
+						con.getIRCIO().privemote(recipient, "screams as Vino penetrates every orifice of her body!");
 					} else if (iequals(botname, sexed)) {
-						ircio.privemote(recipient, "furiously works the potato masher!");
+						con.getIRCIO().privemote(recipient, "furiously works the potato masher!");
 					} else {
-						int sexedAccess = getAccess(sexed, channelNumber(recipient));
+						int sexedAccess = con.getAccess(sexed, channelNumber(con.getIndex(), recipient));
 						if (sexedAccess == -1) {
 							sexed = nick;
 						}
-						ircio.privemote(recipient, "anally rapes " + sexed + ".");
+						con.getIRCIO().privemote(recipient, "anally rapes " + sexed + ".");
 					}
 				} else if (iequals(cmd, "reboot")) {
 					if (data.isAdmin(host)) {
-						ircio.privmsg(recipient, "Be right back.");
+						con.getIRCIO().privmsg(recipient, "Be right back.");
 						data.writeData();
 						System.exit(1);
 					} else
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 					return;
 				} else if (iequals(cmd, "shutdown")) {
 					if (data.isVino(host)) {
-						ircio.privmsg(recipient, "Goodbye everybody!");
+						con.getIRCIO().privmsg(recipient, "Goodbye everybody!");
 						data.writeData();
 						System.exit(0);
 					} else {
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "reload")) {
 					if (data.isAdmin(host)) {
 						data.parseConfig();
-						ircio.privmsg(recipient, "Done.");
+						con.getIRCIO().privmsg(recipient, "Done.");
 					} else {
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "save")) {
 					if (data.isAdmin(host)) {
 						data.writeData();
-						ircio.privmsg(recipient, "Done.");
+						con.getIRCIO().privmsg(recipient, "Done.");
 					} else {
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "listhosts")) {
@@ -788,7 +765,7 @@ class SephiaBot implements IRCListener {
 					for (int i = 0; i < 10; i++)
 						if (user.hosts[i] != null && user.hosts[i].length() > 0)
 							buffer += " " + (i+1) + ": " + user.hosts[i];
-					ircio.privmsg(nick, buffer);
+					con.getIRCIO().privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
 					User user = data.getUserByHost(host);
 					if (user == null)
@@ -797,11 +774,11 @@ class SephiaBot implements IRCListener {
 						for (int i = 0; i < 10; i++) {
 							if (user.hosts[i] != null && user.hosts[i].equals(host)) {
 								data.logout(user, i);
-								ircio.privmsg(nick, "It's too bad things couldn't work out.");
+								con.getIRCIO().privmsg(nick, "It's too bad things couldn't work out.");
 								return;
 							}
 						}
-						ircio.privmsg(nick, "Your host is not logged in.");
+						con.getIRCIO().privmsg(nick, "Your host is not logged in.");
 						return;
 					}
 					try {
@@ -809,9 +786,10 @@ class SephiaBot implements IRCListener {
 						if (i < 0 || i >= 10)
 							return;
 						if (user.hosts[i] == null || user.hosts[i].length() <= 0)
-							ircio.privmsg(nick, "That host is not logged in.");
+							con.getIRCIO().privmsg(nick, "That host is not logged in.");
 						else {
-							ircio.privmsg(nick, "It's too bad things couldn't work out.");
+							con.getIRCIO().privmsg(nick, "It's too bad things couldn't work out.");
+							data.logout(user, i);
 							data.logout(user, i);
 							user.hosts[i] = null;
 						}
@@ -819,7 +797,7 @@ class SephiaBot implements IRCListener {
 					}
 				} else if (iequals(cmd, "login")) {
 					if (tok.countTokens() < 2) {
-						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
+						con.getIRCIO().privmsg(nick, "Yeah. Sure. Whatever.");
 						return;
 					}
 					String login = tok.nextToken(" ").trim();
@@ -828,45 +806,45 @@ class SephiaBot implements IRCListener {
 						int i, userID = -1;
 						User user = data.getUserByName(login);
 						if (user == null) {	//WTFException
-							ircio.privmsg(nick, "WTF? Tell Vino you saw this.");
+							con.getIRCIO().privmsg(nick, "WTF? Tell Vino you saw this.");
 							return;
 						}
 						// If getUserByHost returns non-null then the user is logged into this user already,
 						// or is logged in as another user and may not re-log in.
 						if (data.getUserByHost(host) != null) {
-							ircio.privmsg(nick, "Silly you. You're already logged in.");
+							con.getIRCIO().privmsg(nick, "Silly you. You're already logged in.");
 							return;
 						}
 						data.loginUser(user, host);
 						if (data.isVino(user))
-							ircio.privmsg(nick, "Hi, daddy! :D");
+							con.getIRCIO().privmsg(nick, "Hi, daddy! :D");
 						else
-							ircio.privmsg(nick, "What's up " + user.userName + "?");
+							con.getIRCIO().privmsg(nick, "What's up " + user.userName + "?");
 						data.writeData();
 					} else {
-						ircio.privmsg(nick, "No cigar.");
+						con.getIRCIO().privmsg(nick, "No cigar.");
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
 				} else if (iequals(cmd, "i'm")) {
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "You're what?");
+						con.getIRCIO().privmsg(recipient, "You're what?");
 						return;
 					}
 					User user = data.getUserByHost(host);
 					if (user == null) {
-						ircio.privmsg(recipient, "I don't care.");
+						con.getIRCIO().privmsg(recipient, "I don't care.");
 						return;
 					}
 					String location = tok.nextToken("").trim();
 					if (iregex("^ba+ck", location)) {
 						if (user.away == null) {
-							ircio.privmsg(recipient, "Of course you are honey.");
+							con.getIRCIO().privmsg(recipient, "Of course you are honey.");
 						} else {
-							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(user.leaveTime) + ".");
+							con.getIRCIO().privmsg(recipient, "Welcome back! You've been away for " + makeTime(user.leaveTime) + ".");
 							user.away = null;
 						}
 					} else {
-						ircio.privmsg(recipient, "Have fun!");
+						con.getIRCIO().privmsg(recipient, "Have fun!");
 						//Remove punctuation from the end
 						location = data.removePunctuation(location, ".!,?");
 						user.away = location.replaceAll("\"", "'");
@@ -887,19 +865,19 @@ class SephiaBot implements IRCListener {
 					}
 					Message messages[] = data.getMessagesBySender(nick, user);
 					if (messages.length == 0) {
-						ircio.privmsg(recipient, "You havent sent any messages.");
+						con.getIRCIO().privmsg(recipient, "You havent sent any messages.");
 						return;
 					}
 					if (firstIndex >= messages.length) {
-						ircio.privmsg(recipient, "You don't have that many messages.");
+						con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 						return;
 					}
 					lastIndex = firstIndex + 5;
 					if (lastIndex >= messages.length)
 						lastIndex = messages.length-1;
-					ircio.privmsg(recipient, "You have sent the following messages:");
+					con.getIRCIO().privmsg(recipient, "You have sent the following messages:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
-						ircio.privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
+						con.getIRCIO().privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
 					}
 				} else if (iequals(cmd, "reminders")) {
 					User user = data.getUserByHost(host);
@@ -914,17 +892,17 @@ class SephiaBot implements IRCListener {
 					}
 					Reminder reminders[] = data.getRemindersBySender(nick, user);
 					if (reminders.length == 0) {
-						ircio.privmsg(recipient, "You havent sent any reminders.");
+						con.getIRCIO().privmsg(recipient, "You havent sent any reminders.");
 						return;
 					}
 					if (firstIndex >= reminders.length) {
-						ircio.privmsg(recipient, "You don't have that many reminders.");
+						con.getIRCIO().privmsg(recipient, "You don't have that many reminders.");
 						return;
 					}
 					lastIndex = firstIndex + 5;
 					if (lastIndex >= reminders.length)
 						lastIndex = reminders.length-1;
-					ircio.privmsg(recipient, "You have sent the following reminders:");
+					con.getIRCIO().privmsg(recipient, "You have sent the following reminders:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
 						Reminder reminder = reminders[i];
 						String target = reminder.target;
@@ -938,79 +916,75 @@ class SephiaBot implements IRCListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 						else
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						ircio.privmsg(recipient, "Reminder " + (i+1) + ": From " + sender + " to " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": From " + sender + " to " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
 				} else if (iequals(cmd, "say")) {
 					if (!data.isAdmin(host)) {
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 						return;
 					}
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Say what?!?");
+						con.getIRCIO().privmsg(recipient, "Say what?!?");
 						return;
 					}
 					String inchannel = recipient;
 					if (iequals("in", tok.nextToken())) {
 						inchannel = tok.nextToken();
 					}
-					ircio.privmsg(inchannel, tok.nextToken("").substring(1));
+					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1));
 					return;
 				//TODO: Make mode setting colloquial
 				} else if (iequals(cmd, "mode")) {
 					if (!data.isAdmin(host)) {
-						ircio.privmsg(recipient, "No.");
+						con.getIRCIO().privmsg(recipient, "No.");
 						return;
 					}
 					String inchannel = recipient;
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "What channel?");
+						con.getIRCIO().privmsg(recipient, "What channel?");
 						return;
 					}
 					inchannel = tok.nextToken();
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "Who?");
+						con.getIRCIO().privmsg(recipient, "Who?");
 						return;
 					}
 					String who = tok.nextToken();
 					String mode;
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "What mode?");
+						con.getIRCIO().privmsg(recipient, "What mode?");
 						return;
 					} else mode = tok.nextToken();
 					System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
-					ircio.setMode(who, inchannel, mode);
+					con.getIRCIO().setMode(who, inchannel, mode);
 					return;
 				}
 			}
-		} else if (spelledMyNameWrong(botname)) {
-//			ircio.privmsg(recipient, nick + ", " + spell);
 		} else {
-			//Act like a parrot only if the message isn't a command
-			//Only repeat when 2 people said the same thing, but not the 3rd time.
-			if (iequals(historyText[0], historyText[1]) && !iequals(historyText[0], this.lastRepeat) && !iequals(historyNick[0], historyNick[1]) && !historyText[0].trim().startsWith("!")) {
-				this.lastRepeat = historyText[0];
-				ircio.privmsg(recipient, historyText[0]);
+			if (con.parrotOK()) {
+				con.setLastRepeat(con.getHistory(0));
+				con.getIRCIO().privmsg(recipient, con.getHistory(0));
 			}
 		}
 		
 		//Bot has been mentioned?
-		if (pm || talkingToMe(origmsg) || iregex(name, msg)) {
-			if (!censor()) {
+		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
+			if (!censor(con)) {
 				if (iregex("fuck you", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "Fuck you too, buddy.");
+						con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
 				} else if (iregex("screw you", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "Screw you too, buddy.");
+						con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
 				} else if (iregex("you suck", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
+						con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
@@ -1018,19 +992,19 @@ class SephiaBot implements IRCListener {
 			}
 			if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
-					ircio.privmsg(recipient, "No problem.");
+					con.getIRCIO().privmsg(recipient, "No problem.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("bounc[ye]", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
-					ircio.privmsg(recipient, "Bouncy, bouncy, bouncy!");
+					con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("(right|correct)", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
-					ircio.privmsg(recipient, "Absolutely.");
+					con.getIRCIO().privmsg(recipient, "Absolutely.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -1039,79 +1013,52 @@ class SephiaBot implements IRCListener {
 
 	}
 
-	public boolean talkingToMe(String msg) {
-		String name = data.getName();
+	public boolean talkingToMe(String msg, String name) {
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		return iregex("^"+name.substring(0, nameEnd), msg);
 	}
 
-	public boolean spelledMyNameWrong(String msg) {
-		int offset = data.getName().compareToIgnoreCase(msg);
-
-		//These are common values. replacing a with 4 gives you -16, etc.
-		//63 -16 45
-		return (offset == 63 || offset == -16 || offset == 45 || offset == 50 || offset == -19);
-	}
-
-	   
-	public void checkForBlacklist(String nick, String host, String channel) {
+	public void checkForBlacklist(IRCConnection con, String nick, String host, String channel) {
 		//Check for blacklisted nicks.
 		if (data.checkForBlacklist(nick)) {
-			ircio.ban(channel, nick, host);
-			ircio.kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
+			con.getIRCIO().ban(channel, nick, host);
+			con.getIRCIO().kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
 			return;
 		}
 	}
 		
-	public int getAccess(String user, int channum) {
-		if (channum == -1) {
-//			log ("chan -1");                      //XXX: debug
-			return -1;
-		}
-		IRCUser current = server.channels[channum].users;
-		for (int i = 0; i < server.channels[channum].numusers; i++) {
-			if (iequals(user, current.name)) {
-//				log (current.name + " access " + current.access); //XXX: debug
-				return current.access;
-			}
-			current = current.next;
-		}
-//		log(user + " access -1");  //XXX: debug
-		return -1;
-	}
-
-	public void messageChannelJoin(String nick, String host, String channel) {
+	public void messageChannelJoin(IRCConnection con, String nick, String host, String channel) {
 
 		String log;
 
 		log = "--> " + nick + " has joined " + channel;
 
-		logfile(channel, log);
+		con.logfile(channel, log);
 
 		//Say something as you enter the channel!
-		if (iequals(nick, data.getName())) {
-			ircio.privmsg(channel, data.getGreeting());
+		if (iequals(nick, data.getName(con.getIndex()))) {
+			con.getIRCIO().privmsg(channel, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
 		}
 
 		if (iequals(nick, "metapod\\")) {
-			ircio.privmsg(channel, "Heya meta.");
+			con.getIRCIO().privmsg(channel, "Heya meta.");
 		}
 
 		if (iequals(nick, "luckyremy")) {
-			ircio.privemote(channel, "salutes as Remy enters.");
+			con.getIRCIO().privemote(channel, "salutes as Remy enters.");
 		}
 
-		checkForBlacklist(nick, host, channel);
+		checkForBlacklist(con, nick, host, channel);
 		
-		int channum = channelNumber(channel);
+		int channum = channelNumber(con.getIndex(), channel);
 
 		if (channum > -1) {
-			server.channels[channelNumber(channel)].addUser(nick, host, IRCServer.ACCESS_NONE);
+			con.getServer().channels[channelNumber(con.getIndex(), channel)].addUser(nick, host, IRCServer.ACCESS_NONE);
 		}
 
 	}
 
-	public void messageChannelPart(String nick, String host, String channel, String message) {
+	public void messageChannelPart(IRCConnection con, String nick, String host, String channel, String message) {
 
 		String log;
 
@@ -1120,44 +1067,44 @@ class SephiaBot implements IRCListener {
 			log += " (" + message + ")";
 		}
 
-		logfile(channel, log);
+		con.logfile(channel, log);
 
 	}
 
-	public void messageNickChange(String nick, String host, String newname) {
+	public void messageNickChange(IRCConnection con, String nick, String host, String newname) {
 
 		String log;
 
 		log = "--- " + nick + " changed his name to " + newname;
 
-		logfile(null, log);
+		con.logfile(null, log);
 
 	}
 
-	public void messageModeChange(String nick, String host, String channel, String mode, String recipient) {
+	public void messageModeChange(IRCConnection con, String nick, String host, String channel, String mode, String recipient) {
 
 		String log;
 
 		log = "--- " + nick + " set mode " + mode + " on " + recipient;
 
-		logfile(channel, log);
+		con.logfile(channel, log);
 
-		int channum = channelNumber(channel);
+		int channum = channelNumber(con.getIndex(), channel);
 		int access;
 		if (mode.equalsIgnoreCase("-v") || mode.equalsIgnoreCase("-o")) {
 			access = IRCServer.ACCESS_NONE;
-			server.channels[channum].addUser(recipient, host, access);
+			con.getServer().channels[channum].addUser(recipient, host, access);
 		} else if (mode.equalsIgnoreCase("+o")) {
 			access = IRCServer.ACCESS_OP;
-			server.channels[channum].addUser(recipient, host, access);
+			con.getServer().channels[channum].addUser(recipient, host, access);
 		} else if (mode.equalsIgnoreCase("+v")) {
 			access = IRCServer.ACCESS_VOICE;
-			server.channels[channum].addUser(recipient, host, access);
+			con.getServer().channels[channum].addUser(recipient, host, access);
 		}
 
 	}
 
-	public void messageQuit(String nick, String host, String msg) {
+	public void messageQuit(IRCConnection con, String nick, String host, String msg) {
 
 		String log;
 
@@ -1166,19 +1113,19 @@ class SephiaBot implements IRCListener {
 			log += " (" + msg + ")";
 		}
 
-		logfile(null, log);
+		con.logfile(null, log);
 
 	}
 
-	public void messageChanList(String channel, String list) {
+	public void messageChanList(IRCConnection con, String channel, String list) {
 
-		int channum = channelNumber(channel);
+		int channum = channelNumber(con.getIndex(), channel);
 
 		StringTokenizer tok = new StringTokenizer(list, " ");
 //		int usersInWhois = 0;
 //		String userhostString = "";
 		
-		ircio.who(channel);
+		con.getIRCIO().who(channel);
 		
 		while (tok.hasMoreElements()) {
 			String user = tok.nextToken();
@@ -1195,21 +1142,13 @@ class SephiaBot implements IRCListener {
 			if (access > 0) {
 				user = user.substring(1);
 			}
-			server.channels[channum].addUser(user, "", access);
+			con.getServer().channels[channum].addUser(user, "", access);
 			
-//			userhostString += " " + user;
-//			if (++usersInWhois == 5) {
-//				ircio.userhost(userhostString);
-//				usersInWhois = 0;
-//				userhostString = "";
-//			}
 		}
-//		if (usersInWhois > 0)
-//			ircio.userhost(userhostString);
 
 	}
 
-	public void messageUserHosts(String users) {
+	public void messageUserHosts(IRCConnection con, String users) {
 		StringTokenizer tok = new StringTokenizer(users, " =");
 
 hostFinder:
@@ -1224,8 +1163,8 @@ hostFinder:
 			host = host.substring(1, host.length());
 
 			//For every channel, find users that fit this username and assign this host to them.
-			for (int i = 0; i < server.channels.length; i++) {
-				for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+			for (int i = 0; i < con.getServer().channels.length; i++) {
+				for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
 					if (curr.name.equals(name)) {
 						curr.host = host;
 						continue hostFinder;
@@ -1235,10 +1174,10 @@ hostFinder:
 		}
 	}
 
-	public void messageWho(String userchannel, String usernick, String username, String host, String realname) {
-		for (int i = 0; i < server.channels.length; i++) {
-			if (server.channels[i].name.equalsIgnoreCase(userchannel)) {
-				for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+	public void messageWho(IRCConnection con, String userchannel, String usernick, String username, String host, String realname) {
+		for (int i = 0; i < con.getServer().channels.length; i++) {
+			if (con.getServer().channels[i].name.equalsIgnoreCase(userchannel)) {
+				for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
 					if (curr.name.equalsIgnoreCase(usernick)) {
 						curr.host = username + "@" + host;
 						return;
@@ -1249,13 +1188,13 @@ hostFinder:
 		}
 	}
 	
-	public void messageReceived(String msg) {
+	public void messageReceived(IRCConnection con, String msg) {
 
 	}
 
-	public int channelNumber(String channel) {
-		for (int channum = 0; channum < data.getNumChannels(); channum++) {
-			if (channel.equalsIgnoreCase(data.getChannel(channum))) {
+	public int channelNumber(int serverID, String channel) {
+		for (int channum = 0; channum < data.getNumChannels(serverID); channum++) {
+			if (channel.equalsIgnoreCase(data.getChannel(serverID, channum))) {
 				return channum;
 			}
 		}
@@ -1272,47 +1211,30 @@ hostFinder:
 		log("SYSERR: " + log);
 	}
 
-	//Channel log
-	public void logfile(String recipient, String msg) {
-		try {
-			Calendar now = Calendar.getInstance();
-			int hour = now.get(Calendar.HOUR_OF_DAY);
-			int minute = now.get(Calendar.MINUTE);
-			int second = now.get(Calendar.SECOND);
-			msg = (hour<10?"0":"") + hour + ":" + (minute<10?"0":"") + minute + "." + (second<10?"0":"") + second + " " + msg;
-
-			for (int i = 0; i < data.getNumChannels(); i++) {
-				if (recipient != null && !recipient.equalsIgnoreCase(data.getChannel(i))) {
-					continue;
-				}
-				logOut[i].write(msg, 0, msg.length());
-				logOut[i].newLine();
-				logOut[i].flush();
-			}
-		} catch (IOException ioe) {
-			logerror("Couldn't log to file!");
-		}
+	public String getLogdir() {
+		return data.getLogdir();
 	}
 
 }
 
-interface IRCListener {
+// This needs a better name
+interface IRCConnectionListener {
 
-	public void messageReceived(String msg);
-	public void messageModeChange(String nick, String host, String channel, String mode, String recipient);
-	public void messageNickChange(String nick, String host, String newname);
-	public void messageChannelJoin(String nick, String host, String channel);
-	public void messageChannelPart(String nick, String host, String channel, String message);
-	public void messagePrivMsg(String nick, String host, String recipient, String msg);
-	public void messagePrivEmote(String nick, String host, String recipient, String msg);
-	public void messageQuit(String nick, String host, String message);
+	public void messageReceived(IRCConnection con, String msg);
+	public void messageModeChange(IRCConnection con, String nick, String host, String channel, String mode, String recipient);
+	public void messageNickChange(IRCConnection con, String nick, String host, String newname);
+	public void messageChannelJoin(IRCConnection con, String nick, String host, String channel);
+	public void messageChannelPart(IRCConnection con, String nick, String host, String channel, String message);
+	public void messagePrivMsg(IRCConnection con, String nick, String host, String recipient, String msg);
+	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg);
+	public void messageQuit(IRCConnection con, String nick, String host, String message);
 
-	public void messageChanList(String channel, String list);
-	public void messageUserHosts(String users);
-	public void messageWho(String userchannel, String usernick, String username, String host, String realname);
+	public void messageChanList(IRCConnection con, String channel, String list);
+	public void messageUserHosts(IRCConnection con, String users);
+	public void messageWho(IRCConnection con, String userchannel, String usernick, String username, String host, String realname);
 
-	public void logfile(String recipient, String msg);
 	public void log(String msg);
 	public void logerror(String msg);
 
+	public String getLogdir();
 }
