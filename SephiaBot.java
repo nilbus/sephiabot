@@ -943,7 +943,7 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "No.");
 					return;
 				} else if (iequals(cmd, "shutdown")) {
-					if (isAdmin(host)) {
+					if (isVino(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
 						System.exit(0);
 					} else {

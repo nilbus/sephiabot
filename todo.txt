@@ -7,7 +7,7 @@ kali tell everyone
 Kali's name in PMs should be optional. ATM if you put her name in a PM it
 doesn't recognize the command.
 kali where is person ? -- the ? screws this up.
-kali remind me on day at time to do this
+kali remind me on day at time in duration do this
 kali reminders/messages
 kali kill message/reminder #
 kali kill person bans for 30s to avoid autorejoiners.
@@ -16,6 +16,7 @@ make backups of the data file to load in case kali crashes while writing
 kali, i'm back!
 kali tell person, kill this comma
 - a command where kali says the last time she saw a user speak.
+Have kali keep track of pings and pongs and print out round trip time.
 
 - words in the hello list (don't trigger responses)
 kali, i'm your daddy
