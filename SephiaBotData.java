@@ -338,9 +338,9 @@ lineLoop:
 		log("Loading " + filename);
 
 		if (filename.startsWith("/"))
-			users = parser.parseFile("/", filename);
+			users = parser.parseUsers("/", filename);
 		else
-			users = parser.parseFile(sephiadir, filename);
+			users = parser.parseUsers(sephiadir, filename);
 
 		//This function should not return if users is null.
 		if (users == null)
@@ -353,106 +353,14 @@ lineLoop:
 		String filename = config;
 		log("Parsing " + filename);
 
-		BufferedReader configIn;
-
-		try {
-			configIn = new BufferedReader(new FileReader(filename));
-		} catch (IOException ioe) {
-			logerror("Couldn't open cfg file " + filename + ".");
-			return;
-		}
-
-		try {
-			while(configIn.ready()) {
-				String line = configIn.readLine();
-				StringTokenizer tok = new StringTokenizer(line, " ");
-				if (line.startsWith("//") || !tok.hasMoreElements()) {
-					continue;
-				}
-				String command = tok.nextToken();
-				if (command.equals("name")) {
-					this.name = tok.nextToken("").trim();
-					log("name changed to " + name);
-				} else if (command.equals("server")) {
-					this.network = tok.nextToken("").trim();
-					log("network changed to " + this.network);
-				} else if (command.equals("port")) {
-					this.port = Integer.parseInt(tok.nextToken("").trim());
-					log("port changed to " + this.port);
-				} else if (command.equals("greeting")) {
-					StringBuffer greeting = new StringBuffer(tok.nextToken("").trim());
-					greeting = replaceKeywords(greeting);
-					this.greeting = greeting.toString();
-					log("greeting changed to " + this.greeting);
-				} else if (command.equals("channels")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.channels = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.channels[i] = tok.nextToken();
-						buf.append(this.channels[i] + " ");
-					}
-					log("channels changed to " + buf);
-				} else if (command.equals("hello")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.hellos = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.hellos[i] = tok.nextToken();
-						buf.append(this.hellos[i] + " ");
-					}
-					log("hello changed to " + buf);
-				} else if (command.equals("helloreplies")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.helloreplies = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.helloreplies[i] = tok.nextToken();
-						buf.append(this.helloreplies[i] + " ");
-					}
-					log("helloreplies changed to " + buf);
-				} else if (command.equals("blacklist")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.blacklist = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.blacklist[i] = tok.nextToken();
-						buf.append(this.blacklist[i] + " ");
-					}
-					log("blacklist changed to " + buf);
-				} else if (command.equals("logdir")) {
-					this.logdir = tok.nextToken("").trim();
-					log("logdir changed to " + this.logdir);
-				} else if (command.equals("datafilename")) {
-					this.dataFileName = tok.nextToken("").trim();
-					log("datafilename changed to " + this.dataFileName);
-				} else if (command.equals("usersfilename")) {
-					this.usersFileName = tok.nextToken("").trim();
-					log("usersfilename changed to " + this.usersFileName);
-				} else if (command.equals("sephiadir")) {
-					this.sephiadir = tok.nextToken("").trim();
-					log("sephiadir changed to " + this.sephiadir);
-				} else if (command.equals("censor")) {
-					this.censor = stringToBoolean(tok.nextToken().trim());
-					log("censor changed to " + this.censor);
-				}
-			}
-		} catch (IOException ioe) {
-			logerror("Couldn't read cfg file " + filename + ".");
-		}
-		
-		try {
-			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
-		} catch (IOException ioe) {
-			logerror("Couldn't open syslog file:\n" + ioe.getMessage());
-		}
+		parser.parseConfig("", filename);
 
 		loadUsers();
 		loadData();
 	}
 
 	//"false" "no" and "0" and empty/null strings return false. All else is true.
-	private boolean stringToBoolean(String string) {
+	boolean stringToBoolean(String string) {
 		if (string == null)
 			return false;
 		if (string.length() <= 0)
@@ -799,6 +707,16 @@ lineLoop:
 		return false;
 	}
 
+	void addToBlacklist(String nick) {
+		log("added to blacklist: " + nick);
+		String newBlacklist[] = new String[blacklist.length+1];
+		newBlacklist[0] = nick;
+		for (int i = 1; i < newBlacklist.length; i++) {
+			newBlacklist[i] = blacklist[i-1];
+		}
+		this.blacklist = newBlacklist;
+	}
+	
 	boolean matchHellos(String msg) {
 		for (int i = 0; i < hellos.length; i++) {
 			if (iregex("^"+hellos[i], msg)) {
@@ -875,7 +793,13 @@ lineLoop:
 	}
 	
 	String getGreeting() {
-		return greeting;
+		return new String(replaceKeywords(new StringBuffer(greeting)));
+	}
+
+	void setGreeting(String greeting, int server, int channel) {
+		if (server != -1 || channel != -1)
+			return;
+		this.greeting = greeting;
 	}
 	
 	int getNumChannels() {
@@ -898,11 +822,93 @@ lineLoop:
 		return helloreplies[i];
 	}
 
+	void setHelloReplies(String helloreplies, int server, int channel) {
+		if (server != -1 || channel != -1)
+			return;
+		log("helloreplies changed to " + helloreplies);
+		StringTokenizer tok = new StringTokenizer(helloreplies, " ");
+		int tokens = tok.countTokens();
+		this.helloreplies = new String[tokens];
+		for (int i = 0; i < tokens; i++) {
+			this.helloreplies[i] = tok.nextToken();
+		}
+	}
+	
 	boolean getCensor() {
 		return censor;
 	}
 
+	void setCensor(boolean censor, int server, int channel) {
+		if (server != -1 || channel != -1)
+			return;
+		log("censor changed to " + censor);
+		this.censor = censor;
+	}
+
 	String getLogdir() {
 		return logdir;
+	}
+
+	void setGlobals(String sephiadir, String logdir, String dataFileName, String usersFileName) {
+		if (sephiadir.trim().length() > 0)
+			this.sephiadir = sephiadir;
+		if (logdir.trim().length() > 0)
+			this.logdir = logdir;
+		if (dataFileName.trim().length() > 0)
+			this.dataFileName = dataFileName;
+		if (usersFileName.trim().length() > 0)
+			this.usersFileName = usersFileName;
+		log("sephiadir changed to " + this.sephiadir);
+		log("logdir changed to " + this.logdir);
+		log("dataFileName changed to " + this.dataFileName);
+		log("usersFileName changed to " + this.usersFileName);
+	}
+
+	void setHellos(String hellos, int server, int channel) {
+		if (server != -1 || channel != -1)
+			return;
+		log("hellos changed to " + hellos);
+		StringTokenizer tok = new StringTokenizer(hellos, " ");
+		int tokens = tok.countTokens();
+		this.hellos = new String[tokens];
+		for (int i = 0; i < tokens; i++) {
+			this.hellos[i] = tok.nextToken();
+		}
+	}
+
+	void setChannelInfo(int server, int channel, String name) {
+		if (server != 0)
+			return;
+		log("channel added: " + name);
+		String newChannelList[] = new String[this.channels.length+1];
+		newChannelList[0] = name;
+		for (int i = 1; i < newChannelList.length; i++) {
+			newChannelList[i] = channels[i-1];
+		}
+		this.channels = newChannelList;
+		
+	}
+	
+	int addServer() {
+		this.channels = new String[0];
+		return 0;
+	}
+	
+	int addChannel(int server) {
+		return 0;
+	}
+	
+	void setServerInfo(int server, String host, String port, String nick) {
+		if (server != 0)	//ignore all but the first server for now.
+			return;
+		if (host.trim().length() > 0)
+			this.network = host;
+		if (nick.trim().length() > 0)
+			this.name = nick;
+		if (port.trim().length() > 0)
+			this.port = Integer.parseInt(port);
+		log("network changed to " + this.network);
+		log("nick changed to " + this.name);
+		log("port changed to " + this.port);
 	}
 }

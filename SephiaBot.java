@@ -26,9 +26,9 @@ class SephiaBot implements IRCListener {
 	private boolean censor() { return data.getCensor(); }
 
 	public static void main(String args[]) {
-		String cfgPath = "sephiabot.cfg";
+		String cfgPath = "sephiabot.xml";
 		final String usage = "\nUsage: sephiabot [-c config file]\n" +
-			" Default is to search for sephiabot.cfg in the current directory.";
+			" Default is to search for sephiabot.xml in the current directory.";
 
 		if (args != null && args.length > 0) {
 			for (int i = 0; i < args.length; i++) {
