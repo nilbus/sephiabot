@@ -483,8 +483,8 @@ class SephiaBot implements IRCListener {
 						return;
 					} else {
 						ircio.privmsg(recipient, "It would be my pleasure.");
-			if (tok.nextToken(" ").equals("from"))
-				recipient = tok.nextToken("");
+						if (tok.hasMoreElements() && tok.nextToken(" ").equals("from"))
+							recipient = tok.nextToken("");
 						ircio.kick(recipient, killed, "You have been bitched by " + name + ". Have a nice day.");
 						return;
 					}
