@@ -789,7 +789,7 @@ class SephiaBot implements IRCListener {
 					while (targetName.endsWith("!") || targetName.endsWith("?") || targetName.endsWith(","))
 						targetName = targetName.substring(0, targetName.length()-1);
 					boolean foundAway = false;
-					if (iregex("eve?ry ?(b(o|ud)dy|(1|one?))", targetName)) {
+					if (iregex("eve?ry(b(o|ud)dy|(1|one?))", targetName)) {
 						//Find out where everybody is and tell the channel.
 						for (int i = 0; i < users.length; i++) {
 							User user = users[i];
@@ -803,7 +803,7 @@ class SephiaBot implements IRCListener {
 							foundAway = true;
 						}
 						if (!foundAway)
-							ircio.privmsg(recipient, "Everybody is present and accounted for.");
+							ircio.privmsg(recipient, "Everyone is present and accounted for.");
 						return;
 					}
 					if (iequals(targetName, botname))
