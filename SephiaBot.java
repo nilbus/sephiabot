@@ -691,8 +691,12 @@ class SephiaBot implements IRCListener {
 					}
 					String location = tok.nextToken("").trim();
 					if (location.toLowerCase().equals("back")) {
-						ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(vinoleavetime) + ".");
-						vinoaway = null;
+						if (vinoaway == null) {
+							ircio.privmsg(recipient, "Of course you are honey.");
+						} else {
+							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(vinoleavetime) + ".");
+							vinoaway = null;
+						}
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
 						vinoaway = location;
