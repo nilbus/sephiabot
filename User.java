@@ -1,9 +1,11 @@
 class User {
 	String userName;
 	String hosts[];
+	long lastSeenTimes[];
 	String away;
 	String password;
-	long leavetime;
+	long leaveTime;
+	long lastTalked;
 	int memberType = USER_MEMBER;
 
 	static final int USER_MEMBER = 0;
@@ -14,12 +16,6 @@ class User {
 		this.password = password;
 		this.memberType = memberType;
 		this.hosts = new String[10];
-	}
-	
-	User(String userName, String password, int memberType, String hosts[], String away, long leavetime) {
-		this(userName, password, memberType);
-		this.hosts = hosts;
-		this.away = away;
-		this.leavetime = leavetime;
+		this.lastSeenTimes = new long[10];
 	}
 }

@@ -102,7 +102,7 @@ class SephiaBot implements IRCListener {
 		this.nextWho = 0;
 		this.nextHi = 0;
 
-		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN, new String[10], null, 0);
+		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);
@@ -162,25 +162,19 @@ class SephiaBot implements IRCListener {
 		try {
 			int messagesLoaded = 0;
 			int messagesThrownOut = 0;
+			int hostsLoadedTotal = 0;
+			int hostsThrownOut = 0;
+			int awayMsgLoaded = 0;
+			int awayMsgThrownOut = 0;
 			firstMessage = null;		//Keep messages already in memory from persisting.
+lineLoop:
 			while (dataFileReader.ready()) {
 				String line = dataFileReader.readLine();
 				StringTokenizer tok = new StringTokenizer(line, " ");
 				if (line.startsWith("//") || !tok.hasMoreElements())
 					continue;
 				String command = tok.nextToken();
-				if (command.equals("vinohost")) {
-					int hostsLoaded = 0;
-					while (tok.hasMoreElements() && hostsLoaded < 10)
-						this.vino.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
-					log("Loaded " + hostsLoaded + " vinohosts");
-				} else if (command.equals("vinoaway")) {
-					this.vino.away = tok.nextToken("").trim();
-					log("Loaded vinoaway " + this.vino.away);
-				} else if (command.equals("vinoleavetime")) {
-					this.vino.leavetime = Long.parseLong(tok.nextToken("").trim());
-					log("Loaded vinoleavetime " + this.vino.leavetime);
-				} else if (command.equals("userdata")) {
+				if (command.equals("userdata")) {
 					String userName = tok.nextToken().trim();
 					User user = getUserByName(userName);
 					if (user == null) {
@@ -190,15 +184,36 @@ class SephiaBot implements IRCListener {
 					String subCommand = tok.nextToken();
 					if (subCommand.equals("hosts")) {
 						int hostsLoaded = 0;
-						while (tok.hasMoreElements() && hostsLoaded < 10)
+						while (tok.hasMoreElements() && hostsLoaded < 10) {
+							user.lastSeenTimes[hostsLoaded] = System.currentTimeMillis();	//When converting from old "hosts", default to current time.
 							user.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
+						}
 						log("Loaded " + hostsLoaded + " hosts for user " + user.userName);
+					} else if (subCommand.equals("host")) {
+						String host = tok.nextToken();
+						long time = Long.parseLong(tok.nextToken().trim());
+						if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
+							hostsThrownOut++;
+							continue;
+						}
+						for (int i = 0; i < 10; i++) {
+							if (user.hosts[i] == null || user.hosts[i].length() == 0) {
+								user.hosts[i] = host.trim();
+								user.lastSeenTimes[i] = time;
+								hostsLoadedTotal++;
+								continue lineLoop;
+							}
+						}
+						//Execution should only get here if someone manually modified the data file and included 11 hosts for some reason.
+						log("Ran out of userhost slots for user " + user.userName);
+						hostsThrownOut++;
 					} else if (subCommand.equals("away")) {
 						user.away = tok.nextToken("").trim();
-						log("Loaded away for user " + user.userName + ": " + user.away);
+						awayMsgLoaded++;
 					} else if (subCommand.equals("leavetime")) {
-						user.leavetime = Long.parseLong(tok.nextToken("").trim());
-						log("Loaded leavetime for user " + user.userName + ": " + user.leavetime);
+						user.leaveTime = Long.parseLong(tok.nextToken("").trim());
+					} else if (subCommand.equals("lasttalked")) {
+						user.lastTalked = Long.parseLong(tok.nextToken("").trim());
 					}
 				} else if (command.equals("message")) {
 					String nick = tok.nextToken(" ").trim();
@@ -220,10 +235,32 @@ class SephiaBot implements IRCListener {
 							currMsg = currMsg.next;
 						currMsg.next = new Message(target, message, nick, time);
 					}
+				//vinohost, vinoaway, and vinoleavetime should not be necessary anymore. Vino's info is loaded like any other user.
+				// It's left in here for backwards compatibility.
+				} else if (command.equals("vinohost")) {
+					int hostsLoaded = 0;
+					while (tok.hasMoreElements() && hostsLoaded < 10) {
+						this.vino.lastSeenTimes[hostsLoaded] = System.currentTimeMillis();   //When converting from old "hosts", default to current time.
+						this.vino.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
+					}
+					log("Loaded " + hostsLoaded + " vinohosts");
+				} else if (command.equals("vinoaway")) {
+					this.vino.away = tok.nextToken("").trim();
+					log("Loaded vinoaway " + this.vino.away);
+				} else if (command.equals("vinoleavetime")) {
+					this.vino.leaveTime = Long.parseLong(tok.nextToken("").trim());
+					log("Loaded vinoleavetime " + this.vino.leaveTime);
 				}
 			}
+
+			//TODO: Cycle through away messages and throw out old ones.
+			
 			log("Messages loaded: " + messagesLoaded);
 			log("Messages thrown out: " + messagesThrownOut);
+			log("Hosts loaded: " + hostsLoadedTotal);
+			log("Hosts thrown out: " + hostsThrownOut);
+			log("Away messages loaded: " + awayMsgLoaded);
+			log("Away messages thrown out: " + awayMsgThrownOut);
 		} catch (IOException ioe) {
 			logerror("Couldn't read data file " + filename + ".");
 		}
@@ -246,8 +283,7 @@ class SephiaBot implements IRCListener {
 			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
 			dataFileWriter.write(buffer, 0, buffer.length());
 		
-			buffer = "vinohost";
-			boolean hostFound = false;
+			String userBuffer = "userdata " + vino.userName;
 			for (int i = 0; i < 10; i++) {
 				if (vino.hosts[i] != null && vino.hosts[i].length() > 0) {
 					//Check the array up until now for duplicate entries.
@@ -258,28 +294,32 @@ class SephiaBot implements IRCListener {
 							break;
 						}
 					}
-					if (!foundDuplicate)
-						buffer += " " + this.vino.hosts[i];
-					hostFound = true;
+					if (!foundDuplicate) {
+						buffer = userBuffer + " host " + vino.hosts[i] + " " + vino.lastSeenTimes[i] + "\n";
+						dataFileWriter.write(buffer, 0, buffer.length());
+					}
 				}
 			}
-			buffer += "\n";
-			if (hostFound)
-				dataFileWriter.write(buffer, 0, buffer.length());
 
 			if (this.vino.away != null) {
-				buffer = "vinoaway " + this.vino.away + "\n";
+				buffer = userBuffer;
+				buffer += " away " + this.vino.away + "\n";
 				dataFileWriter.write(buffer, 0, buffer.length());
 
-				buffer = "vinoleavetime " + this.vino.leavetime + "\n";
+				buffer = userBuffer;
+				buffer += " leavetime " + this.vino.leaveTime + "\n";
+				dataFileWriter.write(buffer, 0, buffer.length());
+			}
+			
+			if (vino.lastTalked > 0) {
+				buffer = userBuffer;
+				buffer += " lasttalked " + this.vino.lastTalked + "\n";
 				dataFileWriter.write(buffer, 0, buffer.length());
 			}
 
 			for (int i = 0; i < users.length; i++) {
 				User user = users[i];
-				String userBuffer = "userdata " + user.userName;
-				buffer = userBuffer + " hosts";
-				hostFound = false;
+				userBuffer = "userdata " + user.userName;
 				for (int j = 0; j < 10; j++) {
 					if (user.hosts[j] != null && user.hosts[j].length() > 0) {
 						//Check the array up until now for duplicate entries.
@@ -290,14 +330,12 @@ class SephiaBot implements IRCListener {
 								break;
 							}
 						}
-						if (!foundDuplicate)
-							buffer += " " + user.hosts[j];
-						hostFound = true;
+						if (!foundDuplicate) {
+							buffer = userBuffer + " host " + user.hosts[j] + " " + user.lastSeenTimes[j] + "\n";
+							dataFileWriter.write(buffer, 0, buffer.length());
+						}
 					}
 				}
-				buffer += "\n";
-				if (hostFound)
-					dataFileWriter.write(buffer, 0, buffer.length());
 
 				if (user.away != null) {
 					buffer = userBuffer;
@@ -305,7 +343,13 @@ class SephiaBot implements IRCListener {
 					dataFileWriter.write(buffer, 0, buffer.length());
 
 					buffer = userBuffer;
-					buffer += " leavetime " + user.leavetime + "\n";
+					buffer += " leavetime " + user.leaveTime + "\n";
+					dataFileWriter.write(buffer, 0, buffer.length());
+				}
+
+				if (user.lastTalked > 0) {
+					buffer = userBuffer;
+					buffer += " lasttalked " + user.lastTalked + "\n";
 					dataFileWriter.write(buffer, 0, buffer.length());
 				}
 			}
@@ -590,6 +634,19 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	public void updateUser(String nick, String host) {
+		User user = getUserByHost(host);
+		if (user == null)
+			return;
+		user.lastTalked = System.currentTimeMillis();
+		for (int i = 0; i < 10; i++) {
+			if (iequals(user.hosts[i], host)) {
+				user.lastSeenTimes[i] = System.currentTimeMillis();
+				break;
+			}
+		}
+	}
+	
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
 		
@@ -599,8 +656,8 @@ class SephiaBot implements IRCListener {
 		
 		msg = msg.trim();
 
+		updateUser(nick, host);
 		checkForMessages(nick, host, recipient);
-
 		checkForBlacklist(nick, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
@@ -644,10 +701,9 @@ class SephiaBot implements IRCListener {
 
 		msg = msg.trim();
 
+		updateUser(nick, host);
 		checkForMessages(nick, host, recipient);
-
 		checkForBlacklist(nick, recipient);
-
 		updateHistory(nick, msg);
 		
 		//Say hello!
@@ -776,9 +832,12 @@ class SephiaBot implements IRCListener {
 			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))? vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (vino.away == null) {
-						ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
+						if (vino.lastTalked > 0)
+							ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone. The last time he said anything was " + makeTime(vino.lastTalked) + " ago.");
+						else
+							ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
 					} else {
-						ircio.privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leavetime) + ".");
+						ircio.privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -794,12 +853,12 @@ class SephiaBot implements IRCListener {
 						for (int i = 0; i < users.length; i++) {
 							User user = users[i];
 							if (user.away != null) {
-								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leavetime) + ".");
+								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leaveTime) + ".");
 								foundAway = true;
 							}
 						}
 						if (vino.away != null) {
-							ircio.privmsg(recipient, vino.userName + " has been " + vino.away + " for " + makeTime(vino.leavetime) + ".");
+							ircio.privmsg(recipient, vino.userName + " has been " + vino.away + " for " + makeTime(vino.leaveTime) + ".");
 							foundAway = true;
 						}
 						if (!foundAway)
@@ -815,9 +874,12 @@ class SephiaBot implements IRCListener {
 					} else
 						targetName = target.userName; //use correct caps
 					if (target.away == null) {
-						ircio.privmsg(recipient, "I don't know.");
+						if (target.lastTalked > 0)
+							ircio.privmsg(recipient, "I don't know, the last time they said anything was " + makeTime(target.lastTalked) + " ago.");
+						else
+							ircio.privmsg(recipient, "I don't know.");
 					} else {
-						ircio.privmsg(recipient, targetName + " is " + target.away + ".  " + targetName + " has been gone for " + makeTime(target.leavetime) + ".");
+						ircio.privmsg(recipient, targetName + " is " + target.away + ".  " + targetName + " has been gone for " + makeTime(target.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -1097,6 +1159,7 @@ class SephiaBot implements IRCListener {
 						for (i = 0; i < 10; i++) {
 							if (vino.hosts[i] == null || vino.hosts[i].length() <= 0) {
 								vino.hosts[i] = host;
+								vino.lastSeenTimes[i] = System.currentTimeMillis();
 								foundSpot = true;
 								break;
 							}
@@ -1127,6 +1190,7 @@ class SephiaBot implements IRCListener {
 						for (i = 0; i < 10; i++) {
 							if (users[userID].hosts[i] == null || users[userID].hosts[i].length() <= 0) {
 								users[userID].hosts[i] = host;
+								users[userID].lastSeenTimes[i] = System.currentTimeMillis();
 								foundSpot = true;
 								break;
 							}
@@ -1151,11 +1215,11 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String location = tok.nextToken("").trim();
-					if (iregex("^back", location)) {
+					if (iregex("^ba+ck", location)) {
 						if (user.away == null) {
 							ircio.privmsg(recipient, "Of course you are honey.");
 						} else {
-							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(user.leavetime) + ".");
+							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(user.leaveTime) + ".");
 							user.away = null;
 						}
 					} else {
@@ -1164,7 +1228,7 @@ class SephiaBot implements IRCListener {
 						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(","))
 							location = location.substring(0, location.length()-1);
 						user.away = location.replaceAll("\"", "'");
-						user.leavetime = System.currentTimeMillis();
+						user.leaveTime = System.currentTimeMillis();
 					}
 					writeData();
 					return;
