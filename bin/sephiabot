@@ -1,0 +1,10 @@
+while true
+do
+  cd ~/sephiabot
+  java SephiaBot $*
+  retval=$?
+  if test $retval -ne 1; then
+    break; # if 0 is returned then just quit
+  fi
+  
+done 
