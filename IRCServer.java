@@ -83,6 +83,12 @@ class IRCChannel {
     }
   }
 
+  boolean userInChannel(String nick) {
+	  for (IRCUser user = users; users != null; user = user.next)
+		  if (user.name.equalsIgnoreCase(nick))
+			  return true;
+	  return false;
+  }
 }
 
 class IRCUser {

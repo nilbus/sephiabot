@@ -129,6 +129,8 @@ class SephiaBot implements IRCListener {
 	void poll() {
 		ircio.poll();
 
+		checkForReminders();
+		
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException ie) {}
@@ -175,6 +177,81 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	public void checkForReminders() {
+		Reminder reminders[] = data.getUnnotifiedReminders();
+		for (int i = 0; i < reminders.length; i++) {
+			Reminder reminder = reminders[i];
+			reminder.notified = true;
+			for (int j = 0; j < server.channels.length; j++) {
+				if (!server.channels[j].userInChannel(reminder.target))
+					continue;
+				String sender = reminder.sender;
+				if (iequals(reminder.sender, reminder.target))
+					sender = "yourself";
+				ircio.privmsg(server.channels[j].name, reminder.target + ", reminder from " + sender + " " + makeTime(reminder.timeSent) + " ago: " + reminder.message);
+			}
+		}
+		data.findNextReminderTime();
+	}
+	
+	public void checkForReminders(String nick, String host, String recipient) {
+		User user = data.getUserByHost(host);
+		Reminder reminders[] = data.getRemindersByReceiver(nick, user);
+		if (reminders.length <= 0)
+			return;
+		int notified = 0;
+		for (int i = 0; i < reminders.length; i++) {
+			if (notified >= 5) {
+				ircio.privmsg(recipient, "You have more reminders.");
+				return;
+			}
+			Reminder reminder = reminders[i];
+			if (!reminder.notified)
+				continue;
+			notified++;
+			String sender = reminder.sender;
+			if (iequals(reminder.sender, reminder.target))
+				sender = "yourself";
+			ircio.privmsg(recipient, reminder.target + ", reminder from " + sender + " " + makeTime(reminder.timeSent) + " ago: " + reminder.message);
+			data.removeReminder(reminder);
+		}
+	}
+	
+	public void processReminder(String sender, String target, String msg) {
+		StringTokenizer tok = new StringTokenizer(msg, " ");
+		if (!tok.hasMoreElements())
+			return;
+		String when = tok.nextToken(" ");
+		String message = null;
+		long goalTime = 0;
+		if (iequals(when, "in")) {
+//			processReminderIn(tok.nextToken(""));
+		} else if (iequals(when, "on")) {
+		} else if (iequals(when, "at")) {
+		} else {
+			message = msg;
+			goalTime = System.currentTimeMillis() + 1000*60;
+//			sendReminder(sender, target, message, goalTime);
+		}
+	}
+	
+	public boolean processReminderIn(String sender, String target, String msg) {
+		StringTokenizer tok = new StringTokenizer(msg, " ");
+		if (!tok.hasMoreElements())
+			return false;
+		String number = tok.nextToken();
+		if (!tok.hasMoreElements())
+			return false;
+		String time = tok.nextToken();
+		long goalTime = System.currentTimeMillis() + data.stringToNumber(number) + data.stringToTime(time);
+//		sendReminder(sender, target, message, goalTime);
+		return true;
+	}
+	
+	public void sendReminder(String sender, String target, String message, String goalTime) {
+//		data.addReminder(target, message, sender, goalTime);
+	}
+	
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
 		
@@ -186,6 +263,7 @@ class SephiaBot implements IRCListener {
 
 		data.updateUserTimes(nick, host);
 		checkForMessages(nick, host, recipient);
+		checkForReminders(nick, host, recipient);
 		checkForBlacklist(nick, host, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
@@ -232,6 +310,7 @@ class SephiaBot implements IRCListener {
 
 		data.updateUserTimes(nick, host);
 		checkForMessages(nick, host, recipient);
+		checkForReminders(nick, host, recipient);
 		checkForBlacklist(nick, host, recipient);
 		updateHistory(nick, msg);
 		
@@ -525,6 +604,26 @@ class SephiaBot implements IRCListener {
 								ircio.privmsg(recipient, "...if you can call that a number.");
 							}
 							return;
+						} else if (killed.equalsIgnoreCase("reminder")) {
+							if (!tok.hasMoreElements()) {
+								ircio.privmsg(recipient, "Which reminder? I need a number");
+								return;
+							}
+							try {
+								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
+								User user = data.getUserByHost(host);
+								Reminder reminders[] = data.getRemindersBySender(nick, user);
+								if (msgIndex >= reminders.length || msgIndex < 0) {
+									ircio.privmsg(recipient, "You don't have that many reminders.");
+									return;
+								}
+								Reminder reminder = reminders[msgIndex];
+								ircio.privmsg(recipient, "Reminder removed from " + reminder.sender + " to " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + makeTime(reminder.timeToArrive) + " from now: " + reminder.message);
+								data.removeReminder(reminder);
+							} catch (NumberFormatException nfe) {
+								ircio.privmsg(recipient, "...if you can call that a number.");
+							}
+							return;
 						} else
 							ircio.privmsg(recipient, "Kill who what now?"); 
 						return;
@@ -558,6 +657,53 @@ class SephiaBot implements IRCListener {
 						data.addMessage(target, message, sender);
 					data.writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
+				} else if (iequals("remind", cmd)) {
+					// Bit, remind [person] (at [time] on [day]) OR (in [duration]) OR (every [timespan]) [do this]
+					if (!tok.hasMoreElements()) {
+						ircio.privmsg(recipient, "Remind who when what?");
+						return;
+					}
+					String target = tok.nextToken(" ");
+					String sender = nick;
+					while (target.endsWith(".") || target.endsWith("!") || target.endsWith(","))
+						target = target.substring(0, target.length()-1);
+					if (iequals(target, "me"))
+						target = nick;
+					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
+					User targetUser = getUserByNick(target);
+					if (targetUser != null)
+						target = targetUser.userName;
+					//If the sending user is logged in, send the reminders as his username instead so that all the reminders are sent by the same user.
+					User senderUser = data.getUserByHost(host);
+					if (senderUser != null)
+						sender = senderUser.userName;
+					if (!tok.hasMoreElements()) {
+						ircio.privmsg(recipient, "Remind " + target + " when what?");
+						return;
+					}
+					String when = tok.nextToken(" ");
+					String message = null;
+					long goalTime = 0;
+					if (iequals(when, "in")) {
+					} else if (iequals(when, "on")) {
+					} else if (iequals(when, "at")) {
+					} else if (iequals(when, "on")) {
+//					} else if (iequals(when, "every")) {
+					} else {
+						message = when;
+						//Default to five seconds.
+						goalTime = System.currentTimeMillis() + 1000*5;
+					}
+					goalTime = System.currentTimeMillis() + 1000*5;
+					if (message == null) {
+						if (!tok.hasMoreElements()) {
+							ircio.privmsg(recipient, "Remind " + target + " what?");
+							return;
+						}
+						message = tok.nextToken("");
+					}
+					data.addReminder(target, message, sender, goalTime);
+					ircio.privmsg(recipient, "OK, I won't forget.");
 				} else if (iregex("^(butt?)?se(x|ck[sz])$", cmd)) {
 					if (!tok.hasMoreElements()) {
 						ircio.privemote(recipient, "anally rapes " + nick + ".");
@@ -710,7 +856,6 @@ class SephiaBot implements IRCListener {
 					return;
 				} else if (iequals(cmd, "messages")) {
 					User user = data.getUserByHost(host);
-					boolean foundMessage = false;
 					int lastIndex, firstIndex = 0;
 					if (tok.hasMoreElements()) {
 						try {
@@ -735,6 +880,40 @@ class SephiaBot implements IRCListener {
 					ircio.privmsg(recipient, "You have sent the following messages:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
 						ircio.privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
+					}
+				} else if (iequals(cmd, "reminders")) {
+					User user = data.getUserByHost(host);
+					int lastIndex, firstIndex = 0;
+					if (tok.hasMoreElements()) {
+						try {
+							firstIndex = Integer.parseInt(tok.nextToken())-1;
+							if (firstIndex < 1)
+								firstIndex = 1;
+						} catch (NumberFormatException nfe) {
+						}
+					}
+					Reminder reminders[] = data.getRemindersBySender(nick, user);
+					if (reminders.length == 0) {
+						ircio.privmsg(recipient, "You havent sent any reminders.");
+						return;
+					}
+					if (firstIndex >= reminders.length) {
+						ircio.privmsg(recipient, "You don't have that many reminders.");
+						return;
+					}
+					lastIndex = firstIndex + 5;
+					if (lastIndex >= reminders.length)
+						lastIndex = reminders.length-1;
+					ircio.privmsg(recipient, "You have sent the following reminders:");
+					for (int i = firstIndex; i <= lastIndex; i++) {
+						Reminder reminder = reminders[i];
+						String target = reminder.target;
+						if (iequals(reminder.target, nick))
+							target = "you";
+						String sender = reminder.sender;
+						if (iequals(reminder.sender, nick))
+							sender = "you";
+						ircio.privmsg(recipient, "Reminder " + (i+1) + ": From " + sender + " to " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + makeTime(reminder.timeToArrive) + " from now: " + reminder.message);
 					}
 				} else if (iequals(cmd, "say")) {
 					if (!data.isAdmin(host)) {

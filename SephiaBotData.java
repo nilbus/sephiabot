@@ -25,6 +25,9 @@ class SephiaBotData {
 
 	private Message firstMessage = null;
 
+	private long nextReminder;
+	private Reminder firstReminder = null;
+
 	private User vino;
 	private User users[];
 
@@ -60,6 +63,7 @@ class SephiaBotData {
 		this.blacklist = new String[] {};
 		this.censor = true;
 		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
+		this.nextReminder = 0;
 	}
 	
 	void loadData() {
@@ -81,7 +85,8 @@ class SephiaBotData {
 			int hostsThrownOut = 0;
 			int awayMsgLoaded = 0;
 			int awayMsgThrownOut = 0;
-			firstMessage = null;		//Keep messages already in memory from persisting.
+			firstMessage = null;		//Keep messages and reminders already in memory from persisting.
+			firstReminder = null;
 lineLoop:
 			while (dataFileReader.ready()) {
 				String line = dataFileReader.readLine();
@@ -454,6 +459,36 @@ lineLoop:
 		return true;
 	}
 	
+	long stringToNumber(String string) {
+		try {
+			long i = Long.parseLong(string);
+			return i;
+		} catch (NumberFormatException nfe) {
+			//etc etc.
+			if (iequals("zero", string)) {
+				return 0;
+			} else if (iequals("one", string)) {
+				return 1;
+			}
+		}
+		return 0;
+	}
+	
+	long stringToTime(String string) {
+		if (iregex("^s", string)) {
+			return 1000;
+		} else if (iregex("^m", string)) {
+			return 1000*60;
+		} else if (iregex("^h", string)) {
+			return 1000*60*60;
+		} else if (iregex("^d", string)) {
+			return 1000*60*60*24;
+		} else if (iregex("^w", string)) {
+			return 1000*60*60*24*7;
+		}
+		return 0;
+	}
+	
 	private StringBuffer replaceKeywords(StringBuffer greeting) {
 		int keyindex = greeting.indexOf("%n");
 	
@@ -591,6 +626,92 @@ lineLoop:
 		for (int i = 0; i < users.length; i++)
 			addMessage(users[i].userName, message, nick);
 		addMessage("Vino", message, nick);
+	}
+	
+	//Called ten times a second, so must be relatively fast.
+	Reminder[] getUnnotifiedReminders() {
+		if (System.currentTimeMillis() < nextReminder || nextReminder == 0)
+			return new Reminder[0];
+		Vector reminders = new Vector(10);
+		for (Reminder curr = firstReminder; curr != null; curr = curr.next) {
+			if (curr.timeToArrive < System.currentTimeMillis() && !curr.notified) {
+				reminders.add(curr);
+			}
+		}
+		if (reminders.size() <= 0) {
+			//If no reminders were found, then we must be somewhat close. Be sure to check again sometime soon.
+			nextReminder = System.currentTimeMillis() + 10;
+			return new Reminder[0];
+		}
+		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
+	}
+
+	Reminder[] getRemindersByReceiver(String receiver, User user) {
+		if (receiver == null)
+			return new Reminder[0];
+		Vector reminders = new Vector(10);
+		for (Reminder curr = firstReminder; curr != null; curr = curr.next) {
+			if (iequals(curr.target, receiver) || (user != null && iequals(user.userName, curr.target))) {
+				reminders.add(curr);
+			}
+		}
+		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
+	}
+	
+	Reminder[] getRemindersBySender(String sender, User user) {
+		if (sender == null)
+			return new Reminder[0];
+		Vector reminders = new Vector(10);
+		for (Reminder curr = firstReminder; curr != null; curr = curr.next) {
+			if (iequals(curr.sender, sender) || (user != null && iequals(curr.sender, user.userName))) {
+				reminders.add(curr);
+			}
+		}
+		return (Reminder[])reminders.toArray(new Reminder[reminders.size()]);
+	}
+	
+	boolean removeReminder(Reminder kill) {
+		Reminder curr = firstReminder;
+		Reminder last = null;
+
+		while (curr != null) {
+			if (curr == kill) {
+				if (last == null)
+					firstReminder = curr.next;
+				else
+					last.next = curr.next;
+				writeData();
+				findNextReminderTime();
+				return true;
+			} else {
+				last = curr;
+			}
+			curr = curr.next;
+		}
+		return false;
+	}
+	
+	void addReminder(String target, String message, String nick, long time) {
+		if (firstReminder == null) {
+			firstReminder = new Reminder(target, message, nick, time);
+		} else {
+			Reminder curr = firstReminder;
+			while (curr.next != null)
+				curr = curr.next;
+			curr.next = new Reminder(target, message, nick, time);
+		}
+		findNextReminderTime();
+	}
+	
+	void findNextReminderTime() {
+		long earliestTime = 0;
+		for (Reminder curr = firstReminder; curr != null; curr = curr.next) {
+			if (earliestTime == 0 && curr.notified == false)
+				earliestTime = curr.timeToArrive;
+			else if (curr.timeToArrive < earliestTime && curr.notified == false)
+				earliestTime = curr.timeToArrive;
+		}
+		nextReminder = earliestTime;
 	}
 	
 	boolean validateLogin(String login, String password) {
