@@ -3,6 +3,8 @@ kick for spamming
 fix all the channel maintanance stuff
 If a message starts with "to" have kali warn about using messages in the first
 person.
+kali where is everyone
+kali tell everyone
 
 hug vino back
 - words in the hello list (don't trigger responses)

@@ -1,38 +1,12 @@
 /*
 TODO: Reminders
-TODO: Allow multiple hosts to log in
 TODO: Better handling of dropped connections, etc.
 TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
 TODO: Track nick changes so who is here works.
 */
-import java.net.*;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
-
-class Message {
-	String target;
-	String sender;
-	String message;
-	long time;
-	Message next;
-
-	Message(String target, String message, String sender) {
-		this.target = target;
-		this.message = message;
-		this.sender = sender;
-		time = System.currentTimeMillis();
-		next = null;
-	}
-
-	Message(String target, String message, String sender, long time) {
-		this.target = target;
-		this.message = message;
-		this.sender = sender;
-		this.time = time;
-		next = null;
-	}
-}
 
 class SephiaBot implements IRCListener {
 
@@ -50,9 +24,8 @@ class SephiaBot implements IRCListener {
 
 	private Message firstMessage = null;
 
-	private String vinohost[];
-	private String vinoaway;
-	private long vinoleavetime;
+	private User vino;
+	private User users[];
 
 	private IRCIO ircio;
 	private BufferedWriter logOut[];
@@ -61,6 +34,7 @@ class SephiaBot implements IRCListener {
 	private IRCServer server;
 
 	private String dataFileName;
+	private String usersFileName;
 
 	private long nextWho;
 	private long nextHi;
@@ -109,19 +83,20 @@ class SephiaBot implements IRCListener {
 		this.port = 6667;
 		this.channels = new String[] {"#sephiabot"};
 		this.greeting = "Hello, I am %n, the channel bot. You all suck.";
-		this.hellos = new String[] {"hello","hi","yo","hey","greetings","konichiwa","hola","sup"};
-		this.helloreplies = new String[] {"yo"};
+		this.hellos = new String[] {"hi[hy2]?", "yo[^u]", "hey", "greetings\\b", "kon{1,2}ichiwa", "hola\\b", "sup", "morning\\b", "(y\\s)?h[aeu]l{1,2}o"};
+		this.helloreplies = new String[] {"Yo."};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
 		this.dataFileName = "sephiabot.dat";
+		this.usersFileName = "users.cfg";
 
 		this.nextWho = 0;
 		this.nextHi = 0;
-		this.vinohost = new String[10];
+
+		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN, new String[10], "", 0);
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);
-		loadData();
 
 		try {
 			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
@@ -174,6 +149,7 @@ class SephiaBot implements IRCListener {
 		try {
 			int messagesLoaded = 0;
 			int messagesThrownOut = 0;
+			firstMessage = null;		//Keep messages already in memory from persisting.
 			while (dataFileReader.ready()) {
 				String line = dataFileReader.readLine();
 				StringTokenizer tok = new StringTokenizer(line, " ");
@@ -183,14 +159,34 @@ class SephiaBot implements IRCListener {
 				if (command.equals("vinohost")) {
 					int hostsLoaded = 0;
 					while (tok.hasMoreElements() && hostsLoaded < 10)
-						this.vinohost[hostsLoaded++] = tok.nextToken(" ").trim();
+						this.vino.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
 					log("Loaded " + hostsLoaded + " vinohosts");
 				} else if (command.equals("vinoaway")) {
-					this.vinoaway = tok.nextToken("").trim();
-					log("Loaded vinoaway " + this.vinoaway);
+					this.vino.away = tok.nextToken("").trim();
+					log("Loaded vinoaway " + this.vino.away);
 				} else if (command.equals("vinoleavetime")) {
-					this.vinoleavetime = Long.parseLong(tok.nextToken("").trim());
-					log("Loaded vinoleavetime " + this.vinoleavetime);
+					this.vino.leavetime = Long.parseLong(tok.nextToken("").trim());
+					log("Loaded vinoleavetime " + this.vino.leavetime);
+				} else if (command.equals("userdata")) {
+					String userName = tok.nextToken().trim();
+					User user = getUserByName(userName);
+					if (user == null) {
+						logerror("Tried to load userdata for nonexistent user " + userName + ".");
+						continue;
+					}
+					String subCommand = tok.nextToken();
+					if (subCommand.equals("hosts")) {
+						int hostsLoaded = 0;
+						while (tok.hasMoreElements() && hostsLoaded < 10)
+							user.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
+						log("Loaded " + hostsLoaded + " hosts for user " + user.userName);
+					} else if (subCommand.equals("away")) {
+						user.away = tok.nextToken("").trim();
+						log("Loaded away for user " + user.userName + ": " + user.away);
+					} else if (subCommand.equals("leavetime")) {
+						user.leavetime = Long.parseLong(tok.nextToken("").trim());
+						log("Loaded leavetime for user " + user.userName + ": " + user.leavetime);
+					}
 				} else if (command.equals("message")) {
 					String nick = tok.nextToken(" ").trim();
 					String target = tok.nextToken(" ").trim();
@@ -213,7 +209,8 @@ class SephiaBot implements IRCListener {
 					}
 				}
 			}
-			log(messagesLoaded + " messages loaded, " + messagesThrownOut + " messages thrown out.");
+			log("Messages loaded: " + messagesLoaded);
+			log("Messages thrown out: " + messagesThrownOut);
 		} catch (IOException ioe) {
 			logerror("Couldn't read data file " + filename + ".");
 		}
@@ -236,20 +233,20 @@ class SephiaBot implements IRCListener {
 			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
 			dataFileWriter.write(buffer, 0, buffer.length());
 		
-			buffer = "vinohost ";
+			buffer = "vinohost";
 			boolean hostFound = false;
 			for (int i = 0; i < 10; i++) {
-				if (vinohost[i] != null && vinohost[i].length() > 0) {
+				if (vino.hosts[i] != null && vino.hosts[i].length() > 0) {
 					//Check the array up until now for duplicate entries.
 					boolean foundDuplicate = false;
 					for (int j = 0; j < i; j++) {
-						if (vinohost[j].equals(vinohost[i])) {
+						if (vino.hosts[j].equals(vino.hosts[i])) {
 							foundDuplicate = true;
 							break;
 						}
 					}
 					if (!foundDuplicate)
-						buffer += " " + this.vinohost[i];
+						buffer += " " + this.vino.hosts[i];
 					hostFound = true;
 				}
 			}
@@ -257,14 +254,49 @@ class SephiaBot implements IRCListener {
 			if (hostFound)
 				dataFileWriter.write(buffer, 0, buffer.length());
 
-			if (this.vinoaway != null) {
-				buffer = "vinoaway " + this.vinoaway + "\n";
+			if (this.vino.away != null) {
+				buffer = "vinoaway " + this.vino.away + "\n";
 				dataFileWriter.write(buffer, 0, buffer.length());
 
-				buffer = "vinoleavetime " + this.vinoleavetime + "\n";
+				buffer = "vinoleavetime " + this.vino.leavetime + "\n";
 				dataFileWriter.write(buffer, 0, buffer.length());
 			}
 
+			for (int i = 0; i < users.length; i++) {
+				User user = users[i];
+				String userBuffer = "userdata " + user.userName;
+				buffer = userBuffer + " hosts";
+				hostFound = false;
+				for (int j = 0; j < 10; j++) {
+					if (user.hosts[j] != null && user.hosts[j].length() > 0) {
+						//Check the array up until now for duplicate entries.
+						boolean foundDuplicate = false;
+						for (int k = 0; k < j; k++) {
+							if (user.hosts[k].equals(user.hosts[j])) {
+								foundDuplicate = true;
+								break;
+							}
+						}
+						if (!foundDuplicate)
+							buffer += " " + user.hosts[j];
+						hostFound = true;
+					}
+				}
+				buffer += "\n";
+				if (hostFound)
+					dataFileWriter.write(buffer, 0, buffer.length());
+
+				if (user.away != null) {
+					buffer = userBuffer;
+					buffer += " away " + user.away + "\n";
+					dataFileWriter.write(buffer, 0, buffer.length());
+
+					buffer = userBuffer;
+					buffer += " leavetime " + user.leavetime + "\n";
+					dataFileWriter.write(buffer, 0, buffer.length());
+				}
+			}
+			
 			if (this.firstMessage != null) {
 				Message currMessage = this.firstMessage;
 				do {
@@ -291,6 +323,48 @@ class SephiaBot implements IRCListener {
 		log("Wrote data file.");
 	}
 
+	void loadUsers() {
+		String filename = usersFileName;
+		log("Loading " + filename);
+
+		BufferedReader dataFileReader;
+
+		try {
+			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
+		} catch (IOException ioe) {
+			return;  //Assume no datafile has been created if it doesn't exist
+		}
+
+		try {
+			Vector newUserList = new Vector();
+			while (dataFileReader.ready()) {
+				String line = dataFileReader.readLine();
+				StringTokenizer tok = new StringTokenizer(line, " ");
+				if (line.startsWith("//") || !tok.hasMoreElements())
+					continue;
+				String userName = tok.nextToken(" ");
+				//If there are no elements, throw a WTFException and continue blindly.
+				if (!tok.hasMoreElements())
+					continue;
+				String password = tok.nextToken(" ");
+				//If there are no elements, throw a WTFException and continue blindly.
+				if (!tok.hasMoreElements())
+					continue;
+				String memberTypeString = tok.nextToken("").trim();
+				int memberType = User.USER_MEMBER;
+				if (memberTypeString.equalsIgnoreCase("admin"))
+					memberType = User.USER_ADMIN;
+				User newUser = new User(userName, password, memberType);
+				newUserList.add(newUser);
+			}
+			users = new User[newUserList.size()];
+			users = (User[])newUserList.toArray(users);
+			log(users.length + " users loaded.");
+		} catch (IOException ioe) {
+			logerror("Couldn't read data file " + filename + ".");
+		}
+	}
+	
 	void parseConfig(String filename) {
 		log("Parsing " + filename);
 
@@ -363,6 +437,9 @@ class SephiaBot implements IRCListener {
 				} else if (command.equals("datafilename")) {
 					this.dataFileName = tok.nextToken("").trim();
 					log("datafilename changed to " + this.dataFileName);
+				} else if (command.equals("usersfilename")) {
+					this.dataFileName = tok.nextToken("").trim();
+					log("usersfilename changed to " + this.dataFileName);
 				} else if (command.equals("sephiadir")) {
 					this.sephiadir = tok.nextToken("").trim();
 					log("sephiadir changed to " + this.sephiadir);
@@ -372,6 +449,8 @@ class SephiaBot implements IRCListener {
 			logerror("Couldn't read cfg file " + filename + ".");
 		}
 		
+		loadUsers();
+		loadData();
 	}
 
 	StringBuffer replaceKeywords(StringBuffer greeting) {
@@ -420,6 +499,65 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	//Get a user by his username only.
+	public User getUserByName(String name) {
+		for (int i = 0; i < users.length; i++)
+			if (users[i].userName.equalsIgnoreCase(name.trim()))
+				return users[i];
+		return null;
+	}
+	
+	//Find a user by his IRC nick. If an IRC nick is found matching the specified nick, any users logged in
+	// with that host are returned. Otherwise, any user names matching the specified nick are returned. Note
+	// that if someone's occupies a nick but is not logged in as that nick, this function will return null.
+	public User getUserByNick(String name) {
+		for (int i = 0; i < server.channels.length; i++) {
+			for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+				if (curr.name.equals(name)) {
+					return getUserByHost(curr.host);
+				}
+			}
+		}
+		return getUserByName(name);
+	}
+	
+	//Guarunteed the person is logged in. Gets a User from a host.
+	public User getUserByHost(String host) {
+		for (int i = 0; i < users.length; i++) {
+			for (int j = 0; j < 10; j++)
+				if (users[i].hosts[j] != null && users[i].hosts[j].equalsIgnoreCase(host.trim()))
+					return users[i];
+		}
+		return null;
+	}
+	
+	public void checkForMessages(String nick, String host, String recipient) {
+		//Check if this person has any messages.
+		Message currMsg = firstMessage;
+		Message lastMsg = null;
+		int numberSent = 0;
+		while (currMsg != null) {
+			if (iequals(currMsg.target, nick)) {
+				if (numberSent == 0) {
+					ircio.privmsg(recipient, nick + ", you have messages!");
+				} else if (numberSent >= 5) {
+					ircio.privmsg(recipient, "You have more messages.");
+					break;
+				}
+				ircio.privmsg(recipient, "Message from " + currMsg.sender + " [" + makeTime(currMsg.time) + " ago]:" + currMsg.message);
+				numberSent++;
+				if (lastMsg == null)
+					firstMessage = currMsg.next;
+				else
+					lastMsg.next = currMsg.next;
+				writeData();
+			} else {
+				lastMsg = currMsg;
+			}
+			currMsg = currMsg.next;
+		}
+	}
+
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
 		
@@ -429,6 +567,8 @@ class SephiaBot implements IRCListener {
 		
 		msg = msg.trim();
 
+		checkForMessages(nick, host, recipient);
+		
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
 						
@@ -461,31 +601,8 @@ class SephiaBot implements IRCListener {
 
 		msg = msg.trim();
 
-		//Check if this person has any messages.
-		Message currMsg = firstMessage;
-		Message lastMsg = null;
-		int numberSent = 0;
-		while (currMsg != null) {
-			if (iequals(currMsg.target, nick)) {
-				if (numberSent == 0) {
-					ircio.privmsg(recipient, nick + ", you have messages!");
-				} else if (numberSent >= 5) {
-					ircio.privmsg(recipient, "You have more messages.");
-					break;
-				}
-				ircio.privmsg(recipient, "Message from " + currMsg.sender + " [" + makeTime(currMsg.time) + " ago]:" + currMsg.message);
-				numberSent++;
-				if (lastMsg == null)
-					firstMessage = currMsg.next;
-				else
-					lastMsg.next = currMsg.next;
-				writeData();
-			} else {
-				lastMsg = currMsg;
-			}
-			currMsg = currMsg.next;
-		}
-
+		checkForMessages(nick, host, recipient);
+		
 		//Bot has been mentioned?
 		if (iregex(name, msg) && gamesurge()) {
 			if (iregex("fuck you", msg)) {
@@ -525,7 +642,7 @@ class SephiaBot implements IRCListener {
 
 		StringTokenizer tok = new StringTokenizer(msg, ",: ");
 		String botname;
-		if (tok.hasMoreElements()) {
+		if (!pm && tok.hasMoreElements()) {
 			botname = tok.nextToken();
 		} else {
 			botname = "";
@@ -534,13 +651,12 @@ class SephiaBot implements IRCListener {
 		if (pm || talkingToMe(msg)) {
 
 			//Remove the bot's name
-			if (!pm) {
+			if (!pm)
 				msg = msg.substring(msg.indexOf(" ")+1);
 
-				if (iregex("bring out the strapon", msg)) {
-					ircio.privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
-					return;
-				}
+			if (iregex("bring out the strapon", msg)) {
+				ircio.privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
+				return;
 			}
 
 			//Remove punctuation from the end
@@ -606,7 +722,11 @@ class SephiaBot implements IRCListener {
 				}
 			} else if (iregex("who is", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Nobody important.");
+					User target = getUserByNick(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
+					if (target == null)
+						ircio.privmsg(recipient, "Nobody important.");
+					else
+						ircio.privmsg(recipient, "He's a cool guy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -628,26 +748,44 @@ class SephiaBot implements IRCListener {
 				}
 			} else if (iregex("where is vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					if (vinoaway == null) {
+					if (vino.away == null) {
 						ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
 					} else {
-						ircio.privmsg(recipient, "He's " + vinoaway + ". He's been gone for " + makeTime(vinoleavetime) + ".");
+						ircio.privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leavetime) + ".");
+					}
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
+			} else if (iregex("where is", msg)) {
+				if (System.currentTimeMillis() > nextWho) {	//!spam
+					User target = getUserByNick(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
+					if (target == null) {
+						ircio.privmsg(recipient, "Like I know.");
+						return;
+					}
+					if (target.away == null) {
+						ircio.privmsg(recipient, "I don't know.");
+					} else {
+						ircio.privmsg(recipient, "Away message: " + target.away + ". Time away: " + makeTime(target.leavetime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
 			} else if (iregex("who am i", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					if (!isVino(host)) {
-						ircio.privmsg(recipient, "Nobody important.");
-					} else {
+					User target = getUserByHost(host);
+					if (isVino(host)) {
 						ircio.privmsg(recipient, "Daddy!");
 						ircio.privemote(recipient, "hugs " + nick + ".");
+					} else if (target != null) {
+						ircio.privmsg(recipient, "Someone I know.");
+					} else {
+						ircio.privmsg(recipient, "Nobody important.");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who('| i)s your daddy", msg)) {
+			} else if (iregex("who('| i)?s your daddy", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Vino's my daddy, ugh! Spank me again Vino!");
 					nextWho = System.currentTimeMillis() + 5000;
@@ -687,6 +825,12 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (iregex("do a little dance", msg)) {
+				if (System.currentTimeMillis() > nextWho) {	//!spam
+					ircio.privemote(recipient, "makes a little love.");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
 			} else if (tok.hasMoreElements()) {
 				String cmd = tok.nextToken(" ");
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
@@ -697,18 +841,24 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "KILL! KILL! KILL!");
 						return;
 					}
-					int killerAccess = getAccess(nick, channelNumber(recipient));
 					String killed = tok.nextToken(" ");
-					int killedAccess = getAccess(killed, channelNumber(recipient));
-					if ((killerAccess <= killedAccess || killerAccess == IRCServer.ACCESS_VOICE) && !isVino(host)) {
+					User killerUser = getUserByHost(host);
+					User killedUser = getUserByNick(killed);
+					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !isVino(host)) {
 						ircio.privemote(recipient, "giggles at " + nick);
 						return;
-					} else if (killerAccess == -1 || killedAccess == -1) {
-						ircio.privemote(recipient, "laughs, yeah right.");
-						return;
+					} else if (iequals(killed, "kali")) {
+						ircio.privmsg(recipient, ":(");
 					} else {
+						String killedName;
+						if (killedUser != null)
+							killedName = killedUser.userName;
+						else
+							killedName = killed;
+						if (isVino(host))
+							killerUser = vino;
 						ircio.privmsg(recipient, "It would be my pleasure.");
-						ircio.kick(recipient, killed, "You have been bitched by " + name + ". Have a nice day.");
+						ircio.kick(recipient, killedName, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
 						return;
 					}
 				} else if (iequals(cmd, "tell")) {
@@ -725,7 +875,7 @@ class SephiaBot implements IRCListener {
 					if (firstMessage == null) {
 						firstMessage = new Message(target, message, nick);
 					} else {
-						currMsg = firstMessage;
+						Message currMsg = firstMessage;
 						while (currMsg.next != null)
 							currMsg = currMsg.next;
 						currMsg.next = new Message(target, message, nick);
@@ -749,14 +899,14 @@ class SephiaBot implements IRCListener {
 						}
 					}
 				} else if (iequals(cmd, "reboot")) {
-					if (isVino(host)) {
+					if (isAdmin(host)) {
 						ircio.privmsg(recipient, "Be right back.");
 						System.exit(1);
 					} else
 						ircio.privmsg(recipient, "No.");
 					return;
 				} else if (iequals(cmd, "shutdown")) {
-					if (isVino(host)) {
+					if (isAdmin(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
 						System.exit(0);
 					} else {
@@ -764,25 +914,44 @@ class SephiaBot implements IRCListener {
 					}
 					return;
 				} else if (iequals(cmd, "reload")) {
-					if (isVino(host)) {
+					if (isAdmin(host)) {
 						parseConfig(config);
 						ircio.privmsg(recipient, "Done.");
 					} else {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
+				} else if (iequals(cmd, "save")) {
+					if (isAdmin(host)) {
+						writeData();
+						ircio.privmsg(recipient, "Done.");
+					} else {
+						ircio.privmsg(recipient, "No.");
+					}
+					return;
 				} else if (iequals(cmd, "listhosts")) {
-					String buffer = "Hosts logged in as Vino:";
+					User user = getUserByHost(host);
+					if (isVino(host))
+						user = vino;
+					if (user == null)
+						return;
+					String buffer = "Hosts logged in as " + user.userName + ":";
 					for (int i = 0; i < 10; i++)
-						if (vinohost[i] != null && vinohost[i].length() > 0)
-							buffer += " " + (i+1) + ": " + vinohost[i];
+						if (user.hosts[i] != null && user.hosts[i].length() > 0)
+							buffer += " " + (i+1) + ": " + user.hosts[i];
 					ircio.privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
+					User user = getUserByHost(host);
+					if (isVino(host))
+						user = vino;
+					if (user == null)
+						return;
 					if (!tok.hasMoreElements()) {
 						for (int i = 0; i < 10; i++) {
-							if (vinohost[i] != null && vinohost[i].equals(host)) {
-								vinohost[i] = null;
+							if (user.hosts[i] != null && user.hosts[i].equals(host)) {
+								user.hosts[i] = null;
 								ircio.privmsg(nick, "It's too bad things couldn't work out.");
+								writeData();
 								return;
 							}
 						}
@@ -793,32 +962,34 @@ class SephiaBot implements IRCListener {
 						int i = Integer.parseInt(tok.nextToken("").trim())-1;
 						if (i < 0 || i >= 10)
 							return;
-						if (vinohost[i] == null || vinohost[i].length() <= 0)
+						if (user.hosts[i] == null || user.hosts[i].length() <= 0)
 							ircio.privmsg(nick, "That host is not logged in.");
 						else {
 							ircio.privmsg(nick, "It's too bad things couldn't work out.");
-							vinohost[i] = null;
+							user.hosts[i] = null;
 						}
 					} catch (NumberFormatException nfe) {
 					}
+					writeData();
 				} else if (iequals(cmd, "login")) {
-					if (tok.countTokens() < 1) {
+					if (tok.countTokens() < 2) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
 						return;
 					}
-					String passwd = tok.nextToken("");
-					if (passwd.trim().equals("xxxxx")) {
+					String login = tok.nextToken(" ").trim();
+					String passwd = tok.nextToken("").trim();
+					if (login.trim().equals("vino") && passwd.trim().equals("xxxxx")) {
 						boolean foundSpot = false;
 						int i;
 						for (i = 0; i < 10; i++) {
-							if (vinohost[i] != null && vinohost[i].equals(host)) {
+							if (vino.hosts[i] != null && vino.hosts[i].equals(host)) {
 								ircio.privmsg(nick, "Silly you. You're already logged in.");
 								return;
 							}
 						}
 						for (i = 0; i < 10; i++) {
-							if (vinohost[i] == null || vinohost[i].length() <= 0) {
-								vinohost[i] = host;
+							if (vino.hosts[i] == null || vino.hosts[i].length() <= 0) {
+								vino.hosts[i] = host;
 								foundSpot = true;
 								break;
 							}
@@ -830,36 +1001,68 @@ class SephiaBot implements IRCListener {
 						else
 							ircio.privmsg(nick, "Hi, daddy! :D");
 						writeData();
+					} else if (validateLogin(login, passwd)) {
+						boolean foundSpot = false;
+						int i, userID = -1;
+						for (i = 0; i < users.length; i++)
+							if (users[i].userName.equalsIgnoreCase(login))
+								userID = i;
+						if (userID == -1) {	//WTFException
+							ircio.privmsg(nick, "WTF? Tell Vino you saw this.");
+							return;
+						}
+						for (i = 0; i < 10; i++) {
+							if (users[userID].hosts[i] != null && users[userID].hosts[i].equals(host)) {
+								ircio.privmsg(nick, "Silly you. You're already logged in.");
+								return;
+							}
+						}
+						for (i = 0; i < 10; i++) {
+							if (users[userID].hosts[i] == null || users[userID].hosts[i].length() <= 0) {
+								users[userID].hosts[i] = host;
+								foundSpot = true;
+								break;
+							}
+						}
+						if (!foundSpot)
+							ircio.privmsg(nick, "No spots left.");
+						else
+							ircio.privmsg(nick, "What's up " + users[userID].userName + "?");
+						writeData();
 					} else {
-						ircio.privmsg(nick, "You aint fuckin Vino, prick.");
-						return;
+						ircio.privmsg(nick, "No cigar.");
+						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
 				} else if (iequals(cmd, "i'm")) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "You're what?");
 						return;
 					}
-					if (!isVino(host)) {
+					User user = getUserByHost(host);
+					if (isVino(host)) {
+						user = vino;
+					}
+					if (user == null) {
 						ircio.privmsg(recipient, "I don't care.");
 						return;
 					}
 					String location = tok.nextToken("").trim();
 					if (iequals(location, "back")) {
-						if (vinoaway == null) {
+						if (user.away == null) {
 							ircio.privmsg(recipient, "Of course you are honey.");
 						} else {
-							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(vinoleavetime) + ".");
-							vinoaway = null;
+							ircio.privmsg(recipient, "Welcome back! You've been away for " + makeTime(user.leavetime) + ".");
+							user.away = null;
 						}
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
-						vinoaway = location;
-						vinoleavetime = System.currentTimeMillis();
+						user.away = location;
+						user.leavetime = System.currentTimeMillis();
 					}
 					writeData();
 					return;
 				} else if (iequals(cmd, "say")) {
-					if (!isVino(host)) {
+					if (!isAdmin(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
 					}
@@ -875,7 +1078,7 @@ class SephiaBot implements IRCListener {
 					return;
 				//TODO: Make mode setting colloquial
 				} else if (iequals(cmd, "mode")) {
-					if (!isVino(host)) {
+					if (!isAdmin(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
 					}
@@ -914,6 +1117,13 @@ class SephiaBot implements IRCListener {
 
 	}
 
+	private boolean validateLogin(String login, String password) {
+		for (int i = 0; i < users.length; i++)
+			if (users[i].userName.equalsIgnoreCase(login) && users[i].password.equals(password))
+				return true;
+		return false;
+	}
+	
 	private String randomPhrase(File file) {
 		try {
 			Vector phrases = new Vector();
@@ -932,9 +1142,20 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	public boolean isAdmin(String host) {
+		if (isVino(host))
+			return true;
+		else {
+			User user = getUserByHost(host);
+			if (user != null && user.memberType == User.USER_ADMIN)
+				return true;
+		}
+		return false;
+	}
+	
 	public boolean isVino(String host) {
 		for (int i = 0; i < 10; i++) {
-			if (iequals(host, vinohost[i]))
+			if (iequals(host, vino.hosts[i]))
 				return true;
 		}
 		return false;
@@ -994,7 +1215,7 @@ class SephiaBot implements IRCListener {
 		int channum = channelNumber(channel);
 
 		if (channum > -1) {
-			server.channels[channelNumber(channel)].addUser(nick, IRCServer.ACCESS_NONE);
+			server.channels[channelNumber(channel)].addUser(nick, host, IRCServer.ACCESS_NONE);
 		}
 
 	}
@@ -1034,13 +1255,13 @@ class SephiaBot implements IRCListener {
 		int access;
 		if (mode.equalsIgnoreCase("-v") || mode.equalsIgnoreCase("-o")) {
 			access = IRCServer.ACCESS_NONE;
-			server.channels[channum].addUser(recipient, access);
+			server.channels[channum].addUser(recipient, host, access);
 		} else if (mode.equalsIgnoreCase("+o")) {
 			access = IRCServer.ACCESS_OP;
-			server.channels[channum].addUser(recipient, access);
+			server.channels[channum].addUser(recipient, host, access);
 		} else if (mode.equalsIgnoreCase("+v")) {
 			access = IRCServer.ACCESS_VOICE;
-			server.channels[channum].addUser(recipient, access);
+			server.channels[channum].addUser(recipient, host, access);
 		}
 
 	}
@@ -1063,6 +1284,9 @@ class SephiaBot implements IRCListener {
 		int channum = channelNumber(channel);
 
 		StringTokenizer tok = new StringTokenizer(list, " ");
+		int usersInWhois = 0;
+		String userhostString = "";
+		
 		while (tok.hasMoreElements()) {
 			String user = tok.nextToken();
 			int access;
@@ -1078,9 +1302,44 @@ class SephiaBot implements IRCListener {
 			if (access > 0) {
 				user = user.substring(1);
 			}
-			server.channels[channum].addUser(user, access);
+			server.channels[channum].addUser(user, "", access);
+			
+			userhostString += " " + user;
+			if (++usersInWhois == 5) {
+				ircio.userhost(userhostString);
+				usersInWhois = 0;
+				userhostString = "";
+			}
 		}
+		if (usersInWhois > 0)
+			ircio.userhost(userhostString);
 
+	}
+
+	public void messageUserHosts(String users) {
+		StringTokenizer tok = new StringTokenizer(users, " =");
+
+hostFinder:
+		while (tok.hasMoreElements()) {
+			String name = tok.nextToken();
+
+			//If no more elements, throw WTFException
+			if (!tok.hasMoreElements())
+				return;
+
+			String host = tok.nextToken();
+			host = host.substring(1, host.length());
+
+			//For every channel, find users that fit this username and assign this host to them.
+			for (int i = 0; i < server.channels.length; i++) {
+				for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+					if (curr.name.equals(name)) {
+						curr.host = host;
+						continue hostFinder;
+					}
+				}
+			}
+		}
 	}
 
 	public void messageReceived(String msg) {
@@ -1152,275 +1411,6 @@ class SephiaBot implements IRCListener {
 
 }
 
-class IRCIO {
-
-	private Socket socket;
-	private IRCListener listener;
-	private String network;
-	private String name;
-
-	private BufferedReader in;
-	private BufferedWriter out;
-
-	private boolean registered = false;
-
-	public IRCIO(IRCListener listener, String network, int port) {
-
-		this.listener = listener;
-		this.network = network;
-
-		try {
-			socket = new Socket(network, port);
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-		} catch (UnknownHostException uhe) {
-			listener.logerror("Unknown host.");
-			System.exit(1);
-		} catch (IOException ioe) {
-			listener.logerror("IO Exception trying to connect to server.");
-			System.exit(1);
-		}
-
-
-	}
-
-	public void login(String[] channels, String name) {
-
-		this.name = name;
-
-		try {
-
-			String msg = "NICK " + name + "\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-
-			msg = "USER sephiabot localhost " + network + " :" + name + "\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-
-			out.flush();
-
-			while (!registered) {
-				poll();
-			}
-
-			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-
-//			msg = "MODE " + name + " +x\n";
-//			out.write(msg, 0, msg.length());
-//			listener.log(msg);
-
-			for (int i = 0; i < channels.length; i++) {
-				msg = "JOIN " + channels[i] + "\n";
-				out.write(msg, 0, msg.length());
-				listener.log(msg);
-			}
-
-			out.flush();
-
-		} catch (IOException ioe) {
-			listener.logerror("Couldn't write out.");
-		}
-	}
-
-	void poll() {
-		String msg;
-		try {
-			while (in.ready()) {
-				msg = in.readLine();
-				if (!pong(msg)) {
-					decipherMessage(msg);
-				}
-				if (msg.indexOf("001") != -1) {
-					registered = true;
-				}
-			}
-		} catch (IOException ioe) {
-			listener.logerror("Couldn't poll for input.");
-		}
-	}
-
-	boolean pong(String msg) {
-		if (msg.indexOf("PING") == 0) {
-			String outmsg = "PONG :" + msg.substring(msg.indexOf(":")+1) + "\n";
-			try {
-				out.write(outmsg);
-				out.flush();
-			} catch (IOException ioe) {
-				listener.logerror("Couldn't respond to a ping.");
-			}
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	void decipherMessage(String msg) {
-
-		listener.log(msg);
-
-		String nick;
-		String host;
-		String recipient;
-
-		StringTokenizer tok = new StringTokenizer(msg, " ");
-
-		String buf = tok.nextToken();
-		if (buf.indexOf("!") != -1) {
-			nick = buf.substring(1, buf.indexOf("!"));
-			host = buf.substring(buf.indexOf("!")+1);
-		} else {
-			host = buf;
-			nick = "";
-		}
-
-		buf = tok.nextToken();
-
-		try {
-			int command = Integer.parseInt(buf);
-			switch (command) {
-			case 353:
-//:Extremity.CA.US.GamesNET.net 353 Robyn = #1973 :Robyn Max\DAd @Tempyst LittleMe @MechanicalGhost Mez` @Vino sada^game GOaT @Weine|Away @ChanServ shinobiwan @Yukie WillSchnevel +Feixeno
-
-				String channel = msg.substring(msg.indexOf("=") + 2, msg.indexOf(" ", msg.indexOf("=") + 2));
-				String list = msg.substring(msg.indexOf(":", 1)+1);
-				listener.messageChanList(channel, list);
-				return;
-
-			default:
-			}
-			
-		} catch (NumberFormatException nfe) {
-			
-		}
-
-		if (buf.equals("PRIVMSG")) {
-			recipient = tok.nextToken();
-			String chat = tok.nextToken("");
-			chat = chat.substring(2);
-			if (chat.startsWith("\u0001ACTION ") && chat.endsWith("\u0001"))
-				listener.messagePrivEmote(nick, host, recipient, chat.substring(8, chat.length()-1));
-			else
-				listener.messagePrivMsg(nick, host, recipient, chat);
-			return;
-		} else if (buf.equals("NICK")) {
-			String newname = tok.nextToken("");
-			newname = newname.substring(2);
-			listener.messageNickChange(nick, host, newname);
-			return;
-		} else if (buf.equals("MODE")) {
-			recipient = tok.nextToken();
-			String mode = tok.nextToken().trim();
-			String victim;
-			if (tok.hasMoreElements()) {
-				victim = tok.nextToken("").trim();
-			} else {
-				victim = null;
-			}
-			if (mode.startsWith(":")) {
-				mode = mode.substring(1);
-			}
-			listener.messageModeChange(nick, host, recipient, mode, victim);
-			return;
-		} else if (buf.equals("JOIN")) {
-			String channel = tok.nextToken("");
-			channel = channel.substring(1);
-			if (channel.startsWith(":"))
-				channel = channel.substring(1);
-			listener.messageChannelJoin(nick, host, channel);
-			return;
-		} else if (buf.equals("PART")) {
-			String channel = tok.nextToken();
-			String message;
-			if (tok.hasMoreTokens()) {
-				message = tok.nextToken("");
-				message = message.substring(2);
-			} else {
-				message = null;
-			}
-			listener.messageChannelPart(nick, host, channel, message);
-			return;
-		} else if (buf.equals("QUIT")) {
-			String message = tok.nextToken("");
-			message = message.substring(2);
-			listener.messageQuit(nick, host, message);
-			return;
-		}
-
-		//Still can't figure out what it is.
-		listener.messageReceived(msg);
-	}
-
-	public void kick(String recipient, String user, String msg) {
-		
-		String buf = "KICK " + recipient + " " + user;
-		if (msg != null) {
-			buf += " :" + msg;
-		}
-		buf += "\n";
-
-		try {
-			out.write(buf, 0, buf.length());
-			out.flush();
-		} catch (IOException ioe) {
-		}
-
-	}
-
-	public void privmsg(String recipient, String msg) {
-		String buf = "PRIVMSG " + recipient + " :" + msg + "\n";
-
-		try {
-			out.write(buf, 0, buf.length());
-			out.flush();
-		} catch (IOException ioe) {
-		}
-
-		System.out.print(buf);
-
-		String log;
-		if (msg.indexOf("ACTION") == 1) {
-			log = "* " + name + " ";
-			log += msg.substring(8, msg.length()-1);
-		} else {
-			log = "<" + name + "> ";
-			log += msg.substring(0, msg.length());
-		}
-
-		listener.logfile(recipient, log);
-		
-	}
-	
-	public void privemote(String recipient, String msg) {
-		String buf = "PRIVMSG " + recipient + " :\u0001ACTION " + msg + "\u0001\n";
-
-		try {
-			out.write(buf, 0, buf.length());
-			out.flush();
-		} catch (IOException ioe) {
-		}
-
-		System.out.print(buf);
-
-		String log;
-		log = "* " + name + " " + msg;
-
-		listener.logfile(recipient, log);
-		
-	}
-
-	public void setMode(String recipient, String inchannel, String mode) {
-		try {
-	String msg = "MODE " + inchannel + " " + mode + " " + recipient + "\n";
-	out.write(msg, 0, msg.length());
-				out.flush();
-			System.out.println(msg);
-		} catch (IOException e) {System.out.println(e.getMessage());}
-	}
-}
-
 interface IRCListener {
 
 	public void messageReceived(String msg);
@@ -1433,6 +1423,7 @@ interface IRCListener {
 	public void messageQuit(String nick, String host, String message);
 
 	public void messageChanList(String channel, String list);
+	public void messageUserHosts(String users);
 
 	public void logfile(String recipient, String msg);
 	public void log(String msg);

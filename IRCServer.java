@@ -31,10 +31,10 @@ class IRCChannel {
     this.name = name;
   }
 
-  void addUser(String user, int access) {
+  void addUser(String user, String host, int access) {
 
     if (users == null) {
-      users = new IRCUser(user, access);
+      users = new IRCUser(user, host, access);
       numusers = 1;
       return;
     }
@@ -46,7 +46,7 @@ class IRCChannel {
         return;
       }
       if (curr.next == null) {
-        curr.next = new IRCUser(user, access);
+        curr.next = new IRCUser(user, host, access);
         numusers++;
         return;
       }
@@ -88,12 +88,14 @@ class IRCChannel {
 class IRCUser {
 
   String name;
+  String host;
   int access;
 
   IRCUser next;
 
-  IRCUser(String name, int access) {
+  IRCUser(String name, String host, int access) {
     this.name = name;
+	this.host = host;
     this.access = access;
   }
 
