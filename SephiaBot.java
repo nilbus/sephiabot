@@ -78,7 +78,8 @@ class SephiaBot implements IRCListener {
 		try {
 			logOut = new BufferedWriter[data.getNumChannels()];
 			for (int i = 0; i < data.getNumChannels(); i++) {
-				logOut[i] = new BufferedWriter(new FileWriter("/home/vino/sephiabot/log-"+data.getChannel(i)+".txt", true));
+				logOut[i] = new BufferedWriter(new FileWriter(data.getLogdir() +
+						"/log-" + data.getChannel(i) + ".txt", true));
 			}
 		} catch (IOException ioe) {
 			logerror("Couldn't open log file.");

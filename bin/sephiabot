@@ -1,7 +1,7 @@
 while true
 do
-  cd /home/vino/sephiabot/
-  java SephiaBot $* 2>> /home/vino/sephiabot/syslog.txt
+  cd ~/sephiabot
+  java SephiaBot $* 2>> ~/sephiabot/syslog.txt
   retval=$?
   if test $retval -ne 1; then
     break; # if 0 is returned then just quit

@@ -765,4 +765,8 @@ lineLoop:
 	boolean getCensor() {
 		return censor;
 	}
+
+	String getLogdir() {
+		return logdir;
+	}
 }
