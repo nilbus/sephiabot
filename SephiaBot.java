@@ -26,6 +26,7 @@ class SephiaBot implements IRCListener {
 	private String historyText[];
 	private String lastRepeat;
 	private String config;
+	private boolean censor;
 
 	private Message firstMessage = null;
 
@@ -44,8 +45,7 @@ class SephiaBot implements IRCListener {
 	private long nextWho;
 	private long nextHi;
 
-	private boolean freenode() { return iregex("freenode", network); }
-	private boolean gamesurge() { return iregex("gamesurge", network); }
+	private boolean censor() { return censor; }
 
 	public static void main(String args[]) {
 		String cfgPath = "sephiabot.cfg";
@@ -98,6 +98,7 @@ class SephiaBot implements IRCListener {
 		this.historySize = 3;
 		this.historyNick = new String[this.historySize];
 		this.historyText = new String[this.historySize];
+		this.censor = true;
 
 		this.nextWho = 0;
 		this.nextHi = 0;
@@ -513,6 +514,9 @@ lineLoop:
 				} else if (command.equals("sephiadir")) {
 					this.sephiadir = tok.nextToken("").trim();
 					log("sephiadir changed to " + this.sephiadir);
+				} else if (command.equals("censor")) {
+					this.censor = stringToBoolean(tok.nextToken().trim());
+					log("censor changed to " + this.censor);
 				}
 			}
 		} catch (IOException ioe) {
@@ -523,6 +527,17 @@ lineLoop:
 		loadData();
 	}
 
+	//"false" "no" and "0" and empty/null strings return false. All else is true.
+	boolean stringToBoolean(String string) {
+		if (string == null)
+			return false;
+		if (string.length() <= 0)
+			return false;
+		if (iequals(string, "false") || iequals(string, "no") || iequals(string, "0"))
+			return false;
+		return true;
+	}
+	
 	StringBuffer replaceKeywords(StringBuffer greeting) {
 		int keyindex = greeting.indexOf("%n");
 
@@ -685,9 +700,10 @@ lineLoop:
 		historyText[0] = msg;
 	}
 
-	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
+	public void messagePrivMsg(String nick, String host, String recipient, String origmsg) {
 		boolean pm = false;
 		String log;
+		String msg = origmsg;
 
 		if (iequals(recipient, name)) {
 			recipient = nick;
@@ -754,7 +770,7 @@ lineLoop:
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (gamesurge() && iregex("what does marsellus wallace look like", msg)) {
+			} else if ( iregex("what does marsellus wallace look like", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "He's black.");
 					nextWho = System.currentTimeMillis() + 5000;
@@ -813,13 +829,13 @@ lineLoop:
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (gamesurge() && iregex("are you (sexy|hot)", msg)) {
+			} else if (!censor() && iregex("are you (sexy|hot)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Fuck yes.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (gamesurge() && iregex("want to cyber", msg)) {
+			} else if (!censor() && iregex("want to cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					if (!isVino(host)) {
 						ircio.privmsg(recipient, "Fuck no.");
@@ -910,13 +926,13 @@ lineLoop:
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (gamesurge() && iregex("i suck dick", msg)) {
+			} else if (!censor() && iregex("i suck dick", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
 					ircio.privmsg(recipient, "Yeah, we know you do.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (gamesurge() && iregex("words of wisdom", msg)) {
+			} else if (!censor() && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String phrase = randomPhrase(new File(sephiadir, "wordsofwisdom.txt"));
 					if (phrase != null)
@@ -1315,8 +1331,8 @@ lineLoop:
 		}
 		
 		//Bot has been mentioned?
-		if (iregex(name, msg)) {
-			if (gamesurge()) {
+		if (pm || talkingToMe(origmsg) || iregex(name, msg)) {
+			if (!censor()) {
 				if (iregex("fuck you", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
 						ircio.privmsg(recipient, "Fuck you too, buddy.");
