@@ -551,7 +551,7 @@ class SephiaBot implements IRCListener {
 						data.addMessage(target, message, sender);
 					data.writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
-				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
+				} else if (iregex("^(butt?)?se(x|ck[sz])$", cmd)) {
 					if (!tok.hasMoreElements()) {
 						ircio.privemote(recipient, "anally rapes " + nick + ".");
 						return;
