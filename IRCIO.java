@@ -210,8 +210,9 @@ class IRCIO {
 				
 			case 353:
 //:Extremity.CA.US.GamesNET.net 353 Robyn = #1973 :Robyn Max\DAd @Tempyst LittleMe @MechanicalGhost Mez` @Vino sada^game GOaT @Weine|Away @ChanServ shinobiwan @Yukie WillSchnevel +Feixeno
-				String channel = msg.substring(msg.indexOf("=") + 2, msg.indexOf(" ", msg.indexOf("=") + 2));
-				String list = msg.substring(msg.indexOf(":", 1)+1);
+				int secondColon = msg.indexOf(':', 1);
+				String channel = msg.substring(msg.lastIndexOf(' ', secondColon-2)+1, secondColon-1);
+				String list = msg.substring(secondColon+1);
 				listener.messageChanList(channel, list);
 				return;
 				
