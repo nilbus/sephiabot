@@ -1,9 +1,11 @@
 class User {
 	String userName;
+	String aliases[];
 	String hosts[];
 	long lastSeenTimes[];
 	String away;
 	String password;
+	String description;
 	long leaveTime;
 	long lastTalked;
 	int memberType = USER_NOBODY;
@@ -18,5 +20,7 @@ class User {
 		this.memberType = memberType;
 		this.hosts = new String[10];
 		this.lastSeenTimes = new long[10];
+		this.description = "A person.";
+		this.aliases = new String[0];
 	}
 }

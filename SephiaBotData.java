@@ -531,9 +531,13 @@ lineLoop:
 	User getUserByName(String name) {
 		if (iequals(vino.userName, name.trim()))
 			return vino;
-		for (int i = 0; i < users.length; i++)
+		for (int i = 0; i < users.length; i++) {
 			if (iequals(users[i].userName, name.trim()))
 				return users[i];
+			for (int j = 0; j < users[i].aliases.length; j++)
+				if (iequals(users[i].aliases[j], name.trim()))
+					return users[i];
+		}
 		return null;
 	}
 	

@@ -415,13 +415,13 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who is", msg)) {
+			} else if (iregex("who ?i?\'?s", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User target = getUserByNick(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
+					User target = data.getUserByName(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
 					if (target == null)
 						ircio.privmsg(recipient, "Nobody important.");
 					else
-						ircio.privmsg(recipient, "He's a cool guy.");
+						ircio.privmsg(recipient, target.description);
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
