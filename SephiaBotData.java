@@ -25,6 +25,7 @@ class SephiaBotData {
 	private String config;
 	private boolean censor;
 
+	private XMLParser parser;
 	private Message firstMessage = null;
 
 	private long nextReminder;
@@ -46,6 +47,7 @@ class SephiaBotData {
 	
 	SephiaBotData(String config) {
 		this.config = config;
+		this.parser = new XMLParser(this);
 		setDefaults();
 	}
 
@@ -334,50 +336,16 @@ lineLoop:
 	private void loadUsers() {
 		String filename = usersFileName;
 		log("Loading " + filename);
-			
+
+		if (filename.startsWith("/"))
+			users = parser.parseFile("/", filename);
+		else
+			users = parser.parseFile(sephiadir, filename);
+
 		//This function should not return if users is null.
-		users = new User[0];
-
-		XMLParser parser = new XMLParser(this, sephiadir, filename);
+		if (users == null)
+			users = new User[0];
 		
-		Vector newUserList = new Vector();
-		
-		Document document = parser.document;
-		NodeList userNodes = document.getDocumentElement().getChildNodes();
-
-		for (int i = 0; i < userNodes.getLength(); i++) {
-			Node userNode = userNodes.item(i);
-			if (!userNode.getNodeName().equals("User"))
-				continue;
-			NamedNodeMap userAttributes = userNode.getAttributes();
-			Node currentNode;
-			currentNode = userAttributes.getNamedItem("Nick");
-			if (currentNode == null) {
-				logerror("User element has no Nick attribute.");
-				continue;
-			}
-			String userName = currentNode.getNodeValue();
-			currentNode = userAttributes.getNamedItem("Password");
-			if (currentNode == null) {
-				logerror("User element has no Password attribute.");
-				continue;
-			}
-			String password = currentNode.getNodeValue();
-			currentNode = userAttributes.getNamedItem("Level");
-			if (currentNode == null) {
-				logerror("User element has no Level attribute.");
-				continue;
-			}
-			String memberTypeString = currentNode.getNodeValue();
-			int memberType = User.USER_MEMBER;
-			if (memberTypeString.equalsIgnoreCase("admin"))
-				memberType = User.USER_ADMIN;
-			User newUser = new User(userName, password, memberType);
-			//TODO: Parse aliases and descriptions.
-			newUserList.add(newUser);
-		}
-		users = new User[newUserList.size()];
-		users = (User[])newUserList.toArray(users);
 		log(users.length + " users loaded.");
 	}
 	
@@ -459,8 +427,8 @@ lineLoop:
 					this.dataFileName = tok.nextToken("").trim();
 					log("datafilename changed to " + this.dataFileName);
 				} else if (command.equals("usersfilename")) {
-					this.dataFileName = tok.nextToken("").trim();
-					log("usersfilename changed to " + this.dataFileName);
+					this.usersFileName = tok.nextToken("").trim();
+					log("usersfilename changed to " + this.usersFileName);
 				} else if (command.equals("sephiadir")) {
 					this.sephiadir = tok.nextToken("").trim();
 					log("sephiadir changed to " + this.sephiadir);

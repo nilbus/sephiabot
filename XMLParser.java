@@ -6,22 +6,21 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException; 
 import org.xml.sax.SAXParseException; 
 
-import org.w3c.dom.Document;
-import org.w3c.dom.DOMException;
+import org.w3c.dom.*;
 
 import java.io.*;
+import java.util.*;
 
 public class XMLParser {
 
 	SephiaBotData data;
 	Document document; 
 	
-	public XMLParser(SephiaBotData data, String directory, String fileName) {
+	public XMLParser(SephiaBotData data) {
 		this.data = data;
-		parseFile(directory, fileName);
 	}
 	
-	public void parseFile(String directory, String fileName)	{
+	User[] parseFile(String directory, String fileName)	{
 		DocumentBuilderFactory factory =
 			DocumentBuilderFactory.newInstance();
 		//factory.setNamespaceAware(true);
@@ -58,5 +57,96 @@ public class XMLParser {
 			// I/O error
 			ioe.printStackTrace();
 		}
+
+		return parseUsers(parseGroups());
 	} // main 
+
+	XMLGroup[] parseGroups() {
+		Vector groupList = new Vector(5);
+		NodeList groupNodes = document.getDocumentElement().getChildNodes();
+
+		for (int i = 0; i < groupNodes.getLength(); i++) {
+			Node groupNode = groupNodes.item(i);
+			if (!groupNode.getNodeName().equals("Group"))
+				continue;
+			String groupName = null, groupPermissions = null;
+			NodeList groupSubNodes = groupNode.getChildNodes();
+			for (int j = 0; j < groupSubNodes.getLength(); j++) {
+				Node subNode = groupSubNodes.item(j);
+				if (subNode.getNodeName().equals("Name"))
+					groupName = subNode.getChildNodes().item(0).toString();
+				else if (subNode.getNodeName().equals("Permissions"))
+					groupPermissions = subNode.getChildNodes().item(0).toString();
+			}
+			if (groupPermissions == null || groupName == null)
+				continue;
+			String permissionsArray[] = groupPermissions.split(",");
+			int highestPermissions = User.USER_NOBODY;
+			for (int j = 0; j < permissionsArray.length; j++) {
+				if (permissionsArray[j].equals("sephiabot"))
+					highestPermissions = User.USER_MEMBER;
+				else if (permissionsArray[j].equals("sephiabot-admin"))
+					highestPermissions = User.USER_ADMIN;
+			}
+			if (highestPermissions < User.USER_MEMBER)
+				continue;
+			groupList.add(new XMLGroup(groupName, highestPermissions));
+		}
+		XMLGroup[] groups = new XMLGroup[groupList.size()];
+		return (XMLGroup[])groupList.toArray(groups);
+	}
+
+	User[] parseUsers(XMLGroup groups[]) {
+		Vector newUserList = new Vector(10);
+		NodeList userNodes = document.getDocumentElement().getChildNodes();
+
+		for (int i = 0; i < userNodes.getLength(); i++) {
+			Node userNode = userNodes.item(i);
+			if (!userNode.getNodeName().equals("User"))
+				continue;
+			NodeList groupSubNodes = userNode.getChildNodes();
+			String userName = null, password = null, groupNames = null;
+			for (int j = 0; j < groupSubNodes.getLength(); j++) {
+				Node subNode = groupSubNodes.item(j);
+				if (subNode.getNodeName().equals("Nick"))
+					userName = subNode.getChildNodes().item(0).toString();
+				else if (subNode.getNodeName().equals("Password"))
+					password = subNode.getChildNodes().item(0).toString();
+				else if (subNode.getNodeName().equals("Groups"))
+					groupNames = subNode.getChildNodes().item(0).toString();
+			}
+			if (userName == null || password == null || groupNames == null)
+				continue;
+			String groupsArray[] = groupNames.split(",");
+			int memberType = User.USER_NOBODY;
+			for (int j = 0; j < groupsArray.length; j++) {
+				for (int k = 0; k < groups.length; k++) {
+					if (groupsArray[j].equals(groups[k].name) && groups[k].permissions > memberType) {
+						memberType = groups[k].permissions;
+					}
+				}
+			}
+			if (memberType < User.USER_MEMBER)
+				continue;
+			User newUser = new User(userName, password, memberType);
+			//TODO: Parse aliases and descriptions.
+			newUserList.add(newUser);
+		}
+		User[] users = new User[newUserList.size()];
+		return (User[])newUserList.toArray(users);
+	}
+
+	void logerror(String msg) {
+		data.logerror(msg);
+	}
+}
+
+class XMLGroup {
+	String name;
+	int permissions = User.USER_NOBODY;
+
+	XMLGroup(String name, int permissions) {
+		this.name = name;
+		this.permissions = permissions;
+	}
 }
