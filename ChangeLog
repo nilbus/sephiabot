@@ -1,3 +1,8 @@
+Revision 8
++ BOFH Style quotes
++ sephiadir in config file
+! Words of wisdom read from a file
+
 Revision 4
 + Config file can be specified at the command line with -c. Default is to search for sephiabot.cfg in the current directory.
 + Shows usage if started with --help.

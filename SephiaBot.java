@@ -1,6 +1,8 @@
-//TODO: Better handling of dropped connections, etc.
-//TODO: Write variables to disk and load at startup so memory isn't lost.
-//TODO: Greeting doesn't work on freenode
+/*
+TODO: Write variables to disk and load at startup so memory isn't lost.
+TODO: Better handling of dropped connections, etc.
+FIXME: Greeting doesn't work on freenode
+*/
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -31,6 +33,7 @@ class SephiaBot implements IRCListener {
 	private String spell;
 	private String hellos[];
 	private String logdir;
+	private String sephiadir; //Location of sephiabot. Quote files here
 
 	private Message firstMessage = null;
 
@@ -89,6 +92,7 @@ class SephiaBot implements IRCListener {
 		this.greeting = "Hello, I am %n, the channel bot. You all suck.";
 		this.hellos = new String[] {"hello","hi","yo","hey","greetings","konichiwa","hola","sup"};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
+		this.sephiadir = "/var/lib/sephiabot"; //ditto
 
 		this.nextWho = 0;
 		this.nextHi = 0;
@@ -192,6 +196,9 @@ class SephiaBot implements IRCListener {
 				} else if (command.equals("logdir")) {
 					this.logdir = tok.nextToken("").trim();
 					log("logdir changed to " + this.logdir);
+				} else if (command.equals("sephiadir")) {
+					this.sephiadir = tok.nextToken("").trim();
+					log("sephiadir changed to " + this.sephiadir);
 				}
 			}
 		} catch (IOException ioe) {
@@ -415,46 +422,9 @@ class SephiaBot implements IRCListener {
 				}
 			} else if (msg.toLowerCase().indexOf("words of wisdom") != -1) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					Random rand = new Random();
-					switch (rand.nextInt(12)) {
-					case 0:
-						ircio.privmsg(recipient, "Life is to the left.");
-						break;
-					case 1:
-						ircio.privmsg(recipient, "Y halo thar, buttsecks!");
-						break;
-					case 2:
-						ircio.privmsg(recipient, "Rifles and shotfucks with a butt.");
-						break;
-					case 3:
-						ircio.privmsg(recipient, "!k Podunkian\\ Thank you so much for to playing my game.");
-						break;
-					case 4:
-						ircio.privmsg(recipient, "We're not cheap.");
-						break;
-					case 5:
-						ircio.privmsg(recipient, "In Soviet Russia, joke tells you.");
-						break;
-					case 6:
-						ircio.privmsg(recipient, "JO'Z HEER.");
-						break;
-					case 7:
-						ircio.privmsg(recipient, "Penis monkeys.");
-						break;
-					case 8:
-						ircio.privmsg(recipient, "There is no ruger.");
-						break;
-					case 9:
-						ircio.privmsg(recipient, "A horse walks into a bar and the bartender says, \"Why the long face?\" Vino dies.");
-						break;
-					case 10:
-						ircio.privmsg(recipient, "Have you had your shit pushed in?");
-						break;
-					case 11:
-						ircio.privmsg(recipient, "\"Hello, tech support, may I help you?\" '(in a thick Russian accent)': \"Yes. Monitor is working fine but has sparks and smoke flying out back. Is ok?\"");
-						break;
-					default:
-					}
+					String phrase = randomPhrase(new File(sephiadir, "wordsofwisdom.txt"));
+					if (phrase != null)
+						ircio.privmsg(recipient, phrase);
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -627,28 +597,52 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "What channel?");
 						return;
 					}
-		inchannel = tok.nextToken();
+					inchannel = tok.nextToken();
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "Who?");
 						return;
 					}
-		String who = tok.nextToken();
-		String mode;
+					String who = tok.nextToken();
+					String mode;
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "What mode?");
 						return;
 					} else mode = tok.nextToken();
-		System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
-		ircio.setMode(who, inchannel, mode);
+					System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
+					ircio.setMode(who, inchannel, mode);
 					return;
+				} else if (msg.toLowerCase().indexOf("excuse") != -1) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						String excuse = randomPhrase(new File(sephiadir, "excuses.txt"));
+						if (excuse != null)
+							ircio.privmsg(recipient, "Your excuse is: " + excuse);
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
 				}
 			}
- 
-
 		} else if (spelledMyNameWrong(botname)) {
 //			ircio.privmsg(recipient, nick + ", " + spell);
 		}
 
+	}
+
+	private String randomPhrase(File file) {
+		try {
+			Vector phrases = new Vector();
+			BufferedReader in = new BufferedReader(new FileReader(file));
+			String line;
+			while ((line = in.readLine()) != null)
+				phrases.add(line);
+			in.close();
+			if (phrases.size() == 0)
+				return null;
+			Random rnd = new Random();
+			return (String)phrases.get(rnd.nextInt(phrases.size()));
+		} catch (IOException ioe) {
+			logerror("Couldn't open excuse file: " + ioe.getMessage());
+			return null;
+		}
 	}
 
 	public boolean isVino(String host) {
