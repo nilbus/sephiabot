@@ -6,46 +6,24 @@ TODO: Track nick changes so who is here works.
 */
 import java.io.*;
 import java.util.*;
-import java.util.regex.*;
 
 class SephiaBot implements IRCListener {
 
-	private String network;
-	private int port;
-	private String name;
-	private String channels[];
-	private String greeting;
-	private String spell;
-	private String hellos[];
-	private String helloreplies[];
-	private String logdir;
-	private String sephiadir; //Location of sephiabot. Quote, data files here
-	private String blacklist[];
+	private SephiaBotData data;
+	
 	private int historySize;
 	private String historyNick[];
 	private String historyText[];
 	private String lastRepeat;
-	private String config;
-	private boolean censor;
-
-	private Message firstMessage = null;
-
-	private User vino;
-	private User users[];
 
 	private IRCIO ircio;
 	private BufferedWriter logOut[];
-	private String syslogBuffer;
-	private BufferedWriter syslog;
 	private IRCServer server;
-
-	private String dataFileName;
-	private String usersFileName;
 
 	private long nextWho;
 	private long nextHi;
 
-	private boolean censor() { return censor; }
+	private boolean censor() { return data.getCensor(); }
 
 	public static void main(String args[]) {
 		String cfgPath = "sephiabot.cfg";
@@ -81,45 +59,26 @@ class SephiaBot implements IRCListener {
 	}
 
 	public SephiaBot(String config) {
-		//Set Defaults
-		this.config = config;
-		this.name = "SephiaBot";
-		this.network = "irc.us.freenode.net";
-		this.port = 6667;
-		this.channels = new String[] {"#sephiabot"};
-		this.greeting = "Hello, I am %n, the channel bot. You all suck.";
-		this.hellos = new String[] {"hi[hy2]?", "yo[^u]", "hey", "greetings\\b", "kon{1,2}ichiwa", "hola\\b", "sup", "morning\\b", "(y\\s)?h[aeu]l{1,2}o"};
-		this.helloreplies = new String[] {"Yo."};
-		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
-		this.sephiadir = "/var/lib/sephiabot"; //ditto
-		this.dataFileName = "sephiabot.dat";
-		this.usersFileName = "users.cfg";
-		this.blacklist = new String[] {};
+
 		this.historySize = 3;
 		this.historyNick = new String[this.historySize];
 		this.historyText = new String[this.historySize];
-		this.censor = true;
 
 		this.nextWho = 0;
 		this.nextHi = 0;
 
-		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
+		this.data = new SephiaBotData(config);
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
-		parseConfig(config);
+		
+		data.parseConfig();
+
+		log("Network: " + data.getNetwork() + " " + data.getPort() + " : " + data.getName());
 
 		try {
-			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
-		} catch (IOException ioe) {
-			logerror("Couldn't open syslog file:\n" + ioe.getMessage());
-		}
-
-		log("Network: " + network + " " + port + " : " + name);
-
-		try {
-			logOut = new BufferedWriter[channels.length];
-			for (int i = 0; i < channels.length; i++) {
-				logOut[i] = new BufferedWriter(new FileWriter("/home/vino/sephiabot/log-"+channels[i]+".txt", true));
+			logOut = new BufferedWriter[data.getNumChannels()];
+			for (int i = 0; i < data.getNumChannels(); i++) {
+				logOut[i] = new BufferedWriter(new FileWriter("/home/vino/sephiabot/log-"+data.getChannel(i)+".txt", true));
 			}
 		} catch (IOException ioe) {
 			logerror("Couldn't open log file.");
@@ -148,412 +107,16 @@ class SephiaBot implements IRCListener {
 		return away;
 	}
 
-	void loadData() {
-		String filename = dataFileName;
-		log("Loading " + filename);
-
-		BufferedReader dataFileReader;
-
-		try {
-			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
-		} catch (IOException ioe) {
-			return;  //Assume no datafile has been created if it doesn't exist
-		}
-
-		try {
-			int messagesLoaded = 0;
-			int messagesThrownOut = 0;
-			int hostsLoadedTotal = 0;
-			int hostsThrownOut = 0;
-			int awayMsgLoaded = 0;
-			int awayMsgThrownOut = 0;
-			firstMessage = null;		//Keep messages already in memory from persisting.
-lineLoop:
-			while (dataFileReader.ready()) {
-				String line = dataFileReader.readLine();
-				StringTokenizer tok = new StringTokenizer(line, " ");
-				if (line.startsWith("//") || !tok.hasMoreElements())
-					continue;
-				String command = tok.nextToken();
-				if (command.equals("userdata")) {
-					String userName = tok.nextToken().trim();
-					User user = getUserByName(userName);
-					if (user == null) {
-						logerror("Tried to load userdata for nonexistent user " + userName + ".");
-						continue;
-					}
-					String subCommand = tok.nextToken();
-					if (subCommand.equals("hosts")) {
-						int hostsLoaded = 0;
-						while (tok.hasMoreElements() && hostsLoaded < 10) {
-							user.lastSeenTimes[hostsLoaded] = System.currentTimeMillis();	//When converting from old "hosts", default to current time.
-							user.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
-						}
-						log("Loaded " + hostsLoaded + " hosts for user " + user.userName);
-					} else if (subCommand.equals("host")) {
-						String host = tok.nextToken();
-						long time = Long.parseLong(tok.nextToken().trim());
-						if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
-							hostsThrownOut++;
-							continue;
-						}
-						for (int i = 0; i < 10; i++) {
-							if (user.hosts[i] == null || user.hosts[i].length() == 0) {
-								user.hosts[i] = host.trim();
-								user.lastSeenTimes[i] = time;
-								hostsLoadedTotal++;
-								continue lineLoop;
-							}
-						}
-						//Execution should only get here if someone manually modified the data file and included 11 hosts for some reason.
-						log("Ran out of userhost slots for user " + user.userName);
-						hostsThrownOut++;
-					} else if (subCommand.equals("away")) {
-						user.away = tok.nextToken("").trim();
-						awayMsgLoaded++;
-					} else if (subCommand.equals("leavetime")) {
-						user.leaveTime = Long.parseLong(tok.nextToken("").trim());
-					} else if (subCommand.equals("lasttalked")) {
-						user.lastTalked = Long.parseLong(tok.nextToken("").trim());
-					}
-				} else if (command.equals("message")) {
-					String nick = tok.nextToken(" ").trim();
-					String target = tok.nextToken(" ").trim();
-					long time = Long.parseLong(tok.nextToken(" ").trim());
-					String message = " " + tok.nextToken("").trim();
-
-					//Throw out if more then a week old.
-					if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
-						messagesThrownOut++;
-						continue;
-					} else
-						messagesLoaded++;
-					if (firstMessage == null) {
-						firstMessage = new Message(target, message, nick, time);
-					} else {
-						Message currMsg = firstMessage;
-						while (currMsg.next != null)
-							currMsg = currMsg.next;
-						currMsg.next = new Message(target, message, nick, time);
-					}
-				//vinohost, vinoaway, and vinoleavetime should not be necessary anymore. Vino's info is loaded like any other user.
-				// It's left in here for backwards compatibility.
-				} else if (command.equals("vinohost")) {
-					int hostsLoaded = 0;
-					while (tok.hasMoreElements() && hostsLoaded < 10) {
-						this.vino.lastSeenTimes[hostsLoaded] = System.currentTimeMillis();   //When converting from old "hosts", default to current time.
-						this.vino.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
-					}
-					log("Loaded " + hostsLoaded + " vinohosts");
-				} else if (command.equals("vinoaway")) {
-					this.vino.away = tok.nextToken("").trim();
-					log("Loaded vinoaway " + this.vino.away);
-				} else if (command.equals("vinoleavetime")) {
-					this.vino.leaveTime = Long.parseLong(tok.nextToken("").trim());
-					log("Loaded vinoleavetime " + this.vino.leaveTime);
-				}
-			}
-
-			//TODO: Cycle through away messages and throw out old ones.
-			
-			log("Messages loaded: " + messagesLoaded);
-			log("Messages thrown out: " + messagesThrownOut);
-			log("Hosts loaded: " + hostsLoadedTotal);
-			log("Hosts thrown out: " + hostsThrownOut);
-			log("Away messages loaded: " + awayMsgLoaded);
-			log("Away messages thrown out: " + awayMsgThrownOut);
-		} catch (IOException ioe) {
-			logerror("Couldn't read data file " + filename + ".");
-		}
-	}
-
-	void writeData() {
-		String filename = dataFileName;
-		BufferedWriter dataFileWriter;
-
-		try {
-			dataFileWriter = new BufferedWriter(new FileWriter(new File(sephiadir, filename), false));
-		} catch (IOException ioe) {
-			logerror("Couldn't open data file " + filename + " for writing:\n" + ioe.getMessage());
-			return;
-		}
-
-		try {
-			String buffer;
-
-			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
-			dataFileWriter.write(buffer, 0, buffer.length());
-		
-			String userBuffer = "userdata " + vino.userName;
-			for (int i = 0; i < 10; i++) {
-				if (vino.hosts[i] != null && vino.hosts[i].length() > 0) {
-					//Check the array up until now for duplicate entries.
-					boolean foundDuplicate = false;
-					for (int j = 0; j < i; j++) {
-						if (vino.hosts[j] != null && vino.hosts[j].equals(vino.hosts[i])) {
-							foundDuplicate = true;
-							break;
-						}
-					}
-					if (!foundDuplicate) {
-						buffer = userBuffer + " host " + vino.hosts[i] + " " + vino.lastSeenTimes[i] + "\n";
-						dataFileWriter.write(buffer, 0, buffer.length());
-					}
-				}
-			}
-
-			if (this.vino.away != null) {
-				buffer = userBuffer;
-				buffer += " away " + this.vino.away + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-
-				buffer = userBuffer;
-				buffer += " leavetime " + this.vino.leaveTime + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-			}
-			
-			if (vino.lastTalked > 0) {
-				buffer = userBuffer;
-				buffer += " lasttalked " + this.vino.lastTalked + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-			}
-
-			for (int i = 0; i < users.length; i++) {
-				User user = users[i];
-				userBuffer = "userdata " + user.userName;
-				for (int j = 0; j < 10; j++) {
-					if (user.hosts[j] != null && user.hosts[j].length() > 0) {
-						//Check the array up until now for duplicate entries.
-						boolean foundDuplicate = false;
-						for (int k = 0; k < j; k++) {
-							if (user.hosts[k].equals(user.hosts[j])) {
-								foundDuplicate = true;
-								break;
-							}
-						}
-						if (!foundDuplicate) {
-							buffer = userBuffer + " host " + user.hosts[j] + " " + user.lastSeenTimes[j] + "\n";
-							dataFileWriter.write(buffer, 0, buffer.length());
-						}
-					}
-				}
-
-				if (user.away != null) {
-					buffer = userBuffer;
-					buffer += " away " + user.away + "\n";
-					dataFileWriter.write(buffer, 0, buffer.length());
-
-					buffer = userBuffer;
-					buffer += " leavetime " + user.leaveTime + "\n";
-					dataFileWriter.write(buffer, 0, buffer.length());
-				}
-
-				if (user.lastTalked > 0) {
-					buffer = userBuffer;
-					buffer += " lasttalked " + user.lastTalked + "\n";
-					dataFileWriter.write(buffer, 0, buffer.length());
-				}
-			}
-			
-			if (this.firstMessage != null) {
-				Message currMessage = this.firstMessage;
-				do {
-					//If the message is more then a week old, do not store it.
-					if (currMessage.time > System.currentTimeMillis() - 1000*60*60*24*7) {
-						buffer = "message " + currMessage.sender + " " + currMessage.target + " " + currMessage.time + currMessage.message + "\n";
-						dataFileWriter.write(buffer, 0, buffer.length());
-					}
-					currMessage = currMessage.next;
-				} while (currMessage != null);
-			}
-		} catch (IOException ioe) {
-			logerror("Couldn't write to data file " + filename + ".");
-			return;
-		}
-		
-		try {
-			dataFileWriter.close();
-		} catch (IOException ioe) {
-			logerror("Couldn't save data file " + filename + ".");
-			return;
-		}
-		
-		log("Wrote data file.");
-	}
-
-	void loadUsers() {
-		String filename = usersFileName;
-		log("Loading " + filename);
-			
-		//This function should not return if users is null.
-		users = new User[0];
-
-		BufferedReader dataFileReader;
-
-		try {
-			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
-		} catch (IOException ioe) {
-			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded.");
-			return;  //Assume no datafile has been created if it doesn't exist
-		}
-
-		try {
-			Vector newUserList = new Vector();
-			while (dataFileReader.ready()) {
-				String line = dataFileReader.readLine();
-				StringTokenizer tok = new StringTokenizer(line, " ");
-				if (line.startsWith("//") || !tok.hasMoreElements())
-					continue;
-				String userName = tok.nextToken(" ");
-				//If there are no elements, throw a WTFException and continue blindly.
-				if (!tok.hasMoreElements())
-					continue;
-				String password = tok.nextToken(" ");
-				//If there are no elements, throw a WTFException and continue blindly.
-				if (!tok.hasMoreElements())
-					continue;
-				String memberTypeString = tok.nextToken("").trim();
-				int memberType = User.USER_MEMBER;
-				if (memberTypeString.equalsIgnoreCase("admin"))
-					memberType = User.USER_ADMIN;
-				User newUser = new User(userName, password, memberType);
-				newUserList.add(newUser);
-			}
-			users = new User[newUserList.size()];
-			users = (User[])newUserList.toArray(users);
-			log(users.length + " users loaded.");
-		} catch (IOException ioe) {
-			logerror("Couldn't read data file " + filename + ".");
-		}
-	}
-	
-	void parseConfig(String filename) {
-		log("Parsing " + filename);
-
-		BufferedReader configIn;
-
-		try {
-			configIn = new BufferedReader(new FileReader(filename));
-		} catch (IOException ioe) {
-			logerror("Couldn't open cfg file " + filename + ".");
-			return;
-		}
-
-		try {
-			while(configIn.ready()) {
-				String line = configIn.readLine();
-				StringTokenizer tok = new StringTokenizer(line, " ");
-				if (line.startsWith("//") || !tok.hasMoreElements()) {
-					continue;
-				}
-				String command = tok.nextToken();
-				if (command.equals("name")) {
-					this.name = tok.nextToken("").trim();
-					log("name changed to " + this.name);
-				} else if (command.equals("server")) {
-					this.network = tok.nextToken("").trim();
-					log("network changed to " + this.network);
-				} else if (command.equals("port")) {
-					this.port = Integer.parseInt(tok.nextToken("").trim());
-					log("port changed to " + this.port);
-				} else if (command.equals("greeting")) {
-					StringBuffer greeting = new StringBuffer(tok.nextToken("").trim());
-					greeting = replaceKeywords(greeting);
-					this.greeting = greeting.toString();
-					log("greeting changed to " + this.greeting);
-/*				} else if (command.equals("spell")) {
-					StringBuffer greeting = new StringBuffer(tok.nextToken("").trim());
-					greeting = replaceKeywords(greeting);
-					this.spell = greeting.toString();
-					log("spell changed to " + this.spell);*/
-				} else if (command.equals("channels")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.channels = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.channels[i] = tok.nextToken();
-						buf.append(this.channels[i] + " ");
-					}
-					log("channels changed to " + buf);
-				} else if (command.equals("hello")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.hellos = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.hellos[i] = tok.nextToken();
-						buf.append(this.hellos[i] + " ");
-					}
-					log("hello changed to " + buf);
-				} else if (command.equals("helloreplies")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.helloreplies = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.helloreplies[i] = tok.nextToken();
-						buf.append(this.helloreplies[i] + " ");
-					}
-					log("helloreplies changed to " + buf);
-				} else if (command.equals("blacklist")) {
-					StringBuffer buf = new StringBuffer("");
-					int tokens = tok.countTokens();
-					this.blacklist = new String[tokens];
-					for (int i = 0; i < tokens; i++) {
-						this.blacklist[i] = tok.nextToken();
-						buf.append(this.blacklist[i] + " ");
-					}
-					log("blacklist changed to " + buf);
-				} else if (command.equals("logdir")) {
-					this.logdir = tok.nextToken("").trim();
-					log("logdir changed to " + this.logdir);
-				} else if (command.equals("datafilename")) {
-					this.dataFileName = tok.nextToken("").trim();
-					log("datafilename changed to " + this.dataFileName);
-				} else if (command.equals("usersfilename")) {
-					this.dataFileName = tok.nextToken("").trim();
-					log("usersfilename changed to " + this.dataFileName);
-				} else if (command.equals("sephiadir")) {
-					this.sephiadir = tok.nextToken("").trim();
-					log("sephiadir changed to " + this.sephiadir);
-				} else if (command.equals("censor")) {
-					this.censor = stringToBoolean(tok.nextToken().trim());
-					log("censor changed to " + this.censor);
-				}
-			}
-		} catch (IOException ioe) {
-			logerror("Couldn't read cfg file " + filename + ".");
-		}
-		
-		loadUsers();
-		loadData();
-	}
-
-	//"false" "no" and "0" and empty/null strings return false. All else is true.
-	boolean stringToBoolean(String string) {
-		if (string == null)
-			return false;
-		if (string.length() <= 0)
-			return false;
-		if (iequals(string, "false") || iequals(string, "no") || iequals(string, "0"))
-			return false;
-		return true;
-	}
-	
-	StringBuffer replaceKeywords(StringBuffer greeting) {
-		int keyindex = greeting.indexOf("%n");
-
-		if (keyindex > -1) {
-			greeting.delete(keyindex, keyindex+2);
-			greeting.insert(keyindex, name);
-		}
-
-		return greeting;
-	}
-
 	void connect() {
 
-		ircio = new IRCIO(this, network, port);
-		ircio.login(channels, name);
-		server = new IRCServer(network, port, channels);
+		//Quickly build a channel list.
+		String[] channels = new String[data.getNumChannels()];
+		for (int i = 0; i < channels.length; i++)
+			channels[i] = data.getChannel(i);
+
+		ircio = new IRCIO(this, data.getNetwork(), data.getPort());
+		ircio.login(channels, data.getName());
+		server = new IRCServer(data.getNetwork(), data.getPort(), channels);
 
 	}
 
@@ -566,34 +129,15 @@ lineLoop:
 
 	}
 
-	//Performs a case-insensitive regexp match of string against pattern.
 	private boolean iregex(String pattern, String string) {
-		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
-		Matcher m = p.matcher(string);
-		return m.find();
+		return data.iregex(pattern, string);
 	}
 	
-	//Performs a case-insensitive string comparison.
 	private boolean iequals(String str1, String str2) {
-		if (str1 == null && str2 == null) {
-			return true;
-		} else if (str1 == null || str2 == null) {
-			return false;
-		} else {
-			return str1.toLowerCase().equals(str2.toLowerCase());
-		}
+		return data.iequals(str1, str2);
 	}
 
-	//Get a user by his username only.
-	public User getUserByName(String name) {
-		if (iequals(vino.userName, name.trim()))
-			return vino;
-		for (int i = 0; i < users.length; i++)
-			if (iequals(users[i].userName, name.trim()))
-				return users[i];
-		return null;
-	}
-	
+	   
 	//Find a user by his IRC nick. If an IRC nick is found matching the specified nick, any users logged in
 	// with that host are returned. Otherwise, any user names matching the specified nick are returned. Note
 	// that if someone's occupies a nick but is not logged in as that nick, this function will return null.
@@ -601,67 +145,30 @@ lineLoop:
 		for (int i = 0; i < server.channels.length; i++) {
 			for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
 				if (curr.name.equals(name)) {
-					return getUserByHost(curr.host);
+					return data.getUserByHost(curr.host);
 				}
 			}
 		}
-		return getUserByName(name);
-	}
-	
-	//Guarunteed the person is logged in. Gets a User from a host.
-	public User getUserByHost(String host) {
-		//First check for Vino.
-		if (isVino(host))
-			return vino;
-		for (int i = 0; i < users.length; i++) {
-			for (int j = 0; j < 10; j++)
-				if (users[i].hosts[j] != null && users[i].hosts[j].equalsIgnoreCase(host.trim()))
-					return users[i];
-		}
-		return null;
+		return data.getUserByName(name);
 	}
 	
 	public void checkForMessages(String nick, String host, String recipient) {
 		//Check if this person has any messages.
-		Message currMsg = firstMessage;
-		Message lastMsg = null;
-		int numberSent = 0;
-		User user = getUserByHost(host);
-		while (currMsg != null) {
-			if (iequals(currMsg.target, nick) || (user != null && user.userName.equalsIgnoreCase(currMsg.target))) {
-				if (numberSent == 0) {
-					ircio.privmsg(recipient, nick + ", you have messages!");
-				} else if (numberSent >= 5) {
-					ircio.privmsg(recipient, "You have more messages.");
-					break;
-				}
-				ircio.privmsg(recipient, "Message from " + currMsg.sender + " [" + makeTime(currMsg.time) + " ago]:" + currMsg.message);
-				numberSent++;
-				if (lastMsg == null)
-					firstMessage = currMsg.next;
-				else
-					lastMsg.next = currMsg.next;
-				writeData();
-			} else {
-				lastMsg = currMsg;
+		User user = data.getUserByHost(host);
+		Message messages[] = data.getMessagesByReceiver(nick, user);
+		if (messages.length <= 0)
+			return;
+		ircio.privmsg(recipient, nick + ", you have messages!");
+		for (int i = 0; i < messages.length; i++) {
+			if (i >= 5) {
+				ircio.privmsg(recipient, "You have more messages.");
+				return;
 			}
-			currMsg = currMsg.next;
+			ircio.privmsg(recipient, "Message from " + messages[i].sender + " [" + makeTime(messages[i].time) + " ago]:" + messages[i].message);
+			data.removeMessage(messages[i]);
 		}
 	}
 
-	public void updateUser(String nick, String host) {
-		User user = getUserByHost(host);
-		if (user == null)
-			return;
-		user.lastTalked = System.currentTimeMillis();
-		for (int i = 0; i < 10; i++) {
-			if (iequals(user.hosts[i], host)) {
-				user.lastSeenTimes[i] = System.currentTimeMillis();
-				break;
-			}
-		}
-	}
-	
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
 		
@@ -671,19 +178,19 @@ lineLoop:
 		
 		msg = msg.trim();
 
-		updateUser(nick, host);
+		data.updateUserTimes(nick, host);
 		checkForMessages(nick, host, recipient);
 		checkForBlacklist(nick, host, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
 						
-			if (iregex("hugs " + name, msg)) {
-				if (isVino(host))
+			if (iregex("hugs " + data.getName(), msg)) {
+				if (data.isVino(host))
 					ircio.privemote(recipient, "hugs Vino!");
 				else
 					ircio.privmsg(recipient, "Get the fuck off.");
-			} else if (iregex("pets " + name, msg)) {
+			} else if (iregex("pets " + data.getName(), msg)) {
 				ircio.privemote(recipient, "purrs.");
 			}
 	
@@ -705,7 +212,7 @@ lineLoop:
 		String log;
 		String msg = origmsg;
 
-		if (iequals(recipient, name)) {
+		if (iequals(recipient, data.getName())) {
 			recipient = nick;
 			pm = true;
 		}
@@ -717,21 +224,21 @@ lineLoop:
 
 		msg = msg.trim();
 
-		updateUser(nick, host);
+		data.updateUserTimes(nick, host);
 		checkForMessages(nick, host, recipient);
 		checkForBlacklist(nick, host, recipient);
 		updateHistory(nick, msg);
 		
+		String name = data.getName();
+
 		//Say hello!
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		if (iregex(name.substring(0, nameEnd), msg)) {
-			for (int i = 0; i < hellos.length; i++) {
-				if (iregex("^"+hellos[i], msg)) {
-					if (System.currentTimeMillis() > nextHi) {	//!spam
-						ircio.privmsg(recipient, helloreplies[new Random().nextInt(helloreplies.length)]);
-						nextHi = System.currentTimeMillis() + 500;
-						return;
-					}
+			if (data.matchHellos(msg)) {
+				if (System.currentTimeMillis() > nextHi) {  //!spam
+					ircio.privmsg(recipient, data.getRandomHelloReply());
+					nextHi = System.currentTimeMillis() + 500;
+					return;
 				}
 			}
 		}
@@ -837,7 +344,7 @@ lineLoop:
 				}
 			} else if (!censor() && iregex("want to cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					if (!isVino(host)) {
+					if (!data.isVino(host)) {
 						ircio.privmsg(recipient, "Fuck no.");
 					} else {
 						ircio.privmsg(recipient, "Take me, " + nick + "!");
@@ -847,6 +354,7 @@ lineLoop:
 				}
 			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))? vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
+					User vino = data.getUser(SephiaBotData.USER_VINO);
 					if (vino.away == null) {
 						if (vino.lastTalked > 0)
 							ircio.privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone. The last time he said anything was " + makeTime(vino.lastTalked) + " ago.");
@@ -866,16 +374,12 @@ lineLoop:
 					boolean foundAway = false;
 					if (iregex("eve?ry(b(o|ud)dy|(1|one?))", targetName)) {
 						//Find out where everybody is and tell the channel.
-						for (int i = 0; i < users.length; i++) {
-							User user = users[i];
+						for (int i = 0; i < data.getNumUsers(); i++) {
+							User user = data.getUser(i);
 							if (user.away != null) {
 								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leaveTime) + ".");
 								foundAway = true;
 							}
-						}
-						if (vino.away != null) {
-							ircio.privmsg(recipient, vino.userName + " has been " + vino.away + " for " + makeTime(vino.leaveTime) + ".");
-							foundAway = true;
 						}
 						if (!foundAway)
 							ircio.privmsg(recipient, "Everyone is present and accounted for.");
@@ -902,8 +406,8 @@ lineLoop:
 				}
 			} else if (iregex("who am i", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User target = getUserByHost(host);
-					if (isVino(host)) {
+					User target = data.getUserByHost(host);
+					if (data.isVino(host)) {
 						ircio.privmsg(recipient, "Daddy!");
 						ircio.privemote(recipient, "hugs " + nick + ".");
 					} else if (target != null) {
@@ -934,7 +438,7 @@ lineLoop:
 				}
 			} else if (!censor() && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String phrase = randomPhrase(new File(sephiadir, "wordsofwisdom.txt"));
+					String phrase = data.randomPhrase("wordsofwisdom.txt");
 					if (phrase != null)
 						ircio.privmsg(recipient, phrase);
 					nextWho = System.currentTimeMillis() + 5000;
@@ -946,7 +450,7 @@ lineLoop:
 					int dice = rand.nextInt(5)+2;
 					int sides = rand.nextInt(5)+6;
 					ircio.privemote(recipient, "rolls " + dice + "d" + sides + " dice and gets " + (dice*sides+1) + ".");
-					if (!isVino(host)) {
+					if (!data.isVino(host)) {
 						ircio.privemote(recipient, "kills " + nick + ".");
 					} else {
 						ircio.privemote(recipient, "hugs " + nick + ".");
@@ -962,7 +466,7 @@ lineLoop:
 				}
 			} else if (iregex("excuse", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String excuse = randomPhrase(new File(sephiadir, "excuses.txt"));
+					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
 						ircio.privmsg(recipient, "Your excuse is: " + excuse);
 					nextWho = System.currentTimeMillis() + 5000;
@@ -982,15 +486,15 @@ lineLoop:
 						return;
 					}
 					String killed = tok.nextToken(" ");
-					User killerUser = getUserByHost(host);
+					User killerUser = data.getUserByHost(host);
 					User killedUser = getUserByNick(killed);
-					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !isVino(host)) {
+					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !data.isVino(host)) {
 						ircio.privemote(recipient, "giggles at " + nick);
 					} else if (iequals(killed, botname)) {
 						ircio.privmsg(recipient, ":(");
 					} else {
-						if (isVino(host))
-							killerUser = vino;
+						if (data.isVino(host))
+							killerUser = data.getUser(SephiaBotData.USER_VINO);
 						int killedAccess = getAccess(killed, channelNumber(recipient));
 						if (killedAccess != -1) {
 							ircio.privmsg(recipient, "It would be my pleasure.");
@@ -1001,25 +505,15 @@ lineLoop:
 								return;
 							}
 							try {
-								int msgIndex = Integer.parseInt(tok.nextToken());
-								int i = 1;
-								Message last = null;
-								User user = getUserByHost(host);
-								for (Message curr = firstMessage; curr != null; curr = curr.next) {
-									if (curr.sender.equals(nick) || (user != null && curr.sender.equals(user.userName))) {
-										if (i++ == msgIndex) {
-											if (last == null)
-												firstMessage = curr.next;
-											else
-												last.next = curr.next;
-											ircio.privmsg(recipient, "Message removed from " + curr.sender + " to " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
-											writeData();
-											return;
-										}
-									}
-									last = curr;
+								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
+								User user = data.getUserByHost(host);
+								Message messages[] = data.getMessagesBySender(nick, user);
+								if (msgIndex >= messages.length) {
+									ircio.privmsg(recipient, "You don't have that many messages");
+									return;
 								}
-								ircio.privmsg(recipient, "What message?");
+								ircio.privmsg(recipient, "Message removed from " + messages[msgIndex].sender + " to " + messages[msgIndex].target + " " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
+								//data.removeMessage(messages[msgIndex]);
 							} catch (NumberFormatException nfe) {
 								ircio.privmsg(recipient, "...if you can call that a number.");
 							}
@@ -1046,29 +540,11 @@ lineLoop:
 					}
 					String message = tok.nextToken("");
 					//If the target was "everybody" or "everyone" then send the message to every user.
-					if (getUserByHost(host) != null && (iequals(target, "everybody") || iequals(target, "everyone"))) {
-						for (int i = 0; i < users.length; i++) {
-							if (firstMessage == null) {
-								firstMessage = new Message(users[i].userName, message, nick);
-							} else {
-								Message currMsg = firstMessage;
-								while (currMsg.next != null)
-									currMsg = currMsg.next;
-								currMsg.next = new Message(users[i].userName, message, nick);
-							}
-						}
-						//Fall through here! Send one last message to Vino!
-						target = "Vino";
-					}
-					if (firstMessage == null) {
-						firstMessage = new Message(target, message, nick);
-					} else {
-						Message currMsg = firstMessage;
-						while (currMsg.next != null)
-							currMsg = currMsg.next;
-						currMsg.next = new Message(target, message, nick);
-					}
-					writeData();
+					if (data.getUserByHost(host) != null && (iequals(target, "everybody") || iequals(target, "everyone")))
+						data.sendMessageToAllUsers(message, nick);
+					else
+						data.addMessage(target, message, nick);
+					data.writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
 					if (!tok.hasMoreElements()) {
@@ -1088,40 +564,40 @@ lineLoop:
 						ircio.privemote(recipient, "anally rapes " + sexed + ".");
 					}
 				} else if (iequals(cmd, "reboot")) {
-					if (isAdmin(host)) {
+					if (data.isAdmin(host)) {
 						ircio.privmsg(recipient, "Be right back.");
-						writeData();
+						data.writeData();
 						System.exit(1);
 					} else
 						ircio.privmsg(recipient, "No.");
 					return;
 				} else if (iequals(cmd, "shutdown")) {
-					if (isVino(host)) {
+					if (data.isVino(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
-						writeData();
+						data.writeData();
 						System.exit(0);
 					} else {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "reload")) {
-					if (isAdmin(host)) {
-						parseConfig(config);
+					if (data.isAdmin(host)) {
+						data.parseConfig();
 						ircio.privmsg(recipient, "Done.");
 					} else {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "save")) {
-					if (isAdmin(host)) {
-						writeData();
+					if (data.isAdmin(host)) {
+						data.writeData();
 						ircio.privmsg(recipient, "Done.");
 					} else {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
 				} else if (iequals(cmd, "listhosts")) {
-					User user = getUserByHost(host);
+					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
 					String buffer = "Hosts logged in as " + user.userName + ":";
@@ -1130,7 +606,7 @@ lineLoop:
 							buffer += " " + (i+1) + ": " + user.hosts[i];
 					ircio.privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
-					User user = getUserByHost(host);
+					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
 					if (!tok.hasMoreElements()) {
@@ -1138,7 +614,7 @@ lineLoop:
 							if (user.hosts[i] != null && user.hosts[i].equals(host)) {
 								user.hosts[i] = null;
 								ircio.privmsg(nick, "It's too bad things couldn't work out.");
-								writeData();
+								data.writeData();
 								return;
 							}
 						}
@@ -1157,7 +633,7 @@ lineLoop:
 						}
 					} catch (NumberFormatException nfe) {
 					}
-					writeData();
+					data.writeData();
 				} else if (iequals(cmd, "login")) {
 					if (tok.countTokens() < 2) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
@@ -1165,59 +641,28 @@ lineLoop:
 					}
 					String login = tok.nextToken(" ").trim();
 					String passwd = tok.nextToken("").trim();
-					if (login.trim().equals("vino") && passwd.trim().equals("xxxxx")) {
-						boolean foundSpot = false;
-						int i;
-						for (i = 0; i < 10; i++) {
-							if (vino.hosts[i] != null && vino.hosts[i].equals(host)) {
-								ircio.privmsg(nick, "Silly you. You're already logged in.");
-								return;
-							}
-						}
-						for (i = 0; i < 10; i++) {
-							if (vino.hosts[i] == null || vino.hosts[i].length() <= 0) {
-								vino.hosts[i] = host;
-								vino.lastSeenTimes[i] = System.currentTimeMillis();
-								foundSpot = true;
-								break;
-							}
-						}
-						if (!foundSpot)
-							ircio.privmsg(nick, "No spots left.");
-						else if (iequals(nick, "nilbus"))
-							ircio.privmsg(nick, "What's up Nilbus?");
-						else
-							ircio.privmsg(nick, "Hi, daddy! :D");
-						writeData();
-					} else if (validateLogin(login, passwd)) {
+					if (data.validateLogin(login, passwd)) {
 						boolean foundSpot = false;
 						int i, userID = -1;
-						for (i = 0; i < users.length; i++)
-							if (users[i].userName.equalsIgnoreCase(login))
-								userID = i;
-						if (userID == -1) {	//WTFException
+						User user = data.getUserByName(login);
+						if (user == null) {	//WTFException
 							ircio.privmsg(nick, "WTF? Tell Vino you saw this.");
 							return;
 						}
-						for (i = 0; i < 10; i++) {
-							if (users[userID].hosts[i] != null && users[userID].hosts[i].equals(host)) {
-								ircio.privmsg(nick, "Silly you. You're already logged in.");
-								return;
-							}
+						// If getUserByHost returns non-null then the user is logged into this user already,
+						// or is logged in as another user and may not re-log in.
+						if (data.getUserByHost(host) != null) {
+							ircio.privmsg(nick, "Silly you. You're already logged in.");
+							return;
 						}
-						for (i = 0; i < 10; i++) {
-							if (users[userID].hosts[i] == null || users[userID].hosts[i].length() <= 0) {
-								users[userID].hosts[i] = host;
-								users[userID].lastSeenTimes[i] = System.currentTimeMillis();
-								foundSpot = true;
-								break;
-							}
-						}
-						if (!foundSpot)
-							ircio.privmsg(nick, "No spots left.");
+						if (data.loginUser(user, host))
+							if (data.isVino(user))
+								ircio.privmsg(nick, "Hi, daddy! :D");
+							else
+								ircio.privmsg(nick, "What's up " + user.userName + "?");
 						else
-							ircio.privmsg(nick, "What's up " + users[userID].userName + "?");
-						writeData();
+							ircio.privmsg(nick, "No spots left.");
+						data.writeData();
 					} else {
 						ircio.privmsg(nick, "No cigar.");
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
@@ -1227,7 +672,7 @@ lineLoop:
 						ircio.privmsg(recipient, "You're what?");
 						return;
 					}
-					User user = getUserByHost(host);
+					User user = data.getUserByHost(host);
 					if (user == null) {
 						ircio.privmsg(recipient, "I don't care.");
 						return;
@@ -1248,12 +693,12 @@ lineLoop:
 						user.away = location.replaceAll("\"", "'");
 						user.leaveTime = System.currentTimeMillis();
 					}
-					writeData();
+					data.writeData();
 					return;
 				} else if (iequals(cmd, "messages")) {
-					User user = getUserByHost(host);
+					User user = data.getUserByHost(host);
 					boolean foundMessage = false;
-					int i = 1, lastIndex, firstIndex = 1;
+					int lastIndex, firstIndex = 1;
 					if (tok.hasMoreElements()) {
 						try {
 							firstIndex = Integer.parseInt(tok.nextToken());
@@ -1262,25 +707,24 @@ lineLoop:
 						} catch (NumberFormatException nfe) {
 						}
 					}
-					lastIndex = firstIndex + 5;
-					for (Message curr = firstMessage; curr != null; curr = curr.next) {
-						if (curr.sender.equals(nick) || (user != null && curr.sender.equals(user.userName))) {
-							if (i >= firstIndex) {
-								if (!foundMessage) {
-									ircio.privmsg(recipient, "You have sent the following messages:");
-									foundMessage = true;
-								}
-								ircio.privmsg(recipient, "Message " + i + ": To " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
-							}
-							i++;
-						}
-						if (i >= lastIndex)
-							break;
-					}
-					if (!foundMessage)
+					Message messages[] = data.getMessagesBySender(nick, user);
+					if (messages.length == 0) {
 						ircio.privmsg(recipient, "You havent sent any messages.");
+						return;
+					}
+					if (firstIndex >= messages.length) {
+						ircio.privmsg(recipient, "You don't have that many messages.");
+						return;
+					}
+					lastIndex = firstIndex + 5;
+					if (lastIndex > messages.length)
+						lastIndex = messages.length;
+					ircio.privmsg(recipient, "You have sent the following messages:");
+					for (int i = firstIndex - 1; i < lastIndex; i++) {
+						ircio.privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
+					}
 				} else if (iequals(cmd, "say")) {
-					if (!isAdmin(host)) {
+					if (!data.isAdmin(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
 					}
@@ -1296,7 +740,7 @@ lineLoop:
 					return;
 				//TODO: Make mode setting colloquial
 				} else if (iequals(cmd, "mode")) {
-					if (!isAdmin(host)) {
+					if (!data.isAdmin(host)) {
 						ircio.privmsg(recipient, "No.");
 						return;
 					}
@@ -1366,59 +810,30 @@ lineLoop:
 
 	}
 
-	private boolean validateLogin(String login, String password) {
-		for (int i = 0; i < users.length; i++)
-			if (users[i].userName.equalsIgnoreCase(login) && users[i].password.equals(password))
-				return true;
-		return false;
-	}
-	
-	private String randomPhrase(File file) {
-		try {
-			Vector phrases = new Vector();
-			BufferedReader in = new BufferedReader(new FileReader(file));
-			String line;
-			while ((line = in.readLine()) != null)
-				phrases.add(line);
-			in.close();
-			if (phrases.size() == 1)
-				return null;
-			Random rnd = new Random();
-			return (String)phrases.get(rnd.nextInt(phrases.size()));
-		} catch (IOException ioe) {
-			logerror("Couldn't open excuse file: " + ioe.getMessage());
-			return null;
-		}
-	}
-
-	public boolean isAdmin(String host) {
-		User user = getUserByHost(host);
-		if (user != null && user.memberType == User.USER_ADMIN)
-			return true;
-		return false;
-	}
-	
-	public boolean isVino(String host) {
-		for (int i = 0; i < 10; i++) {
-			if (vino.hosts[i] != null && iequals(host, vino.hosts[i]))
-				return true;
-		}
-		return false;
-	}
-
 	public boolean talkingToMe(String msg) {
+		String name = data.getName();
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		return iregex("^"+name.substring(0, nameEnd), msg);
 	}
 
 	public boolean spelledMyNameWrong(String msg) {
-		int offset = name.compareToIgnoreCase(msg);
+		int offset = data.getName().compareToIgnoreCase(msg);
 
 		//These are common values. replacing a with 4 gives you -16, etc.
 		//63 -16 45
 		return (offset == 63 || offset == -16 || offset == 45 || offset == 50 || offset == -19);
 	}
 
+	   
+	public void checkForBlacklist(String nick, String host, String channel) {
+		//Check for blacklisted nicks.
+		if (data.checkForBlacklist(nick)) {
+			ircio.ban(channel, nick, host);
+			ircio.kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
+			return;
+		}
+	}
+		
 	public int getAccess(String user, int channum) {
 		if (channum == -1) {
 //			log ("chan -1");                      //XXX: debug
@@ -1436,17 +851,6 @@ lineLoop:
 		return -1;
 	}
 
-	public void checkForBlacklist(String nick, String host, String channel) {
-		//Check for blacklisted nicks.
-		for (int i = 0; i < blacklist.length; i++) {
-			if (iequals(nick, blacklist[i])) {
-				ircio.ban(channel, nick, host);
-				ircio.kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
-				return;
-			}
-		}
-	}
-
 	public void messageChannelJoin(String nick, String host, String channel) {
 
 		String log;
@@ -1456,8 +860,8 @@ lineLoop:
 		logfile(channel, log);
 
 		//Say something as you enter the channel!
-		if (iequals(nick, name)) {
-			ircio.privmsg(channel, greeting);
+		if (iequals(nick, data.getName())) {
+			ircio.privmsg(channel, data.getGreeting());
 		}
 
 		if (iequals(nick, "metapod\\")) {
@@ -1621,8 +1025,8 @@ hostFinder:
 	}
 
 	public int channelNumber(String channel) {
-		for (int channum = 0; channum < channels.length; channum++) {
-			if (channel.equalsIgnoreCase(channels[channum])) {
+		for (int channum = 0; channum < data.getNumChannels(); channum++) {
+			if (channel.equalsIgnoreCase(data.getChannel(channum))) {
 				return channum;
 			}
 		}
@@ -1631,29 +1035,7 @@ hostFinder:
 
 	//Bot system log
 	public void log(String log) {
-		String orig = log;
-		if (syslog == null) { //If the log file hasn't been opened yet
-			if (syslogBuffer == null)
-				syslogBuffer = "";
-			syslogBuffer += log;
-			if (!log.endsWith("\n"))
-				syslogBuffer += "\n";
-		} else {
-			if (syslogBuffer != null && syslogBuffer.length() > 0) {
-				log = syslogBuffer + log;
-				syslogBuffer = null;
-			}
-			try {
-				syslog.write(log, 0, log.length());
-				if (!log.endsWith("\n")) {
-					syslog.newLine();
-				}
-				syslog.flush();
-			} catch (IOException ioe) {
-				System.out.println("Warning: Couldn't write to syslog!");
-			}
-		}
-		System.out.println(orig);
+		data.log(log);
 	}
 
 	//Error log
@@ -1670,8 +1052,8 @@ hostFinder:
 			int second = now.get(Calendar.SECOND);
 			msg = (hour<10?"0":"") + hour + ":" + (minute<10?"0":"") + minute + "." + (second<10?"0":"") + second + " " + msg;
 
-			for (int i = 0; i < channels.length; i++) {
-				if (recipient != null && !recipient.equalsIgnoreCase(channels[i])) {
+			for (int i = 0; i < data.getNumChannels(); i++) {
+				if (recipient != null && !recipient.equalsIgnoreCase(data.getChannel(i))) {
 					continue;
 				}
 				logOut[i].write(msg, 0, msg.length());
