@@ -336,6 +336,8 @@ class SephiaBot implements IRCListener {
 		try {
 			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
 		} catch (IOException ioe) {
+			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded..");
+			users = new User[0];
 			return;  //Assume no datafile has been created if it doesn't exist
 		}
 
