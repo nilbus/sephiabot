@@ -627,26 +627,29 @@ class SephiaBot implements IRCListener {
 		checkForBlacklist(nick, recipient);
 
 		//Bot has been mentioned?
-		if (iregex(name, msg) && gamesurge()) {
-			if (iregex("fuck you", msg)) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Fuck you too, buddy.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
+		if (iregex(name, msg)) {
+			if (gamesurge()) {
+				if (iregex("fuck you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "Fuck you too, buddy.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				} else if (iregex("screw you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "Screw you too, buddy.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				} else if (iregex("you suck", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
 				}
-			} else if (iregex("screw you", msg)) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "Screw you too, buddy.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("you suck", msg)) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-					ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("thank you", msg)) {
+			}
+			if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
 				if (System.currentTimeMillis() > nextWho) { //!spam
 					ircio.privmsg(recipient, "No problem.");
 					nextWho = System.currentTimeMillis() + 5000;
