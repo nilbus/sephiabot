@@ -520,8 +520,10 @@ class SephiaBot implements IRCListener {
 
 	//Get a user by his username only.
 	public User getUserByName(String name) {
+		if (iequals(vino.userName, name.trim()))
+			return vino;
 		for (int i = 0; i < users.length; i++)
-			if (users[i].userName.equalsIgnoreCase(name.trim()))
+			if (iequals(users[i].userName, name.trim()))
 				return users[i];
 		return null;
 	}
@@ -542,6 +544,9 @@ class SephiaBot implements IRCListener {
 	
 	//Guarunteed the person is logged in. Gets a User from a host.
 	public User getUserByHost(String host) {
+		//First check for Vino.
+		if (isVino(host))
+			return vino;
 		for (int i = 0; i < users.length; i++) {
 			for (int j = 0; j < 10; j++)
 				if (users[i].hosts[j] != null && users[i].hosts[j].equalsIgnoreCase(host.trim()))
@@ -555,8 +560,9 @@ class SephiaBot implements IRCListener {
 		Message currMsg = firstMessage;
 		Message lastMsg = null;
 		int numberSent = 0;
+		User user = getUserByHost(host);
 		while (currMsg != null) {
-			if (iequals(currMsg.target, nick)) {
+			if (iequals(currMsg.target, nick) || (user != null && user.userName.equalsIgnoreCase(currMsg.target))) {
 				if (numberSent == 0) {
 					ircio.privmsg(recipient, nick + ", you have messages!");
 				} else if (numberSent >= 5) {
@@ -715,6 +721,7 @@ class SephiaBot implements IRCListener {
 			} else if (iregex("who wrote you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I was written by Vino. Vino rocks.");
+					ircio.privmsg(recipient, "Nilbus helped too.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
@@ -910,17 +917,12 @@ class SephiaBot implements IRCListener {
 					} else if (iequals(killed, botname)) {
 						ircio.privmsg(recipient, ":(");
 					} else {
-						String killedName;
-						if (killedUser != null)
-							killedName = killedUser.userName;
-						else
-							killedName = killed;
 						if (isVino(host))
 							killerUser = vino;
 						int killedAccess = getAccess(killed, channelNumber(recipient));
 						if (killedAccess != -1) {
 							ircio.privmsg(recipient, "It would be my pleasure.");
-							ircio.kick(recipient, killedName, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
+							ircio.kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
 						} else if (killed.equalsIgnoreCase("message")) {
 							if (!tok.hasMoreElements()) {
 								ircio.privmsg(recipient, "Which message? I need a number");
@@ -960,11 +962,32 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String target = tok.nextToken(" ");
+					while (target.endsWith(".") || target.endsWith("!") || target.endsWith(","))
+						target = target.substring(0, target.length()-1);
+					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
+					User user = getUserByNick(target);
+					if (user != null)
+						target = user.userName;
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "Tell " + target + " what?");
 						return;
 					}
 					String message = tok.nextToken("");
+					//If the target was "everybody" or "everyone" then send the message to every user.
+					if (getUserByHost(host) != null && (iequals(target, "everybody") || iequals(target, "everyone"))) {
+						for (int i = 0; i < users.length; i++) {
+							if (firstMessage == null) {
+								firstMessage = new Message(users[i].userName, message, nick);
+							} else {
+								Message currMsg = firstMessage;
+								while (currMsg.next != null)
+									currMsg = currMsg.next;
+								currMsg.next = new Message(users[i].userName, message, nick);
+							}
+						}
+						//Fall through here! Send one last message to Vino!
+						target = "Vino";
+					}
 					if (firstMessage == null) {
 						firstMessage = new Message(target, message, nick);
 					} else {
@@ -983,13 +1006,14 @@ class SephiaBot implements IRCListener {
 					String sexed = tok.nextToken(" ");
 					if (iregex("^vino", sexed)) {
 						ircio.privemote(recipient, "screams as Vino penetrates every orifice of her body!");
+					} else if (iequals(botname, sexed)) {
+						ircio.privemote(recipient, "furiously works the potato masher!");
 					} else {
 						int sexedAccess = getAccess(sexed, channelNumber(recipient));
 						if (sexedAccess == -1) {
-							ircio.privemote(recipient, "I'd love to, but who the hell is that?");
-						} else {
-							ircio.privemote(recipient, "anally rapes " + sexed + ".");
+							sexed = nick;
 						}
+						ircio.privemote(recipient, "anally rapes " + sexed + ".");
 					}
 				} else if (iequals(cmd, "reboot")) {
 					if (isAdmin(host)) {
@@ -1024,8 +1048,6 @@ class SephiaBot implements IRCListener {
 					return;
 				} else if (iequals(cmd, "listhosts")) {
 					User user = getUserByHost(host);
-					if (isVino(host))
-						user = vino;
 					if (user == null)
 						return;
 					String buffer = "Hosts logged in as " + user.userName + ":";
@@ -1035,8 +1057,6 @@ class SephiaBot implements IRCListener {
 					ircio.privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
 					User user = getUserByHost(host);
-					if (isVino(host))
-						user = vino;
 					if (user == null)
 						return;
 					if (!tok.hasMoreElements()) {
@@ -1132,15 +1152,12 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					User user = getUserByHost(host);
-					if (isVino(host)) {
-						user = vino;
-					}
 					if (user == null) {
 						ircio.privmsg(recipient, "I don't care.");
 						return;
 					}
 					String location = tok.nextToken("").trim();
-					if (iequals(location, "back")) {
+					if (location.startsWith("back")) {
 						if (user.away == null) {
 							ircio.privmsg(recipient, "Of course you are honey.");
 						} else {
@@ -1150,9 +1167,8 @@ class SephiaBot implements IRCListener {
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
 						//Remove punctuation from the end
-						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(",")){
+						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(","))
 							location = location.substring(0, location.length()-1);
-						}
 						user.away = location;
 						user.leavetime = System.currentTimeMillis();
 					}
@@ -1161,15 +1177,29 @@ class SephiaBot implements IRCListener {
 				} else if (iequals(cmd, "messages")) {
 					User user = getUserByHost(host);
 					boolean foundMessage = false;
-					int i = 1;
+					int i = 0, lastIndex, firstIndex = 1;
+					if (tok.hasMoreElements()) {
+						try {
+							firstIndex = Integer.parseInt(tok.nextToken());
+							if (firstIndex < 1)
+								firstIndex = 1;
+						} catch (NumberFormatException nfe) {
+						}
+					}
+					lastIndex = firstIndex + 5;
 					for (Message curr = firstMessage; curr != null; curr = curr.next) {
 						if (curr.sender.equals(nick) || (user != null && curr.sender.equals(user.userName))) {
-							if (!foundMessage) {
-								ircio.privmsg(recipient, "You have sent the following messages:");
-								foundMessage = true;
+							if (i >= firstIndex) {
+								if (!foundMessage) {
+									ircio.privmsg(recipient, "You have sent the following messages:");
+									foundMessage = true;
+								}
+								ircio.privmsg(recipient, "Message " + i + ": To " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
 							}
-							ircio.privmsg(recipient, "Message " + (i++) + ": To " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
+							i++;
 						}
+						if (i >= lastIndex)
+							break;
 					}
 					if (!foundMessage)
 						ircio.privmsg(recipient, "You havent sent any messages.");
@@ -1247,19 +1277,15 @@ class SephiaBot implements IRCListener {
 	}
 
 	public boolean isAdmin(String host) {
-		if (isVino(host))
+		User user = getUserByHost(host);
+		if (user != null && user.memberType == User.USER_ADMIN)
 			return true;
-		else {
-			User user = getUserByHost(host);
-			if (user != null && user.memberType == User.USER_ADMIN)
-				return true;
-		}
 		return false;
 	}
 	
 	public boolean isVino(String host) {
 		for (int i = 0; i < 10; i++) {
-			if (iequals(host, vino.hosts[i]))
+			if (vino.hosts[i] != null && iequals(host, vino.hosts[i]))
 				return true;
 		}
 		return false;
