@@ -10,6 +10,7 @@ kali where is person ? -- the ? screws this up.
 kali remind me on day at time to do this
 kali reminders/messages
 kali kill message/reminder #
+kali kill person bans for 30s to avoid autorejoiners.
 
 hug vino back
 - words in the hello list (don't trigger responses)

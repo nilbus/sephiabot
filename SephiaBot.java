@@ -244,7 +244,7 @@ class SephiaBot implements IRCListener {
 					//Check the array up until now for duplicate entries.
 					boolean foundDuplicate = false;
 					for (int j = 0; j < i; j++) {
-						if (vino.hosts[j].equals(vino.hosts[i])) {
+						if (vino.hosts[j] != null && vino.hosts[j].equals(vino.hosts[i])) {
 							foundDuplicate = true;
 							break;
 						}
@@ -330,6 +330,9 @@ class SephiaBot implements IRCListener {
 	void loadUsers() {
 		String filename = usersFileName;
 		log("Loading " + filename);
+			
+		//This function should not return if users is null.
+		users = new User[0];
 
 		BufferedReader dataFileReader;
 
@@ -337,7 +340,6 @@ class SephiaBot implements IRCListener {
 			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
 		} catch (IOException ioe) {
 			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded.");
-			users = new User[0];
 			return;  //Assume no datafile has been created if it doesn't exist
 		}
 
