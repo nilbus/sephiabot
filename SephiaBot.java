@@ -1269,7 +1269,7 @@ class SephiaBot implements IRCListener {
 		} else {
 			//Act like a parrot only if the message isn't a command
 			//Only repeat when 2 people said the same thing, but not the 3rd time.
-			if (iequals(historyText[0], historyText[1]) && !iequals(historyText[0], this.lastRepeat) && !iequals(historyNick[0], historyNick[1])) {
+			if (iequals(historyText[0], historyText[1]) && !iequals(historyText[0], this.lastRepeat) && !iequals(historyNick[0], historyNick[1]) && !historyText[0].trim().startsWith("!")) {
 				this.lastRepeat = historyText[0];
 				ircio.privmsg(recipient, historyText[0]);
 			}
