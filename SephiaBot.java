@@ -86,25 +86,30 @@ class SephiaBot implements IRCListener {
 	}
 
 	String makeTime(long formerTime) {
-		long time, elapsed = System.currentTimeMillis() - formerTime;
-		int second = 1000;
-		String away;
-		if (elapsed < second*60) {
-			time = elapsed/1000;
-			away = "about " + time + " second" + ((time!=1)?"s":"");
-		} else if (elapsed < second*60*60) {
-			time = elapsed/1000/60;
-			away = "about " + time + " minute" + ((time!=1)?"s":"");
-		} else if (elapsed < second*60*60*24) {
-			time = elapsed/1000/60/60;
-			away = "about " + time + " hour" + ((time!=1)?"s":"");
-		} else if (elapsed < second*60*60*24*7) {
-			time = elapsed/1000/60/60/24;
-			away = "about " + time + " day" + ((time!=1)?"s":"");
+		long currentTime = System.currentTimeMillis();
+		long lowTime, highTime;
+		if (formerTime < currentTime) {
+			lowTime = formerTime;
+			highTime = currentTime;
 		} else {
-			away = "more then a week";
+			lowTime = currentTime;
+			highTime = formerTime;
 		}
-		return away;
+		long timeInSeconds = data.timeInSeconds(lowTime, highTime);
+		long timeInMinutes = data.timeInMinutes(lowTime, highTime);
+		long timeInHours = data.timeInHours(lowTime, highTime);
+		long timeInDays = data.timeInDays(lowTime, highTime);
+		if (timeInSeconds < 60) {
+			return "about " + timeInSeconds + " second" + ((timeInSeconds!=1)?"s":"");
+		} else if (timeInMinutes < 60) {
+			return "about " + timeInMinutes + " minute" + ((timeInMinutes!=1)?"s":"");
+		} else if (timeInHours < 24) {
+			return "about " + timeInHours + " hour" + ((timeInHours!=1)?"s":"");
+		} else if (timeInDays < 7) {
+			return "about " + timeInDays + " day" + ((timeInDays!=1)?"s":"");
+		} else {
+			return "more then a week";
+		}
 	}
 
 	void connect() {
@@ -376,7 +381,8 @@ class SephiaBot implements IRCListener {
 						//Find out where everybody is and tell the channel.
 						for (int i = 0; i < data.getNumUsers(); i++) {
 							User user = data.getUser(i);
-							if (user.away != null) {
+							//Do not display away message if the person has not logged in for a while.
+							if (user.away != null && data.timeInWeeks(user.lastTalked, System.currentTimeMillis()) < 1) {
 								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leaveTime) + ".");
 								foundAway = true;
 							}

@@ -107,7 +107,7 @@ lineLoop:
 					} else if (subCommand.equals("host")) {
 						String host = tok.nextToken();
 						long time = Long.parseLong(tok.nextToken().trim());
-						if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
+						if (timeInWeeks(time, System.currentTimeMillis()) >= 1) {
 							hostsThrownOut++;
 							continue;
 						}
@@ -137,7 +137,7 @@ lineLoop:
 					String message = " " + tok.nextToken("").trim();
 
 					//Throw out if more then a week old.
-					if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
+					if (timeInWeeks(time, System.currentTimeMillis()) >= 1) {
 						messagesThrownOut++;
 						continue;
 					} else
@@ -273,7 +273,7 @@ lineLoop:
 				Message currMessage = this.firstMessage;
 				do {
 					//If the message is more then a week old, do not store it.
-					if (currMessage.time > System.currentTimeMillis() - 1000*60*60*24*7) {
+					if (timeInWeeks(currMessage.time, System.currentTimeMillis()) >= 1) {
 						buffer = "message " + currMessage.sender + " " + currMessage.target + " " + currMessage.time + currMessage.message + "\n";
 						dataFileWriter.write(buffer, 0, buffer.length());
 					}
@@ -706,6 +706,26 @@ lineLoop:
 		log("SYSERR: " + log);
 	}
 
+	long timeInSeconds(long from, long to) {
+		return (to - from)/1000;
+	}
+	
+	long timeInMinutes(long from, long to) {
+		return (to - from)/1000/60;
+	}
+	
+	long timeInHours(long from, long to) {
+		return (to - from)/1000/60/60;
+	}
+	
+	long timeInDays(long from, long to) {
+		return (to - from)/1000/60/60/24;
+	}
+	
+	long timeInWeeks(long from, long to) {
+		return (to - from)/1000/60/60/24/7;
+	}
+	
 	String getName() {
 		return name;
 	}
