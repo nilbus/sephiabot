@@ -66,31 +66,36 @@ class SephiaBot implements IRCConnectionListener {
 		this.connections = new IRCConnection[data.getNumNetworks()];
 	}
 
-	String makeTime(long formerTime) {
-		long currentTime = System.currentTimeMillis();
-		long lowTime, highTime;
-		if (formerTime < currentTime) {
-			lowTime = formerTime;
-			highTime = currentTime;
-		} else {
-			lowTime = currentTime;
-			highTime = formerTime;
-		}
-		long timeInSeconds = data.timeInSeconds(lowTime, highTime);
-		long timeInMinutes = data.timeInMinutes(lowTime, highTime);
-		long timeInHours = data.timeInHours(lowTime, highTime);
-		long timeInDays = data.timeInDays(lowTime, highTime);
-		if (timeInSeconds < 60) {
-			return "about " + timeInSeconds + " second" + ((timeInSeconds!=1)?"s":"");
-		} else if (timeInMinutes < 60) {
-			return "about " + timeInMinutes + " minute" + ((timeInMinutes!=1)?"s":"");
-		} else if (timeInHours < 24) {
-			return "about " + timeInHours + " hour" + ((timeInHours!=1)?"s":"");
-		} else if (timeInDays < 7) {
-			return "about " + timeInDays + " day" + ((timeInDays!=1)?"s":"");
-		} else {
-			return "more than a week";
-		}
+	String makeTime(long time) {
+		long dur = Math.abs(time - System.currentTimeMillis()); 
+		String result = "";
+		dur /= 1000L;//Seconds
+		if (dur < 60)
+			result += dur + " second";
+		else {
+		dur /= 60L; // Minutes
+		if (dur < 60)
+			result += dur + " minute";
+		else {
+		dur /= 60L; // Hours
+		if (dur < 24)
+			result += dur + " hour";
+		else {
+		dur /= 24L; // Days
+		if (dur < 30)		//Precision isn't necessary; use avg month length
+			result += dur + " day";
+		else {
+		dur /= 30L; // Months
+		if (dur < 12)
+			result += dur + " month";
+		else {
+		dur /= 12L; // Years
+		result += dur + " year";
+		}}}}}
+
+		if (dur != 1)
+			result += "s";
+		return result;
 	}
 
 	void connect() {
@@ -397,7 +402,7 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			} else if (iregex("who is remy", msg)
 					|| iregex("who is luckyremy",msg)) {
-				if (System.currentTimeMillis() > nextWho) {     //!spam
+				if (System.currentTimeMillis() > nextWho) {	 //!spam
 					con.getIRCIO().privmsg(recipient, "Father of the Black Sheep.");
 					con.getIRCIO().privmsg(recipient, "Harbinger of Doom.");
 					nextWho = System.currentTimeMillis() + 5000;
@@ -724,7 +729,7 @@ class SephiaBot implements IRCConnectionListener {
 						}
 						con.getIRCIO().privemote(recipient, "anally rapes " + sexed + ".");
 					}
-				} else if (iequals(cmd, "reboot")) {
+				} else if (iregex("^re(boot|start)$", cmd)) {
 					if (data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "Be right back.");
 						data.writeData();
@@ -916,7 +921,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 						else
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": From " + sender + " to " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
 				} else if (iequals(cmd, "say")) {
 					if (!data.isAdmin(host)) {

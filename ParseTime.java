@@ -1,4 +1,5 @@
 import java.util.regex.*;
+import java.util.*;
 
 public class ParseTime {
 	public static String ones = "(one|two|three|four|five|six|seven|eight|nine)";
@@ -11,7 +12,8 @@ public class ParseTime {
 	public static String days = "((sun|mon|tues?|wed(nes)?|thu(r(s)?)?|fri|sat(ur)?)(day)?)";
 	public static String dateNumber = "([0-9]?(1(st)?|2(nd)?|3(rd)?|[0-9&&[^1-3]](th)?))";
 
-	public static String time = "[0-2]?[0-9](:[0-9]{2})?( ?([ap]m?)?| in the morning| at night| in the evening)?";
+	public static String time = "([0-2]?[0-9](:[0-9]{2})?)";
+	public static String ampm = "(( ?(?<![a-zA-Z])([ap]m?)?| in the morning?| at ni(ght|te)| in the evening?)\\b)?";
 	public static String counter = "([0-9]+|an?|"+numberWords+")";
 	public static String secondUnit = "(?<![a-zA-Z])s(ec(ond)?s?)?\\b";
 	public static String minuteUnit = "(?<![a-zA-Z])m(in(ute)?s?)?\\b";
@@ -24,7 +26,7 @@ public class ParseTime {
 	public static String date = "("+days+"|(the )?"+dateNumber+" of "+months+"|("+months+"( the)?|the) "+dateNumber+")"; //Wed|the 4th of july|Jul 4th|the 4th
 	public static String onReturn = "(when (I'm back|\\w+ ((gets?|comes?) (in|here|back|on(line)?)|returns?)))";
 
-	public static String timeExpressionPattern = "\\b(at (ab(ou)?t )?"+time+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+")\\b";
+	public static String timeExpressionPattern = "\\b(at (ab(ou)?t )?"+time+ampm+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+")\\b";
 	//Add within, sometime, after, before, later
 	//Add 'general' specifics like tonight, tomorrow, next week, a while
 	//Add remind me about
@@ -95,7 +97,46 @@ public class ParseTime {
 			timeExpression = "in " + duration + " " + unitWord;
 
 			return System.currentTimeMillis() + unit * dur;
-		} else if (iregex("^in ", originalTimeExpression)) {
+		}
+
+		try {
+			//The rest of these will use a calendar object
+			GregorianCalendar now = new GregorianCalendar();
+			GregorianCalendar cal = new GregorianCalendar();
+			if (iregex("^at ", timeExpression)) {
+				String strAmpm = iregexFind(ampm, timeExpression);
+				String strTime = iregexFind(time, timeExpression);
+				String strHrs = iregexFind("[^:]+", strTime);
+				int intHrs = Integer.parseInt(strHrs);
+				String strMins = iregexFind("(?<=:)\\d+", strTime);
+				int intMins;
+				if (strMins != null && strMins.length() > 0)
+					intMins = Integer.parseInt(strMins);
+				else
+					intMins = 0; 
+				cal.set(Calendar.HOUR, intHrs);
+				cal.set(Calendar.MINUTE, intMins);
+
+				int increment = 6;
+				if (strAmpm.length() > 0) {
+					increment = 12;
+					if (iregex("\\bam?|in the morning?\\b", strAmpm))
+						cal.set(Calendar.AM_PM, Calendar.AM);
+					else if (iregex("\\b(pm?|in the evening?|at ni(ght|te))\\b", strAmpm))
+						cal.set(Calendar.AM_PM, Calendar.PM);
+				}
+
+				while (cal.before(now))
+					cal.add(Calendar.HOUR, increment);
+				int newHour = cal.get(Calendar.HOUR);
+				if (newHour == 0) newHour += 12;
+				timeExpression = "" + newHour + ":" + cal.get(Calendar.MINUTE)+
+					(cal.get(Calendar.AM_PM)==Calendar.AM ? "a" : "p");
+				return cal.getTimeInMillis();
+			}
+			//TODO: do other date operations if there are multiple expressions
+		} catch (NumberFormatException nfe) {
+			throw new WTFException("Woah - some weird time I couldn't understand. WTF!");
 		}
 		throw new WTFException("I recognize '" + this.originalTimeExpression + "', but I haven't learned what it means yet.");
 	}
