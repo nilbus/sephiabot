@@ -1,6 +1,6 @@
 while true
 do
-  cd ~/sephiabot
+  cd /home/vino/svn/sephiabot/trunk
   java SephiaBot $*
   retval=$?
   if test $retval -ne 1; then
