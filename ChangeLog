@@ -1,3 +1,7 @@
+Revision 12
++ A few more hellos
+! Fixed channel greeting in freenode where JOIN syntax is different
+
 Revision 8
 + BOFH Style quotes
 + sephiadir in config file

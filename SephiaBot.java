@@ -1,7 +1,7 @@
 /*
 TODO: Write variables to disk and load at startup so memory isn't lost.
 TODO: Better handling of dropped connections, etc.
-FIXME: Greeting doesn't work on freenode
+TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
 */
 import java.net.*;
 import java.io.*;
@@ -1025,6 +1025,8 @@ class IRCIO {
 		} else if (buf.equals("JOIN")) {
 			String channel = tok.nextToken("");
 			channel = channel.substring(1);
+			if (channel.startsWith(":"))
+				channel = channel.substring(1);
 			listener.messageChannelJoin(nick, host, channel);
 			return;
 		} else if (buf.equals("PART")) {
