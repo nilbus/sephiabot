@@ -3,11 +3,13 @@ kick for spamming
 fix all the channel maintanance stuff
 If a message starts with "to" have kali warn about using messages in the first
 person.
-kali where is everyone
 kali tell everyone
 Kali's name in PMs should be optional. ATM if you put her name in a PM it
 doesn't recognize the command.
 kali where is person ? -- the ? screws this up.
+kali remind me on day at time to do this
+kali reminders/messages
+kali kill message/reminder #
 
 hug vino back
 - words in the hello list (don't trigger responses)

@@ -117,17 +117,21 @@ class SephiaBot implements IRCListener {
 	}
 
 	String makeTime(long formerTime) {
-		long elapsed = System.currentTimeMillis() - formerTime;
+		long time, elapsed = System.currentTimeMillis() - formerTime;
 		int second = 1000;
 		String away;
 		if (elapsed < second*60) {
-			away = "about " + elapsed/1000 + " seconds";
+			time = elapsed/1000;
+			away = "about " + time + " second" + ((time!=1)?"s":"");
 		} else if (elapsed < second*60*60) {
-			away = "about " + elapsed/1000/60 + " minutes";
+			time = elapsed/1000/60;
+			away = "about " + time + " minute" + ((time!=1)?"s":"");
 		} else if (elapsed < second*60*60*24) {
-			away = "about " + elapsed/1000/60/60 + " hours";
+			time = elapsed/1000/60/60;
+			away = "about " + time + " hour" + ((time!=1)?"s":"");
 		} else if (elapsed < second*60*60*24*7) {
-			away = "about " + elapsed/1000/60/60/24 + " days";
+			time = elapsed/1000/60/60/24;
+			away = "about " + time + " day" + ((time!=1)?"s":"");
 		} else {
 			away = "more then a week";
 		}
@@ -758,7 +762,21 @@ class SephiaBot implements IRCListener {
 				}
 			} else if (iregex("where is", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User target = getUserByNick(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
+					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
+					if (iequals(targetName, "everybody") || iequals(targetName, "everyone")) {
+						//Find out where everybody is and tell the channel.
+						for (int i = 0; i < users.length; i++) {
+							User user = users[i];
+							if (user.away != null)
+								ircio.privmsg(recipient, user.userName + " has been " + user.away + " for " + makeTime(user.leavetime) + ".");
+						}
+						if (vino.away != null)
+							ircio.privmsg(recipient, vino.userName + " has been " + vino.away + " for " + makeTime(vino.leavetime) + ".");
+						return;
+					}
+					if (iequals(targetName, "kali"))
+						return;
+					User target = getUserByNick(targetName);
 					if (target == null) {
 						ircio.privmsg(recipient, "Like I know.");
 						return;
@@ -1056,6 +1074,10 @@ class SephiaBot implements IRCListener {
 						}
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
+						//Remove punctuation from the end
+						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(",")){
+							location = location.substring(0, location.length()-1);
+						}
 						user.away = location;
 						user.leavetime = System.currentTimeMillis();
 					}
