@@ -84,7 +84,7 @@ class IRCChannel {
   }
 
   boolean userInChannel(String nick) {
-	  for (IRCUser user = users; users != null; user = user.next)
+	  for (IRCUser user = users; user != null; user = user.next)
 		  if (user.name.equalsIgnoreCase(nick))
 			  return true;
 	  return false;

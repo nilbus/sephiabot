@@ -81,6 +81,7 @@ class SephiaBotData {
 		try {
 			int messagesLoaded = 0;
 			int messagesThrownOut = 0;
+			int remindersLoaded = 0;
 			int hostsLoadedTotal = 0;
 			int hostsThrownOut = 0;
 			int awayMsgLoaded = 0;
@@ -155,6 +156,23 @@ lineLoop:
 							currMsg = currMsg.next;
 						currMsg.next = new Message(target, message, nick, time);
 					}
+				} else if (command.equals("reminder")) {
+					String nick = tok.nextToken(" ").trim();
+					String target = tok.nextToken(" ").trim();
+					long timeSent = Long.parseLong(tok.nextToken(" ").trim());
+					long timeToArrive = Long.parseLong(tok.nextToken(" ").trim());
+					boolean notified = stringToBoolean(tok.nextToken(" ").trim());
+					String message = tok.nextToken("").trim();
+
+					remindersLoaded++;
+					if (firstReminder == null) {
+						firstReminder = new Reminder(target, message, nick, notified, timeToArrive, timeSent);
+					} else {
+						Reminder currRem = firstReminder;
+						while (currRem.next != null)
+							currRem = currRem.next;
+						currRem.next = new Reminder(target, message, nick, notified, timeToArrive, timeSent);
+					}
 				//vinohost, vinoaway, and vinoleavetime should not be necessary anymore. Vino's info is loaded like any other user.
 				// It's left in here for backwards compatibility.
 				} else if (command.equals("vinohost")) {
@@ -173,10 +191,11 @@ lineLoop:
 				}
 			}
 
-			//TODO: Cycle through away messages and throw out old ones.
+			findNextReminderTime();
 			
 			log("Messages loaded: " + messagesLoaded);
 			log("Messages thrown out: " + messagesThrownOut);
+			log("Reminders loaded: " + remindersLoaded);
 			log("Hosts loaded: " + hostsLoadedTotal);
 			log("Hosts thrown out: " + hostsThrownOut);
 			log("Away messages loaded: " + awayMsgLoaded);
@@ -285,6 +304,16 @@ lineLoop:
 					currMessage = currMessage.next;
 				} while (currMessage != null);
 			}
+
+			if (this.firstReminder != null) {
+				Reminder currReminder = this.firstReminder;
+				do {
+					buffer = "reminder " + currReminder.sender + " " + currReminder.target + " " + currReminder.timeSent + " " + currReminder.timeToArrive + " " + currReminder.notified + " " + currReminder.message + "\n";
+					dataFileWriter.write(buffer, 0, buffer.length());
+					currReminder = currReminder.next;
+				} while (currReminder != null);
+			}
+
 		} catch (IOException ioe) {
 			logerror("Couldn't write to data file " + filename + ".");
 			return;
@@ -707,6 +736,7 @@ lineLoop:
 			curr.next = new Reminder(target, message, nick, time);
 		}
 		findNextReminderTime();
+		writeData();
 	}
 	
 	void findNextReminderTime() {
