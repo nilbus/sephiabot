@@ -802,7 +802,7 @@ class SephiaBot implements IRCListener {
 					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
 					while (targetName.endsWith("!") || targetName.endsWith("?") || targetName.endsWith(","))
 						targetName = targetName.substring(0, targetName.length()-1);
-					if (iequals(targetName, "everybody") || iequals(targetName, "everyone")) {
+					if (iregex("eve?ry ?(b(o|ud)dy|(1|one?))", targetName)) {
 						//Find out where everybody is and tell the channel.
 						for (int i = 0; i < users.length; i++) {
 							User user = users[i];
@@ -819,11 +819,12 @@ class SephiaBot implements IRCListener {
 					if (target == null) {
 						ircio.privmsg(recipient, "Like I know.");
 						return;
-					}
+					} else
+						targetName = target.userName; //use correct caps
 					if (target.away == null) {
 						ircio.privmsg(recipient, "I don't know.");
 					} else {
-						ircio.privmsg(recipient, "Away message: " + target.away + ". Time away: " + makeTime(target.leavetime) + ".");
+						ircio.privmsg(recipient, targetName + " said, \"I'm " + target.away + ".\"  " + targetName + " has been away for " + makeTime(target.leavetime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -1169,7 +1170,7 @@ class SephiaBot implements IRCListener {
 						//Remove punctuation from the end
 						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(","))
 							location = location.substring(0, location.length()-1);
-						user.away = location;
+						user.away = location.replaceAll("\"", "'");
 						user.leavetime = System.currentTimeMillis();
 					}
 					writeData();
