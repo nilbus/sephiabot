@@ -109,7 +109,7 @@ class SephiaBot implements IRCListener {
 		} else if (timeInDays < 7) {
 			return "about " + timeInDays + " day" + ((timeInDays!=1)?"s":"");
 		} else {
-			return "more then a week";
+			return "more than a week";
 		}
 	}
 
