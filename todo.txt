@@ -12,8 +12,11 @@ kali reminders/messages
 kali kill message/reminder #
 kali kill person bans for 30s to avoid autorejoiners.
 Kali where am I? / Kali where is vino? (same person who said it.)
+make backups of the data file to load in case kali crashes while writing
+kali, i'm back!
+kali tell person, kill this comma
+- a command where kali says the last time she saw a user speak.
 
-hug vino back
 - words in the hello list (don't trigger responses)
 kali, i'm your daddy
 /me slaps kali

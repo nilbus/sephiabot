@@ -587,6 +587,8 @@ class SephiaBot implements IRCListener {
 		msg = msg.trim();
 
 		checkForMessages(nick, host, recipient);
+
+		checkForBlacklist(nick, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
@@ -621,6 +623,8 @@ class SephiaBot implements IRCListener {
 		msg = msg.trim();
 
 		checkForMessages(nick, host, recipient);
+
+		checkForBlacklist(nick, recipient);
 
 		//Bot has been mentioned?
 		if (iregex(name, msg) && gamesurge()) {
@@ -1228,6 +1232,16 @@ class SephiaBot implements IRCListener {
 		return -1;
 	}
 
+	public void checkForBlacklist(String nick, String channel) {
+		//Check for blacklisted nicks.
+		for (int i = 0; i < blacklist.length; i++) {
+			if (iequals(nick, blacklist[i])) {
+				ircio.privmsg(channel, "!kb " + nick + " You have been blacklisted. Please never return to this channel.");
+				return;
+			}
+		}
+	}
+
 	public void messageChannelJoin(String nick, String host, String channel) {
 
 		String log;
@@ -1249,13 +1263,7 @@ class SephiaBot implements IRCListener {
 			ircio.privemote(channel, "salutes as Remy enters.");
 		}
 
-		//Check for blacklisted nicks.
-		for (int i = 0; i < blacklist.length; i++) {
-			if (iequals(nick, blacklist[i])) {
-				ircio.privmsg(channel, "!kb " + nick + " You have been blacklisted. Please never return to this channel.");
-				break;
-			}
-		}
+		checkForBlacklist(nick, channel);
 		
 		int channum = channelNumber(channel);
 
