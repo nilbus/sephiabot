@@ -351,7 +351,7 @@ class SephiaBot implements IRCConnectionListener {
 
 			//BEGIN COLLOQUIAL COMMANDS
 			//These commands can be used anywhere if the bot's name is spoken first.
-			if (iregex("^who are you\\W+$", msg)) {
+			if (iregex("who are you\\W*$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "I am an advanced SephiaBot channel bot.");
 					con.getIRCIO().privmsg(recipient, "I'll kick your " + (censor(con)?"butt":"ass") + " in days that end in 'y'.");
