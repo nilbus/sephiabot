@@ -1,4 +1,3 @@
-Thank you kali. You're welcome
 kick for spamming
 fix all the channel maintanance stuff
 If a message starts with "to" have kali warn about using messages in the first
@@ -6,10 +5,9 @@ person.
 kali tell everyone
 Kali's name in PMs should be optional. ATM if you put her name in a PM it
 doesn't recognize the command.
-kali where is person ? -- the ? screws this up.
 kali remind me on day at time in duration do this
-kali reminders/messages
-kali kill message/reminder #
+kali reminders
+kali kill reminder #
 kali kill person bans for 30s to avoid autorejoiners.
 Kali where am I? / Kali where is vino? (same person who said it.)
 make backups of the data file to load in case kali crashes while writing
@@ -17,8 +15,8 @@ kali, i'm back!
 kali tell person, kill this comma
 - a command where kali says the last time she saw a user speak.
 Have kali keep track of pings and pongs and print out round trip time.
+- Create a "removePunctuation" function that strips specified punctuation from words.
 
-- words in the hello list (don't trigger responses)
 kali, i'm your daddy
 /me slaps kali
 kali, asl

@@ -131,18 +131,34 @@ class IRCIO {
 		try {
 			int command = Integer.parseInt(buf);
 			switch (command) {
-			case 353:
-//:Extremity.CA.US.GamesNET.net 353 Robyn = #1973 :Robyn Max\DAd @Tempyst LittleMe @MechanicalGhost Mez` @Vino sada^game GOaT @Weine|Away @ChanServ shinobiwan @Yukie WillSchnevel +Feixeno
-
-				String channel = msg.substring(msg.indexOf("=") + 2, msg.indexOf(" ", msg.indexOf("=") + 2));
-				String list = msg.substring(msg.indexOf(":", 1)+1);
-				listener.messageChanList(channel, list);
-				return;
 
 			case 302:
 //:Prothid.CA.US.GameSurge.net 302 Kali :Kali=+~sephiabot@adsl-221-75-195.rmo.bellsouth.net bigguy=+~bigguy@rdu163-63-180.nc.rr.com Thearc=+Sakura_Mus@047.162-78-65.ftth.swbr.surewest.net Vino=+~Vino@adsl-221-75-195.rmo.bellsouth.net Eke=+way2ez48bi@Ek3.user.gamesurge
 				String users = msg.substring(msg.indexOf(":", 1)+1);
 				listener.messageUserHosts(users);
+				return;
+
+
+
+//:ClanShells.DE.EU.GameSurge.net 352 Vino #tsbeta ~Vino adsl-221-57-217.rmo.bellsouth.net *.GameSurge.net Vino H :0 Jorge L. Rodriguez
+			case 352:
+				tok.nextToken();							//Bot's name
+				String userchannel = tok.nextToken();		//Channel
+				String username = tok.nextToken();			//User name
+				String userhost = tok.nextToken();			//User host
+				tok.nextToken();							//*.gamesurge.net ?
+				String usernick = tok.nextToken();			//User nick
+				tok.nextToken();							//H !
+				tok.nextToken();							//: and then server hop level
+				String realname = tok.nextToken("").trim();	//User's real name
+				listener.messageWho(userchannel, usernick, username, userhost, realname);
+				return;
+				
+			case 353:
+//:Extremity.CA.US.GamesNET.net 353 Robyn = #1973 :Robyn Max\DAd @Tempyst LittleMe @MechanicalGhost Mez` @Vino sada^game GOaT @Weine|Away @ChanServ shinobiwan @Yukie WillSchnevel +Feixeno
+				String channel = msg.substring(msg.indexOf("=") + 2, msg.indexOf(" ", msg.indexOf("=") + 2));
+				String list = msg.substring(msg.indexOf(":", 1)+1);
+				listener.messageChanList(channel, list);
 				return;
 				
 			default:
@@ -279,6 +295,18 @@ class IRCIO {
 		listener.log(buf);
 	}
 
+	public void who(String target) {
+		String buf = "WHO " + target + "\n";
+		
+		try {
+			out.write(buf, 0, buf.length());
+			out.flush();
+		} catch (IOException ioe) {
+		}
+
+		listener.log(buf);
+	}
+	
 	public void setMode(String recipient, String inchannel, String mode) {
 		try {
 	String msg = "MODE " + inchannel + " " + mode + " " + recipient + "\n";

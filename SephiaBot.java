@@ -646,6 +646,12 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (iregex("thank you", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					ircio.privmsg(recipient, "No problem.");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
 			}
 		}
 
@@ -687,6 +693,8 @@ class SephiaBot implements IRCListener {
 				msg = msg.substring(0, msg.length()-1);
 			}
 
+			//BEGIN COLLOQUIAL COMMANDS
+			//These commands can be used anywhere if the bot's name is spoken first.
 			if (iequals("who are you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "I am an advanced SephiaBot channel bot.");
@@ -782,6 +790,8 @@ class SephiaBot implements IRCListener {
 			} else if (iregex("where is", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
+					while (targetName.endsWith("!") || targetName.endsWith("?") || targetName.endsWith(","))
+						targetName = targetName.substring(0, targetName.length()-1);
 					if (iequals(targetName, "everybody") || iequals(targetName, "everyone")) {
 						//Find out where everybody is and tell the channel.
 						for (int i = 0; i < users.length; i++) {
@@ -868,6 +878,17 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (iregex("excuse", msg)) {
+				if (System.currentTimeMillis() > nextWho) {	//!spam
+					String excuse = randomPhrase(new File(sephiadir, "excuses.txt"));
+					if (excuse != null)
+						ircio.privmsg(recipient, "Your excuse is: " + excuse);
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
+				
+			//BEGIN COMMAND SECTION.
+			//These are one-word commands only. The command is the first thing you say after the bot name. botname, command arguments.
 			} else if (tok.hasMoreElements()) {
 				String cmd = tok.nextToken(" ");
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
@@ -883,7 +904,6 @@ class SephiaBot implements IRCListener {
 					User killedUser = getUserByNick(killed);
 					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !isVino(host)) {
 						ircio.privemote(recipient, "giggles at " + nick);
-						return;
 					} else if (iequals(killed, botname)) {
 						ircio.privmsg(recipient, ":(");
 					} else {
@@ -894,8 +914,41 @@ class SephiaBot implements IRCListener {
 							killedName = killed;
 						if (isVino(host))
 							killerUser = vino;
-						ircio.privmsg(recipient, "It would be my pleasure.");
-						ircio.kick(recipient, killedName, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
+						int killedAccess = getAccess(killed, channelNumber(recipient));
+						if (killedAccess != -1) {
+							ircio.privmsg(recipient, "It would be my pleasure.");
+							ircio.kick(recipient, killedName, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
+						} else if (killed.equalsIgnoreCase("message")) {
+							if (!tok.hasMoreElements()) {
+								ircio.privmsg(recipient, "Which message? I need a number");
+								return;
+							}
+							try {
+								int msgIndex = Integer.parseInt(tok.nextToken());
+								int i = 1;
+								Message last = null;
+								User user = getUserByHost(host);
+								for (Message curr = firstMessage; curr != null; curr = curr.next) {
+									if (curr.sender.equals(nick) || (user != null && curr.sender.equals(user.userName))) {
+										if (i++ == msgIndex) {
+											if (last == null)
+												firstMessage = curr.next;
+											else
+												last.next = curr.next;
+											ircio.privmsg(recipient, "Message removed from " + curr.sender + " to " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
+											writeData();
+											return;
+										}
+									}
+									last = curr;
+								}
+								ircio.privmsg(recipient, "What message?");
+							} catch (NumberFormatException nfe) {
+								ircio.privmsg(recipient, "...if you can call that a number.");
+							}
+							return;
+						} else
+							ircio.privmsg(recipient, "Kill who what now?"); 
 						return;
 					}
 				} else if (iequals(cmd, "tell")) {
@@ -1102,6 +1155,21 @@ class SephiaBot implements IRCListener {
 					}
 					writeData();
 					return;
+				} else if (iequals(cmd, "messages")) {
+					User user = getUserByHost(host);
+					boolean foundMessage = false;
+					int i = 1;
+					for (Message curr = firstMessage; curr != null; curr = curr.next) {
+						if (curr.sender.equals(nick) || (user != null && curr.sender.equals(user.userName))) {
+							if (!foundMessage) {
+								ircio.privmsg(recipient, "You have sent the following messages:");
+								foundMessage = true;
+							}
+							ircio.privmsg(recipient, "Message " + (i++) + ": To " + curr.target + " " + makeTime(curr.time) + " ago:" + curr.message);
+						}
+					}
+					if (!foundMessage)
+						ircio.privmsg(recipient, "You havent sent any messages.");
 				} else if (iequals(cmd, "say")) {
 					if (!isAdmin(host)) {
 						ircio.privmsg(recipient, "No.");
@@ -1142,14 +1210,6 @@ class SephiaBot implements IRCListener {
 					System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
 					ircio.setMode(who, inchannel, mode);
 					return;
-				} else if (iregex("excuse", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						String excuse = randomPhrase(new File(sephiadir, "excuses.txt"));
-						if (excuse != null)
-							ircio.privmsg(recipient, "Your excuse is: " + excuse);
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					}
 				}
 			}
 		} else if (spelledMyNameWrong(botname)) {
@@ -1217,18 +1277,18 @@ class SephiaBot implements IRCListener {
 
 	public int getAccess(String user, int channum) {
 		if (channum == -1) {
-			log ("chan -1");                      //XXX: debug
+//			log ("chan -1");                      //XXX: debug
 			return -1;
 		}
 		IRCUser current = server.channels[channum].users;
 		for (int i = 0; i < server.channels[channum].numusers; i++) {
 			if (iequals(user, current.name)) {
-				log (current.name + " access " + current.access); //XXX: debug
+//				log (current.name + " access " + current.access); //XXX: debug
 				return current.access;
 			}
 			current = current.next;
 		}
-		log(user + " access -1");  //XXX: debug
+//		log(user + " access -1");  //XXX: debug
 		return -1;
 	}
 
@@ -1337,8 +1397,10 @@ class SephiaBot implements IRCListener {
 		int channum = channelNumber(channel);
 
 		StringTokenizer tok = new StringTokenizer(list, " ");
-		int usersInWhois = 0;
-		String userhostString = "";
+//		int usersInWhois = 0;
+//		String userhostString = "";
+		
+		ircio.who(channel);
 		
 		while (tok.hasMoreElements()) {
 			String user = tok.nextToken();
@@ -1357,15 +1419,15 @@ class SephiaBot implements IRCListener {
 			}
 			server.channels[channum].addUser(user, "", access);
 			
-			userhostString += " " + user;
-			if (++usersInWhois == 5) {
-				ircio.userhost(userhostString);
-				usersInWhois = 0;
-				userhostString = "";
-			}
+//			userhostString += " " + user;
+//			if (++usersInWhois == 5) {
+//				ircio.userhost(userhostString);
+//				usersInWhois = 0;
+//				userhostString = "";
+//			}
 		}
-		if (usersInWhois > 0)
-			ircio.userhost(userhostString);
+//		if (usersInWhois > 0)
+//			ircio.userhost(userhostString);
 
 	}
 
@@ -1395,6 +1457,20 @@ hostFinder:
 		}
 	}
 
+	public void messageWho(String userchannel, String usernick, String username, String host, String realname) {
+		for (int i = 0; i < server.channels.length; i++) {
+			if (server.channels[i].name.equalsIgnoreCase(userchannel)) {
+				for (IRCUser curr = server.channels[i].users; curr != null; curr = curr.next) {
+					if (curr.name.equalsIgnoreCase(usernick)) {
+						curr.host = username + "@" + host;
+						return;
+					}
+				}
+				return;
+			}
+		}
+	}
+	
 	public void messageReceived(String msg) {
 
 	}
@@ -1477,6 +1553,7 @@ interface IRCListener {
 
 	public void messageChanList(String channel, String list);
 	public void messageUserHosts(String users);
+	public void messageWho(String userchannel, String usernick, String username, String host, String realname);
 
 	public void logfile(String recipient, String msg);
 	public void log(String msg);
