@@ -239,7 +239,7 @@ class SephiaBot implements IRCListener {
 		String log;
 
 		if (recipient.toLowerCase().equals(name.toLowerCase())) {
-			recipient = nick;   						//XXX: Still testing
+			recipient = nick;
 			log("received private message");
 		}
 
@@ -359,6 +359,26 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (msg.toLowerCase().equals("who is here") && nick.equals("Nilbus")) {
+				if (System.currentTimeMillis() > nextWho) {	//!spam
+
+					int channum = channelNumber(recipient);
+					if (channum == -1) {
+						ircio.privmsg(recipient, "It's just you and me in a PM, buddy.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					} else {
+						StringBuffer buf = new StringBuffer("Users in this channel:");
+						IRCUser current = server.channels[channum].users;
+						for (int i = 0; i < server.channels[channum].numusers; i++) {
+							buf.append(" " + current.name);
+							current = current.next;
+						}
+						ircio.privmsg("Nilbus", buf.toString()); //XXX hack!
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				}
 			} else if (msg.toLowerCase().indexOf("who is vino") != -1) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "A dirty cuban.");
@@ -444,26 +464,6 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (msg.toLowerCase().equals("who is here") && nick.equals("Nilbus")) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-
-					int channum = channelNumber(recipient);
-					if (channum == -1) {
-						ircio.privmsg(recipient, "It's just you and me in a PM, buddy.");
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					} else {
-						StringBuffer buf = new StringBuffer("Users in this channel:");
-						IRCUser current = server.channels[channum].users;
-						for (int i = 0; i < server.channels[channum].numusers; i++) {
-							buf.append(" " + current.name);
-							current = current.next;
-						}
-						ircio.privmsg("Nilbus", buf.toString()); //XXX hack!
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					}
-				}
 			} else if (tok.hasMoreElements()) {
 				String cmd = tok.nextToken(" ");
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
@@ -485,8 +485,6 @@ class SephiaBot implements IRCListener {
 						return;
 					} else {
 						ircio.privmsg(recipient, "It would be my pleasure.");
-						if (tok.hasMoreElements() && tok.nextToken(" ").equals("from"))
-							recipient = tok.nextToken("");
 						ircio.kick(recipient, killed, "You have been bitched by " + name + ". Have a nice day.");
 						return;
 					}
