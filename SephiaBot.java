@@ -397,18 +397,25 @@ class SephiaBot implements IRCListener {
 	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
 		String log;
 		
-		log = "* " + nick + " ";
-		log += msg.substring(8, msg.length()-1);
+		log = "* " + nick + " " + msg;
 
 		logfile(recipient, log);
 		
 		msg = msg.trim();
 
-		if (iregex("hugs kali", msg)) {
-			if (isVino(host))
-				ircio.privemote(recipient, "hugs Vino!");
-			else
-				ircio.privmsg(recipient, "Get the fuck off.");
+		if (System.currentTimeMillis() > nextWho) { //!spam
+			nextWho = System.currentTimeMillis() + 5000;
+						
+			if (iregex("hugs kali", msg)) {
+				if (isVino(host))
+					ircio.privemote(recipient, "hugs Vino!");
+				else
+					ircio.privmsg(recipient, "Get the fuck off.");
+			} else if (iregex("pets kali", msg)) {
+				ircio.privemote(recipient, "purrs.");
+			}
+	
+			return;
 		}
 	}
 
@@ -893,6 +900,10 @@ class SephiaBot implements IRCListener {
 			ircio.privmsg(channel, "Heya meta.");
 		}
 
+		if (iequals(nick, "luckyremy")) {
+			ircio.privemote(channel, "salutes as Remy enters.");
+		}
+
 		int channum = channelNumber(channel);
 
 		if (channum > -1) {
@@ -1307,8 +1318,7 @@ class IRCIO {
 		System.out.println(buf);
 
 		String log;
-		log = "* " + name + " ";
-		log += msg.substring(8, msg.length()-1);
+		log = "* " + name + " " + msg;
 
 		listener.logfile(recipient, log);
 		
