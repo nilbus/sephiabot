@@ -161,6 +161,10 @@ class IRCIO {
 				listener.messageChanList(channel, list);
 				return;
 				
+			case 433:
+//:NetFire.TX.US.GameSurge.net 433 * Kali :Nickname is already in use.
+				return;
+				
 			default:
 			}
 			

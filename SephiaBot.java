@@ -508,12 +508,12 @@ class SephiaBot implements IRCListener {
 								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
 								User user = data.getUserByHost(host);
 								Message messages[] = data.getMessagesBySender(nick, user);
-								if (msgIndex >= messages.length) {
-									ircio.privmsg(recipient, "You don't have that many messages");
+								if (msgIndex >= messages.length || msgIndex < 0) {
+									ircio.privmsg(recipient, "You don't have that many messages.");
 									return;
 								}
 								ircio.privmsg(recipient, "Message removed from " + messages[msgIndex].sender + " to " + messages[msgIndex].target + " " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
-								//data.removeMessage(messages[msgIndex]);
+								data.removeMessage(messages[msgIndex]);
 							} catch (NumberFormatException nfe) {
 								ircio.privmsg(recipient, "...if you can call that a number.");
 							}
@@ -528,12 +528,17 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String target = tok.nextToken(" ");
+					String sender = nick;
 					while (target.endsWith(".") || target.endsWith("!") || target.endsWith(","))
 						target = target.substring(0, target.length()-1);
 					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
-					User user = getUserByNick(target);
-					if (user != null)
-						target = user.userName;
+					User targetUser = getUserByNick(target);
+					if (targetUser != null)
+						target = targetUser.userName;
+					//If the sending user is logged in, send the message as his username instead so that all the messages are sent by the same user.
+					User senderUser = data.getUserByHost(host);
+					if (senderUser != null)
+						sender = senderUser.userName;
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "Tell " + target + " what?");
 						return;
@@ -541,9 +546,9 @@ class SephiaBot implements IRCListener {
 					String message = tok.nextToken("");
 					//If the target was "everybody" or "everyone" then send the message to every user.
 					if (data.getUserByHost(host) != null && (iequals(target, "everybody") || iequals(target, "everyone")))
-						data.sendMessageToAllUsers(message, nick);
+						data.sendMessageToAllUsers(message, sender);
 					else
-						data.addMessage(target, message, nick);
+						data.addMessage(target, message, sender);
 					data.writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
@@ -606,6 +611,7 @@ class SephiaBot implements IRCListener {
 							buffer += " " + (i+1) + ": " + user.hosts[i];
 					ircio.privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
+					//TODO: data.logout(host) instead of doing this manually.
 					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
@@ -688,7 +694,7 @@ class SephiaBot implements IRCListener {
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
 						//Remove punctuation from the end
-						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(","))
+						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(",") || location.endsWith("?"))
 							location = location.substring(0, location.length()-1);
 						user.away = location.replaceAll("\"", "'");
 						user.leaveTime = System.currentTimeMillis();
@@ -698,10 +704,10 @@ class SephiaBot implements IRCListener {
 				} else if (iequals(cmd, "messages")) {
 					User user = data.getUserByHost(host);
 					boolean foundMessage = false;
-					int lastIndex, firstIndex = 1;
+					int lastIndex, firstIndex = 0;
 					if (tok.hasMoreElements()) {
 						try {
-							firstIndex = Integer.parseInt(tok.nextToken());
+							firstIndex = Integer.parseInt(tok.nextToken())-1;
 							if (firstIndex < 1)
 								firstIndex = 1;
 						} catch (NumberFormatException nfe) {
@@ -717,10 +723,10 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					lastIndex = firstIndex + 5;
-					if (lastIndex > messages.length)
-						lastIndex = messages.length;
+					if (lastIndex >= messages.length)
+						lastIndex = messages.length-1;
 					ircio.privmsg(recipient, "You have sent the following messages:");
-					for (int i = firstIndex - 1; i < lastIndex; i++) {
+					for (int i = firstIndex; i <= lastIndex; i++) {
 						ircio.privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
 					}
 				} else if (iequals(cmd, "say")) {

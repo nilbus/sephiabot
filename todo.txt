@@ -14,6 +14,10 @@ make backups of the data file to load in case kali crashes while writing
 Have kali keep track of pings and pongs and print out round trip time.
 - Create a "removePunctuation" function that strips specified punctuation from words.
 Say "be right back" and "goodbye" onshutdown in every channel.
+Kick for using colors.
+
+<Person> Vino, blah blah
+<Kali> Person, vino is away. blah blh
 
 kali, i'm your daddy
 /me slaps kali

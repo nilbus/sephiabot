@@ -550,7 +550,6 @@ lineLoop:
 		while (currMsg != null) {
 			if (iequals(currMsg.target, receiver) || (user != null && iequals(user.userName, currMsg.target))) {
 				messages.add(currMsg);
-				removeMessage(currMsg);
 			}
 			currMsg = currMsg.next;
 		}
@@ -657,7 +656,7 @@ lineLoop:
 	boolean checkForBlacklist(String nick) {
 		//Check for blacklisted nicks.
 		for (int i = 0; i < blacklist.length; i++) {
-			if (iequals(nick, blacklist[i])) {
+			if (iregex(blacklist[i], nick)) {
 				return true;
 			}
 		}
