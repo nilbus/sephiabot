@@ -336,7 +336,7 @@ class SephiaBot implements IRCListener {
 		try {
 			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
 		} catch (IOException ioe) {
-			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded..");
+			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded.");
 			users = new User[0];
 			return;  //Assume no datafile has been created if it doesn't exist
 		}
@@ -776,7 +776,7 @@ class SephiaBot implements IRCListener {
 							ircio.privmsg(recipient, vino.userName + " has been " + vino.away + " for " + makeTime(vino.leavetime) + ".");
 						return;
 					}
-					if (iequals(targetName, "kali"))
+					if (iequals(targetName, botname))
 						return;
 					User target = getUserByNick(targetName);
 					if (target == null) {
@@ -867,7 +867,7 @@ class SephiaBot implements IRCListener {
 					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !isVino(host)) {
 						ircio.privemote(recipient, "giggles at " + nick);
 						return;
-					} else if (iequals(killed, "kali")) {
+					} else if (iequals(killed, botname)) {
 						ircio.privmsg(recipient, ":(");
 					} else {
 						String killedName;
