@@ -567,6 +567,12 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (msg.toLowerCase().indexOf("i suck dick") != -1) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					ircio.privmsg(recipient, "Yeah, we know you do.");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
 			} else if (msg.toLowerCase().indexOf("words of wisdom") != -1) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String phrase = randomPhrase(new File(sephiadir, "wordsofwisdom.txt"));
