@@ -14,7 +14,7 @@ class IRCIO {
 	private BufferedReader in;
 	private BufferedWriter out;
 
-	static final long TIMEOUT = 30*1000;	//30 seconds
+	static final long TIMEOUT = 60*1000;	//60 seconds
 
 	private boolean connected = false;
 	private boolean registered = false;
