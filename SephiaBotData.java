@@ -278,7 +278,7 @@ lineLoop:
 				Message currMessage = this.firstMessage;
 				do {
 					//If the message is more then a week old, do not store it.
-					if (timeInWeeks(currMessage.time, System.currentTimeMillis()) >= 1) {
+					if (timeInWeeks(currMessage.time, System.currentTimeMillis()) <= 0) {
 						buffer = "message " + currMessage.sender + " " + currMessage.target + " " + currMessage.time + currMessage.message + "\n";
 						dataFileWriter.write(buffer, 0, buffer.length());
 					}
