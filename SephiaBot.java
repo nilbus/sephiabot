@@ -20,6 +20,7 @@ class SephiaBot implements IRCListener {
 	private String helloreplies[];
 	private String logdir;
 	private String sephiadir; //Location of sephiabot. Quote, data files here
+	private String blacklist[];
 	private String config;
 
 	private Message firstMessage = null;
@@ -89,6 +90,7 @@ class SephiaBot implements IRCListener {
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
 		this.dataFileName = "sephiabot.dat";
 		this.usersFileName = "users.cfg";
+		this.blacklist = new String[] {};
 
 		this.nextWho = 0;
 		this.nextHi = 0;
@@ -439,6 +441,15 @@ class SephiaBot implements IRCListener {
 						buf.append(this.helloreplies[i] + " ");
 					}
 					log("helloreplies changed to " + buf);
+				} else if (command.equals("blacklist")) {
+					StringBuffer buf = new StringBuffer("");
+					int tokens = tok.countTokens();
+					this.blacklist = new String[tokens];
+					for (int i = 0; i < tokens; i++) {
+						this.blacklist[i] = tok.nextToken();
+						buf.append(this.blacklist[i] + " ");
+					}
+					log("blacklist changed to " + buf);
 				} else if (command.equals("logdir")) {
 					this.logdir = tok.nextToken("").trim();
 					log("logdir changed to " + this.logdir);
@@ -610,7 +621,7 @@ class SephiaBot implements IRCListener {
 		msg = msg.trim();
 
 		checkForMessages(nick, host, recipient);
-		
+
 		//Bot has been mentioned?
 		if (iregex(name, msg) && gamesurge()) {
 			if (iregex("fuck you", msg)) {
@@ -1238,6 +1249,14 @@ class SephiaBot implements IRCListener {
 			ircio.privemote(channel, "salutes as Remy enters.");
 		}
 
+		//Check for blacklisted nicks.
+		for (int i = 0; i < blacklist.length; i++) {
+			if (iequals(nick, blacklist[i])) {
+				ircio.privmsg(channel, "!kb " + nick + " You have been blacklisted. Please never return to this channel.");
+				break;
+			}
+		}
+		
 		int channum = channelNumber(channel);
 
 		if (channum > -1) {
