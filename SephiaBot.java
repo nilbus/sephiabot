@@ -83,11 +83,11 @@ class SephiaBot implements IRCListener {
 				if (args.length > 1)
 					cfgPath = args[1];
 				else {
-					System.out.println("SYSERR: You must specify the path of your config file with -c" + usage);
+					System.out.println("You must specify the path of your config file with -c" + usage);
 					System.exit(0);
 				}
 			else {
-				System.out.println("SYSERR: Invalid arguments." + usage);
+				System.out.println("Invalid arguments." + usage);
 				System.exit(0);
 			}
 		}
@@ -333,7 +333,7 @@ class SephiaBot implements IRCListener {
 						this.helloreplies[i] = tok.nextToken();
 						buf.append(this.helloreplies[i] + " ");
 					}
-					log("hello changed to " + buf);
+					log("helloreplies changed to " + buf);
 				} else if (command.equals("logdir")) {
 					this.logdir = tok.nextToken("").trim();
 					log("logdir changed to " + this.logdir);
@@ -394,6 +394,24 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	public void messagePrivEmote(String nick, String host, String recipient, String msg) {
+		String log;
+		
+		log = "* " + nick + " ";
+		log += msg.substring(8, msg.length()-1);
+
+		logfile(recipient, log);
+		
+		msg = msg.trim();
+
+		if (iregex("hugs kali", msg)) {
+			if (isVino(host))
+				ircio.privemote(recipient, "hugs Vino!");
+			else
+				ircio.privmsg(recipient, "Get the fuck off.");
+		}
+	}
+
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
 		boolean pm = false;
 		String log;
@@ -403,13 +421,8 @@ class SephiaBot implements IRCListener {
 			pm = true;
 		}
 
-		if (iregex("^.ACTION", msg)) {
-			log = "* " + nick + " ";
-			log += msg.substring(8, msg.length()-1);
-		} else {
-			log = "<" + nick + "> ";
-			log += msg.substring(0, msg.length());
-		}
+		log = "<" + nick + "> ";
+		log += msg.substring(0, msg.length());
 
 		logfile(recipient, log);
 
@@ -492,7 +505,7 @@ class SephiaBot implements IRCListener {
 				msg = msg.substring(msg.indexOf(" ")+1);
 
 				if (iregex("bring out the strapon", msg)) {
-					ircio.privmsg(recipient, "\u0001ACTION steps forward with a large strapon and begins mashing potatoes.\u0001");
+					ircio.privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
 					return;
 				}
 			}
@@ -550,6 +563,14 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (iregex("who is remy", msg)
+					|| iregex("who is luckyremy",msg)) {
+				if (System.currentTimeMillis() > nextWho) {     //!spam
+					ircio.privmsg(recipient, "Father of the Black Sheep.");
+					ircio.privmsg(recipient, "Harbinger of Doom.");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
 			} else if (iregex("who is", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					ircio.privmsg(recipient, "Nobody important.");
@@ -588,7 +609,7 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "Nobody important.");
 					} else {
 						ircio.privmsg(recipient, "Daddy!");
-						ircio.privmsg(recipient, "\u0001ACTION hugs " + nick + ".\u0001");
+						ircio.privemote(recipient, "hugs " + nick + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -624,11 +645,11 @@ class SephiaBot implements IRCListener {
 					Random rand = new Random();
 					int dice = rand.nextInt(5)+2;
 					int sides = rand.nextInt(5)+6;
-					ircio.privmsg(recipient, "\u0001ACTION rolls " + dice + "d" + sides + " dice and gets " + (dice*sides+1) + ".\u0001");
+					ircio.privemote(recipient, "rolls " + dice + "d" + sides + " dice and gets " + (dice*sides+1) + ".");
 					if (!isVino(host)) {
-						ircio.privmsg(recipient, "\u0001ACTION kills " + nick + ".\u0001");
+						ircio.privemote(recipient, "kills " + nick + ".");
 					} else {
-						ircio.privmsg(recipient, "\u0001ACTION hugs " + nick + ".\u0001");
+						ircio.privemote(recipient, "hugs " + nick + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -647,10 +668,10 @@ class SephiaBot implements IRCListener {
 					String killed = tok.nextToken(" ");
 					int killedAccess = getAccess(killed, channelNumber(recipient));
 					if ((killerAccess <= killedAccess || killerAccess == IRCServer.ACCESS_VOICE) && !isVino(host)) {
-						ircio.privmsg(recipient, "\u0001ACTION giggles at " + nick + "\u0001");
+						ircio.privemote(recipient, "giggles at " + nick);
 						return;
 					} else if (killerAccess == -1 || killedAccess == -1) {
-						ircio.privmsg(recipient, "\u0001ACTION laughs, yeah right.\u0001");
+						ircio.privemote(recipient, "laughs, yeah right.");
 						return;
 					} else {
 						ircio.privmsg(recipient, "It would be my pleasure.");
@@ -680,18 +701,18 @@ class SephiaBot implements IRCListener {
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
 					if (!tok.hasMoreElements()) {
-						ircio.privmsg(recipient, "\u0001ACTION anally rapes " + nick + ".\u0001");
+						ircio.privemote(recipient, "anally rapes " + nick + ".");
 						return;
 					}
 					String sexed = tok.nextToken(" ");
 					if (iequals("vino", sexed)) {
-						ircio.privmsg(recipient, "\u0001ACTION screams as Vino penetrates every orifice of her body!\u0001");
+						ircio.privemote(recipient, "screams as Vino penetrates every orifice of her body!");
 					} else {
 						int sexedAccess = getAccess(sexed, channelNumber(recipient));
 						if (sexedAccess == -1) {
-							ircio.privmsg(recipient, "I'd love to, but who the hell is that?");
+							ircio.privemote(recipient, "I'd love to, but who the hell is that?");
 						} else {
-							ircio.privmsg(recipient, "\u0001ACTION anally rapes " + sexed + ".\u0001");
+							ircio.privemote(recipient, "anally rapes " + sexed + ".");
 						}
 					}
 				} else if (iequals(cmd, "reboot")) {
@@ -1056,10 +1077,10 @@ class IRCIO {
 			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 		} catch (UnknownHostException uhe) {
 			listener.logerror("Unknown host.");
-			System.exit(0);
+			System.exit(1);
 		} catch (IOException ioe) {
 			listener.logerror("IO Exception trying to connect to server.");
-			System.exit(0);
+			System.exit(1);
 		}
 
 
@@ -1181,7 +1202,10 @@ class IRCIO {
 			recipient = tok.nextToken();
 			String chat = tok.nextToken("");
 			chat = chat.substring(2);
-			listener.messagePrivMsg(nick, host, recipient, chat);
+			if (chat.startsWith("\u0001ACTION ") && chat.endsWith("\u0001"))
+				listener.messagePrivEmote(nick, host, recipient, chat.substring(8, chat.length()-1));
+			else
+				listener.messagePrivMsg(nick, host, recipient, chat);
 			return;
 		} else if (buf.equals("NICK")) {
 			String newname = tok.nextToken("");
@@ -1270,6 +1294,25 @@ class IRCIO {
 		listener.logfile(recipient, log);
 		
 	}
+	
+	public void privemote(String recipient, String msg) {
+		String buf = "PRIVMSG " + recipient + " :\u0001ACTION " + msg + "\u0001\n";
+
+		try {
+			out.write(buf, 0, buf.length());
+			out.flush();
+		} catch (IOException ioe) {
+		}
+
+		System.out.println(buf);
+
+		String log;
+		log = "* " + name + " ";
+		log += msg.substring(8, msg.length()-1);
+
+		listener.logfile(recipient, log);
+		
+	}
 
 	public void setMode(String recipient, String inchannel, String mode) {
 		try {
@@ -1289,6 +1332,7 @@ interface IRCListener {
 	public void messageChannelJoin(String nick, String host, String channel);
 	public void messageChannelPart(String nick, String host, String channel, String message);
 	public void messagePrivMsg(String nick, String host, String recipient, String msg);
+	public void messagePrivEmote(String nick, String host, String recipient, String msg);
 	public void messageQuit(String nick, String host, String message);
 
 	public void messageChanList(String channel, String list);
