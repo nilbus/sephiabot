@@ -7,37 +7,74 @@ class IRCIO {
 	private Socket socket;
 	private IRCListener listener;
 	private String network;
+	private int port;
+	private String channels[];
 	private String name;
 
 	private BufferedReader in;
 	private BufferedWriter out;
 
+	static final long TIMEOUT = 30*1000;	//30 seconds
+
+	private boolean connected = false;
 	private boolean registered = false;
+	private long lastMessage = 0;
+	private long lastPing = 0;
 
 	public IRCIO(IRCListener listener, String network, int port) {
 
 		this.listener = listener;
 		this.network = network;
+		this.port = port;
 
+		connect();
+		
+	}
+
+	void connect() {
+		connected = false;
+		while (!connected) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException ie) {
+			}
+			reconnect();
+		}
+	}
+
+	private void reconnect() {
+		listener.log("Connecting to " + network + " on port " + port);
 		try {
+			if (socket != null)
+				socket.close();
 			socket = new Socket(network, port);
+			if (in != null)
+				in.close();
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			if (out != null)
+				out.close();
 			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			connected = true;
+			registered = false;
+			lastMessage = 0;
+			lastPing = 0;
+			listener.log("Connection complete.");
 		} catch (UnknownHostException uhe) {
 			listener.logerror("Unknown host.");
-			System.exit(1);
 		} catch (IOException ioe) {
 			listener.logerror("IO Exception trying to connect to server.");
-			System.exit(1);
 		}
-
-
 	}
 
 	public void login(String[] channels, String name) {
-
 		this.name = name;
+		this.channels = channels;
+		login();
+	}
 
+	void login() {
+		if (!connected)
+			return;
 		try {
 
 			String msg = "NICK " + name + "\n";
@@ -80,6 +117,8 @@ class IRCIO {
 		try {
 			while (in.ready()) {
 				msg = in.readLine();
+				lastMessage = System.currentTimeMillis();
+				lastPing = 0;
 				if (!pong(msg)) {
 					decipherMessage(msg);
 				}
@@ -88,7 +127,22 @@ class IRCIO {
 				}
 			}
 		} catch (IOException ioe) {
-			listener.logerror("Couldn't poll for input.");
+			listener.logerror("Couldn't poll for input: " + ioe.getMessage());
+		}
+		if (lastPing != 0 && System.currentTimeMillis() - lastPing > TIMEOUT) {
+			listener.logerror("Ping timeout.");
+			
+			connect();
+			login();
+		} else if (registered && lastPing == 0 && System.currentTimeMillis() - lastMessage > TIMEOUT) {
+			lastPing = System.currentTimeMillis();
+			String outmsg = "PING " + lastPing + "\n";
+			try {
+				out.write(outmsg);
+				out.flush();
+			} catch (IOException ioe) {
+				listener.logerror("Couldn't ping the server.");
+			}
 		}
 	}
 
@@ -222,6 +276,9 @@ class IRCIO {
 			String message = tok.nextToken("");
 			message = message.substring(2);
 			listener.messageQuit(nick, host, message);
+			return;
+		} else if (buf.equals("PONG")) {
+			lastPing = 0;
 			return;
 		}
 
