@@ -56,29 +56,30 @@ public class ParseTime {
 		Matcher matcher = when.matcher(text);
 		if (!matcher.find())
 			throw new WTFException("I can't figure out when to send that.");
-		this.originalTimeExpression = matcher.group();
-		if (iregex("^in ", originalTimeExpression)) {
+		originalTimeExpression = matcher.group();
+		timeExpression = originalTimeExpression.replaceAll("about ", "");
+		if (iregex("^in ", timeExpression)) {
 			long unit = 0;
 			String unitWord = "";
-			if (iregex(secondUnit, originalTimeExpression)) {
+			if (iregex(secondUnit, timeExpression)) {
 				unit = 1000;
 				unitWord = "second";
-			} else if (iregex(minuteUnit, originalTimeExpression)) {
+			} else if (iregex(minuteUnit, timeExpression)) {
 				unit = 1000 * 60;
 				unitWord = "minute";
-			} else if (iregex(hourUnit, originalTimeExpression)) {
+			} else if (iregex(hourUnit, timeExpression)) {
 				unit = 1000 * 60 * 60;
 				unitWord = "hour";
-			} else if (iregex(dayUnit, originalTimeExpression)) {
+			} else if (iregex(dayUnit, timeExpression)) {
 				unit = 1000 * 60 * 60 * 24;
 				unitWord = "day";
-			} else if (iregex(weekUnit, originalTimeExpression)) {
+			} else if (iregex(weekUnit, timeExpression)) {
 				unit = 1000 * 60 * 60 * 24 * 7;
 				unitWord = "week";
-			} else if (iregex(monthUnit, originalTimeExpression)) {
+			} else if (iregex(monthUnit, timeExpression)) {
 				unit = 1000 * 60 * 60 * 24 * 30;
 				unitWord = "month";
-			} else if (iregex(yearUnit, originalTimeExpression)) {
+			} else if (iregex(yearUnit, timeExpression)) {
 				unit = 1000 * 60 * 60 * 24 * 365;
 				unitWord = "year";
 			} else { //default to minutes
@@ -86,7 +87,7 @@ public class ParseTime {
 				unitWord = "minute";
 			}
 
-			String duration = iregexFind(counter, originalTimeExpression);
+			String duration = iregexFind(counter, timeExpression);
 			int dur = wordToInt(duration);
 
 			if (dur != 1)
@@ -94,6 +95,7 @@ public class ParseTime {
 			timeExpression = "in " + duration + " " + unitWord;
 
 			return System.currentTimeMillis() + unit * dur;
+		} else if (iregex("^in ", originalTimeExpression)) {
 		}
 		throw new WTFException("I recognize '" + this.originalTimeExpression + "', but I haven't learned what it means yet.");
 	}
