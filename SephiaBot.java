@@ -1157,7 +1157,7 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String location = tok.nextToken("").trim();
-					if (location.startsWith("back")) {
+					if (iregex("^back", location)) {
 						if (user.away == null) {
 							ircio.privmsg(recipient, "Of course you are honey.");
 						} else {
