@@ -1,5 +1,4 @@
 /*
-TODO: Write variables to disk and load at startup so memory isn't lost.
 TODO: Better handling of dropped connections, etc.
 TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
 */
@@ -19,6 +18,14 @@ class Message {
 		this.message = message;
 		this.sender = sender;
 		time = System.currentTimeMillis();
+		next = null;
+	}
+
+	Message(String target, String message, String sender, long time) {
+		this.target = target;
+		this.message = message;
+		this.sender = sender;
+		this.time = time;
 		next = null;
 	}
 }
@@ -46,6 +53,8 @@ class SephiaBot implements IRCListener {
 	private String syslogBuffer;
 	private BufferedWriter syslog;
 	private IRCServer server;
+
+	private String dataFileName = "sephiabot.dat";
 
 	private long nextWho;
 	private long nextHi;
@@ -99,6 +108,7 @@ class SephiaBot implements IRCListener {
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);
+		loadData(dataFileName);
 
 		try {
 			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
@@ -134,6 +144,120 @@ class SephiaBot implements IRCListener {
 			away = "more then a week";
 		}
 		return away;
+	}
+
+	void loadData(String filename) {
+		log("Loading " + filename);
+
+		BufferedReader dataFileReader;
+
+		try {
+			dataFileReader = new BufferedReader(new FileReader(filename));
+		} catch (IOException ioe) {
+			logerror("Couldn't open data file " + filename + ".");
+			return;
+		}
+
+		try {
+			int messagesLoaded = 0;
+			int messagesThrownOut = 0;
+			while (dataFileReader.ready()) {
+				String line = dataFileReader.readLine();
+				StringTokenizer tok = new StringTokenizer(line, " ");
+				if (line.startsWith("//") || !tok.hasMoreElements())
+					continue;
+				String command = tok.nextToken();
+				if (command.equals("vinohost")) {
+					this.vinohost = tok.nextToken("").trim();
+					log("Loaded vinohost " + this.vinohost);
+				} else if (command.equals("vinoaway")) {
+					this.vinoaway = tok.nextToken("").trim();
+					log("Loaded vinoaway " + this.vinoaway);
+				} else if (command.equals("vinoleavetime")) {
+					this.vinoleavetime = Long.parseLong(tok.nextToken("").trim());
+					log("Loaded vinoleavetime " + this.vinoleavetime);
+				} else if (command.equals("message")) {
+					String nick = tok.nextToken(" ").trim();
+					String target = tok.nextToken(" ").trim();
+					long time = Long.parseLong(tok.nextToken(" ").trim());
+					String message = " " + tok.nextToken("").trim();
+
+					//Throw out if more then a week old.
+					if (time < System.currentTimeMillis() - 1000*60*60*24*7) {
+						messagesThrownOut++;
+						continue;
+					} else
+						messagesLoaded++;
+
+					if (firstMessage == null) {
+						firstMessage = new Message(target, message, nick, time);
+					} else {
+						Message currMsg = firstMessage;
+						while (currMsg.next != null)
+							currMsg = currMsg.next;
+						currMsg.next = new Message(target, message, nick, time);
+					}
+				}
+			}
+			log(messagesLoaded + " messages loaded, " + messagesThrownOut + " messages thrown out.");
+		} catch (IOException ioe) {
+			logerror("Couldn't read data file " + filename + ".");
+		}
+	}
+
+	void writeData(String filename) {
+		BufferedWriter dataFileWriter;
+
+		try {
+			dataFileWriter = new BufferedWriter(new FileWriter(filename, false));
+		} catch (IOException ioe) {
+			logerror("Couldn't open data file " + filename + ".");
+			return;
+		}
+
+		try {
+			String buffer;
+
+			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
+			dataFileWriter.write(buffer, 0, buffer.length());
+		
+			if (this.vinohost != null) {
+				buffer = "vinohost " + this.vinohost + "\n";
+				dataFileWriter.write(buffer, 0, buffer.length());
+			}
+
+			if (this.vinoaway != null) {
+				buffer = "vinoaway " + this.vinoaway + "\n";
+				dataFileWriter.write(buffer, 0, buffer.length());
+
+				buffer = "vinoleavetime " + this.vinoleavetime + "\n";
+				dataFileWriter.write(buffer, 0, buffer.length());
+			}
+
+			if (this.firstMessage != null) {
+				Message currMessage = this.firstMessage;
+				do {
+					//If the message is more then a week old, do not store it.
+					if (currMessage.time > System.currentTimeMillis() - 1000*60*60*24*7) {
+						buffer = "message " + currMessage.sender + " " + currMessage.target + " " + currMessage.time + currMessage.message + "\n";
+						dataFileWriter.write(buffer, 0, buffer.length());
+					}
+					currMessage = currMessage.next;
+				} while (currMessage != null);
+			}
+		} catch (IOException ioe) {
+			logerror("Couldn't write to data file " + filename + ".");
+			return;
+		}
+		
+		try {
+			dataFileWriter.close();
+		} catch (IOException ioe) {
+			logerror("Couldn't save data file " + filename + ".");
+			return;
+		}
+		
+		log("Wrote data file.");
 	}
 
 	void parseConfig(String filename) {
@@ -273,6 +397,7 @@ class SephiaBot implements IRCListener {
 					firstMessage = currMsg.next;
 				else
 					lastMsg.next = currMsg.next;
+				writeData(dataFileName);
 			} else {
 				lastMsg = currMsg;
 			}
@@ -507,6 +632,7 @@ class SephiaBot implements IRCListener {
 							currMsg = currMsg.next;
 						currMsg.next = new Message(target, message, nick);
 					}
+					writeData(dataFileName);
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (cmd.toLowerCase().equals("sex") ||
 						cmd.toLowerCase().equals("secks") ||
@@ -548,6 +674,7 @@ class SephiaBot implements IRCListener {
 					if (passwd.trim().equals("xxxxx")) {
 						ircio.privmsg(nick, "Hi, daddy! :D");
 						vinohost = host;
+						writeData(dataFileName);
 					} else {
 						ircio.privmsg(nick, "You aint fuckin Vino, prick.");
 						return;
@@ -571,6 +698,7 @@ class SephiaBot implements IRCListener {
 						vinoaway = location;
 						vinoleavetime = System.currentTimeMillis();
 					}
+					writeData(dataFileName);
 					return;
 				} else if (cmd.toLowerCase().equals("say")) {
 					if (!isVino(host)) {
