@@ -1007,6 +1007,12 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
+			} else if (iregex("bounc[ye]", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					ircio.privmsg(recipient, "Bouncy, bouncy, bouncy!");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
 			}
 		}
 
