@@ -193,7 +193,7 @@ class SephiaBot implements IRCListener {
   public void messagePrivMsg(String nick, String host, String recipient, String msg) {
     String log;
 
-    if (recipient.equals(name))  //Fixed responding to private messages -Nilbus
+    if (recipient.equals(name))
     	recipient = nick;
 
     if (msg.indexOf("ACTION") == 1) {
