@@ -92,6 +92,9 @@ class SephiaBotData {
 			int awayMsgThrownOut = 0;
 			firstMessage = null;		//Keep messages and reminders already in memory from persisting.
 			firstReminder = null;
+			logout(vino, -1);			//Log all users out and use only persistent login information.
+			for (int i = 0; i < users.length; i++)
+				logout(users[i], -1);
 lineLoop:
 			while (dataFileReader.ready()) {
 				String line = dataFileReader.readLine();
@@ -654,7 +657,34 @@ lineLoop:
 				return true;
 			}
 		}
-		return false;
+		logoutOldest(user);
+		// I hope this never causes an infinite loop.
+		return loginUser(user, host);
+	}
+	
+	void logoutOldest(User user) {
+		float oldest = System.currentTimeMillis();
+		int oldestID = -1;
+		for (int i = 0; i < 10; i++) {
+			if (user.lastSeenTimes[i] < oldest) {
+				oldest = user.lastSeenTimes[i];
+				oldestID = i;
+			}
+		}
+		// I don't know why this would happen, but...
+		if (oldestID == -1)
+			return;
+		logout(user, oldestID);
+	}
+
+	void logout(User user, int i) {
+		if (i == -1) {
+			for (int j = 0; j < 10; j++)
+				user.hosts[j] = null;
+			return;
+		}
+		user.hosts[i] = null;
+		writeData();
 	}
 	
 	String randomPhrase(String filename) {

@@ -431,12 +431,12 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (!censor() && iregex("want to cyber", msg)) {
+			} else if (!censor() && iregex("wan(na |t to )cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					if (!data.isVino(host)) {
-						ircio.privmsg(recipient, "Fuck no.");
-					} else {
+					if (data.isVino(host) || iequals(getUserByNick(nick).userName, "Yukie")) {
 						ircio.privmsg(recipient, "Take me, " + nick + "!");
+					} else {
+						ircio.privmsg(recipient, "Fuck no.");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -771,16 +771,14 @@ class SephiaBot implements IRCListener {
 							buffer += " " + (i+1) + ": " + user.hosts[i];
 					ircio.privmsg(nick, buffer);
 				} else if (iequals(cmd, "logout")) {
-					//TODO: data.logout(host) instead of doing this manually.
 					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
 					if (!tok.hasMoreElements()) {
 						for (int i = 0; i < 10; i++) {
 							if (user.hosts[i] != null && user.hosts[i].equals(host)) {
-								user.hosts[i] = null;
+								data.logout(user, i);
 								ircio.privmsg(nick, "It's too bad things couldn't work out.");
-								data.writeData();
 								return;
 							}
 						}
@@ -795,11 +793,11 @@ class SephiaBot implements IRCListener {
 							ircio.privmsg(nick, "That host is not logged in.");
 						else {
 							ircio.privmsg(nick, "It's too bad things couldn't work out.");
+							data.logout(user, i);
 							user.hosts[i] = null;
 						}
 					} catch (NumberFormatException nfe) {
 					}
-					data.writeData();
 				} else if (iequals(cmd, "login")) {
 					if (tok.countTokens() < 2) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
@@ -808,7 +806,6 @@ class SephiaBot implements IRCListener {
 					String login = tok.nextToken(" ").trim();
 					String passwd = tok.nextToken("").trim();
 					if (data.validateLogin(login, passwd)) {
-						boolean foundSpot = false;
 						int i, userID = -1;
 						User user = data.getUserByName(login);
 						if (user == null) {	//WTFException
@@ -821,13 +818,11 @@ class SephiaBot implements IRCListener {
 							ircio.privmsg(nick, "Silly you. You're already logged in.");
 							return;
 						}
-						if (data.loginUser(user, host))
-							if (data.isVino(user))
-								ircio.privmsg(nick, "Hi, daddy! :D");
-							else
-								ircio.privmsg(nick, "What's up " + user.userName + "?");
+						data.loginUser(user, host);
+						if (data.isVino(user))
+							ircio.privmsg(nick, "Hi, daddy! :D");
 						else
-							ircio.privmsg(nick, "No spots left.");
+							ircio.privmsg(nick, "What's up " + user.userName + "?");
 						data.writeData();
 					} else {
 						ircio.privmsg(nick, "No cigar.");
