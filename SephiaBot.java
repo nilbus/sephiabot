@@ -43,6 +43,7 @@ class SephiaBot implements IRCListener {
 	private String greeting;
 	private String spell;
 	private String hellos[];
+	private String helloreplies[];
 	private String logdir;
 	private String sephiadir; //Location of sephiabot. Quote, data files here
 
@@ -107,6 +108,7 @@ class SephiaBot implements IRCListener {
 		this.channels = new String[] {"#sephiabot"};
 		this.greeting = "Hello, I am %n, the channel bot. You all suck.";
 		this.hellos = new String[] {"hello","hi","yo","hey","greetings","konichiwa","hola","sup"};
+		this.helloreplies = new String[] {"yo"};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
 
@@ -323,6 +325,15 @@ class SephiaBot implements IRCListener {
 						buf.append(this.hellos[i] + " ");
 					}
 					log("hello changed to " + buf);
+				} else if (command.equals("helloreplies")) {
+					StringBuffer buf = new StringBuffer("");
+					int tokens = tok.countTokens();
+					this.helloreplies = new String[tokens];
+					for (int i = 0; i < tokens; i++) {
+						this.helloreplies[i] = tok.nextToken();
+						buf.append(this.helloreplies[i] + " ");
+					}
+					log("hello changed to " + buf);
 				} else if (command.equals("logdir")) {
 					this.logdir = tok.nextToken("").trim();
 					log("logdir changed to " + this.logdir);
@@ -367,24 +378,18 @@ class SephiaBot implements IRCListener {
 
 	//Performs a case-insensitive regexp match of string against pattern.
 	private boolean iregex(String pattern, String string) {
-		System.out.println("Matching \"" + string + "\" on pattern /" + pattern + "/");
 		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
 		Matcher m = p.matcher(string);
-		System.out.println(m.find()?"Match":"No Match");
 		return m.find();
 	}
 	
 	//Performs a case-insensitive string comparison.
 	private boolean iequals(String str1, String str2) {
-		System.out.println("Comparing \"" + str1 + "\" and \"" + str2 + "\".");
 		if (str1 == null && str2 == null) {
-			System.out.println("Match");
 			return true;
 		} else if (str1 == null || str2 == null) {
-			System.out.println("No Match");
 			return false;
 		} else {
-			System.out.println(str1.toLowerCase().equals(str2.toLowerCase())?"Match":"No Match");
 			return str1.toLowerCase().equals(str2.toLowerCase());
 		}
 	}
@@ -464,7 +469,7 @@ class SephiaBot implements IRCListener {
 			for (int i = 0; i < hellos.length; i++) {
 				if (iregex("^"+hellos[i], msg)) {
 					if (System.currentTimeMillis() > nextHi) {	//!spam
-						ircio.privmsg(recipient, hellos[new Random().nextInt(hellos.length)]);
+						ircio.privmsg(recipient, helloreplies[new Random().nextInt(helloreplies.length)]);
 						nextHi = System.currentTimeMillis() + 500;
 						return;
 					}
