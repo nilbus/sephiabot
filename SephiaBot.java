@@ -712,7 +712,7 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String sexed = tok.nextToken(" ");
-					if (iequals("vino", sexed)) {
+					if (iregex("^vino", sexed)) {
 						ircio.privemote(recipient, "screams as Vino penetrates every orifice of her body!");
 					} else {
 						int sexedAccess = getAccess(sexed, channelNumber(recipient));
