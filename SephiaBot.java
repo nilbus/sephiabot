@@ -406,12 +406,12 @@ class SephiaBot implements IRCListener {
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
 						
-			if (iregex("hugs kali", msg)) {
+			if (iregex("hugs " + name, msg)) {
 				if (isVino(host))
 					ircio.privemote(recipient, "hugs Vino!");
 				else
 					ircio.privmsg(recipient, "Get the fuck off.");
-			} else if (iregex("pets kali", msg)) {
+			} else if (iregex("pets " + name, msg)) {
 				ircio.privemote(recipient, "purrs.");
 			}
 	
