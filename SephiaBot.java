@@ -46,10 +46,11 @@ class SephiaBot implements IRCListener {
 	private String helloreplies[];
 	private String logdir;
 	private String sephiadir; //Location of sephiabot. Quote, data files here
+	private String config;
 
 	private Message firstMessage = null;
 
-	private String vinohost;
+	private String vinohost[];
 	private String vinoaway;
 	private long vinoleavetime;
 
@@ -59,7 +60,7 @@ class SephiaBot implements IRCListener {
 	private BufferedWriter syslog;
 	private IRCServer server;
 
-	private String dataFileName = "sephiabot.dat";
+	private String dataFileName;
 
 	private long nextWho;
 	private long nextHi;
@@ -102,6 +103,7 @@ class SephiaBot implements IRCListener {
 
 	public SephiaBot(String config) {
 		//Set Defaults
+		this.config = config;
 		this.name = "SephiaBot";
 		this.network = "irc.us.freenode.net";
 		this.port = 6667;
@@ -111,13 +113,15 @@ class SephiaBot implements IRCListener {
 		this.helloreplies = new String[] {"yo"};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
+		this.dataFileName = "sephiabot.dat";
 
 		this.nextWho = 0;
 		this.nextHi = 0;
+		this.vinohost = new String[10];
 		
 		log("----------------------------------------------------------------------------\nSephiaBot Started!");
 		parseConfig(config);
-		loadData(dataFileName);
+		loadData();
 
 		try {
 			syslog = new BufferedWriter(new FileWriter(new File(logdir, "syslog.txt"), true));
@@ -155,7 +159,8 @@ class SephiaBot implements IRCListener {
 		return away;
 	}
 
-	void loadData(String filename) {
+	void loadData() {
+		String filename = dataFileName;
 		log("Loading " + filename);
 
 		BufferedReader dataFileReader;
@@ -176,8 +181,10 @@ class SephiaBot implements IRCListener {
 					continue;
 				String command = tok.nextToken();
 				if (command.equals("vinohost")) {
-					this.vinohost = tok.nextToken("").trim();
-					log("Loaded vinohost " + this.vinohost);
+					int hostsLoaded = 0;
+					while (tok.hasMoreElements() && hostsLoaded < 10)
+						this.vinohost[hostsLoaded++] = tok.nextToken(" ").trim();
+					log("Loaded " + hostsLoaded + " vinohosts");
 				} else if (command.equals("vinoaway")) {
 					this.vinoaway = tok.nextToken("").trim();
 					log("Loaded vinoaway " + this.vinoaway);
@@ -196,7 +203,6 @@ class SephiaBot implements IRCListener {
 						continue;
 					} else
 						messagesLoaded++;
-
 					if (firstMessage == null) {
 						firstMessage = new Message(target, message, nick, time);
 					} else {
@@ -213,7 +219,8 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
-	void writeData(String filename) {
+	void writeData() {
+		String filename = dataFileName;
 		BufferedWriter dataFileWriter;
 
 		try {
@@ -229,10 +236,26 @@ class SephiaBot implements IRCListener {
 			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
 			dataFileWriter.write(buffer, 0, buffer.length());
 		
-			if (this.vinohost != null) {
-				buffer = "vinohost " + this.vinohost + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
+			buffer = "vinohost ";
+			boolean hostFound = false;
+			for (int i = 0; i < 10; i++) {
+				if (vinohost[i] != null && vinohost[i].length() > 0) {
+					//Check the array up until now for duplicate entries.
+					boolean foundDuplicate = false;
+					for (int j = 0; j < i; j++) {
+						if (vinohost[j].equals(vinohost[i])) {
+							foundDuplicate = true;
+							break;
+						}
+					}
+					if (!foundDuplicate)
+						buffer += " " + this.vinohost[i];
+					hostFound = true;
+				}
 			}
+			buffer += "\n";
+			if (hostFound)
+				dataFileWriter.write(buffer, 0, buffer.length());
 
 			if (this.vinoaway != null) {
 				buffer = "vinoaway " + this.vinoaway + "\n";
@@ -337,6 +360,9 @@ class SephiaBot implements IRCListener {
 				} else if (command.equals("logdir")) {
 					this.logdir = tok.nextToken("").trim();
 					log("logdir changed to " + this.logdir);
+				} else if (command.equals("datafilename")) {
+					this.dataFileName = tok.nextToken("").trim();
+					log("datafilename changed to " + this.dataFileName);
 				} else if (command.equals("sephiadir")) {
 					this.sephiadir = tok.nextToken("").trim();
 					log("sephiadir changed to " + this.sephiadir);
@@ -453,7 +479,7 @@ class SephiaBot implements IRCListener {
 					firstMessage = currMsg.next;
 				else
 					lastMsg.next = currMsg.next;
-				writeData(dataFileName);
+				writeData();
 			} else {
 				lastMsg = currMsg;
 			}
@@ -704,7 +730,7 @@ class SephiaBot implements IRCListener {
 							currMsg = currMsg.next;
 						currMsg.next = new Message(target, message, nick);
 					}
-					writeData(dataFileName);
+					writeData();
 					ircio.privmsg(recipient, "OK, I'll make sure to let them know.");
 				} else if (iregex("^(butt?)?se(x|cks)$", cmd)) {
 					if (!tok.hasMoreElements()) {
@@ -737,6 +763,44 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(recipient, "No.");
 					}
 					return;
+				} else if (iequals(cmd, "reload")) {
+					if (isVino(host)) {
+						parseConfig(config);
+						ircio.privmsg(recipient, "Done.");
+					} else {
+						ircio.privmsg(recipient, "No.");
+					}
+					return;
+				} else if (iequals(cmd, "listhosts")) {
+					String buffer = "Hosts logged in as Vino:";
+					for (int i = 0; i < 10; i++)
+						if (vinohost[i] != null && vinohost[i].length() > 0)
+							buffer += " " + (i+1) + ": " + vinohost[i];
+					ircio.privmsg(nick, buffer);
+				} else if (iequals(cmd, "logout")) {
+					if (!tok.hasMoreElements()) {
+						for (int i = 0; i < 10; i++) {
+							if (vinohost[i] != null && vinohost[i].equals(host)) {
+								vinohost[i] = null;
+								ircio.privmsg(nick, "It's too bad things couldn't work out.");
+								return;
+							}
+						}
+						ircio.privmsg(nick, "Your host is not logged in.");
+						return;
+					}
+					try {
+						int i = Integer.parseInt(tok.nextToken("").trim())-1;
+						if (i < 0 || i >= 10)
+							return;
+						if (vinohost[i] == null || vinohost[i].length() <= 0)
+							ircio.privmsg(nick, "That host is not logged in.");
+						else {
+							ircio.privmsg(nick, "It's too bad things couldn't work out.");
+							vinohost[i] = null;
+						}
+					} catch (NumberFormatException nfe) {
+					}
 				} else if (iequals(cmd, "login")) {
 					if (tok.countTokens() < 1) {
 						ircio.privmsg(nick, "Yeah. Sure. Whatever.");
@@ -744,9 +808,28 @@ class SephiaBot implements IRCListener {
 					}
 					String passwd = tok.nextToken("");
 					if (passwd.trim().equals("xxxxx")) {
-						ircio.privmsg(nick, "Hi, daddy! :D");
-						vinohost = host;
-						writeData(dataFileName);
+						boolean foundSpot = false;
+						int i;
+						for (i = 0; i < 10; i++) {
+							if (vinohost[i] != null && vinohost[i].equals(host)) {
+								ircio.privmsg(nick, "Silly you. You're already logged in.");
+								return;
+							}
+						}
+						for (i = 0; i < 10; i++) {
+							if (vinohost[i] == null || vinohost[i].length() <= 0) {
+								vinohost[i] = host;
+								foundSpot = true;
+								break;
+							}
+						}
+						if (!foundSpot)
+							ircio.privmsg(nick, "No spots left.");
+						else if (iequals(nick, "nilbus"))
+							ircio.privmsg(nick, "What's up Nilbus?");
+						else
+							ircio.privmsg(nick, "Hi, daddy! :D");
+						writeData();
 					} else {
 						ircio.privmsg(nick, "You aint fuckin Vino, prick.");
 						return;
@@ -773,7 +856,7 @@ class SephiaBot implements IRCListener {
 						vinoaway = location;
 						vinoleavetime = System.currentTimeMillis();
 					}
-					writeData(dataFileName);
+					writeData();
 					return;
 				} else if (iequals(cmd, "say")) {
 					if (!isVino(host)) {
@@ -850,7 +933,11 @@ class SephiaBot implements IRCListener {
 	}
 
 	public boolean isVino(String host) {
-		return (iequals(host, vinohost));
+		for (int i = 0; i < 10; i++) {
+			if (iequals(host, vinohost[i]))
+				return true;
+		}
+		return false;
 	}
 
 	public boolean talkingToMe(String msg) {
@@ -1291,7 +1378,7 @@ class IRCIO {
 		} catch (IOException ioe) {
 		}
 
-		System.out.println(buf);
+		System.out.print(buf);
 
 		String log;
 		if (msg.indexOf("ACTION") == 1) {
@@ -1315,7 +1402,7 @@ class IRCIO {
 		} catch (IOException ioe) {
 		}
 
-		System.out.println(buf);
+		System.out.print(buf);
 
 		String log;
 		log = "* " + name + " " + msg;
