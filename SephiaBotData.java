@@ -7,6 +7,8 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
+import org.w3c.dom.*;
+
 class SephiaBotData {
 
 	private String network;
@@ -59,7 +61,7 @@ class SephiaBotData {
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
 		this.dataFileName = "sephiabot.dat";
-		this.usersFileName = "users.cfg";
+		this.usersFileName = "users.xml";
 		this.blacklist = new String[] {};
 		this.censor = true;
 		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
@@ -336,43 +338,47 @@ lineLoop:
 		//This function should not return if users is null.
 		users = new User[0];
 
-		BufferedReader dataFileReader;
+		XMLParser parser = new XMLParser(this, sephiadir, filename);
+		
+		Vector newUserList = new Vector();
+		
+		Document document = parser.document;
+		NodeList userNodes = document.getDocumentElement().getChildNodes();
 
-		try {
-			dataFileReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
-		} catch (IOException ioe) {
-			logerror("Couldn't find users file: " + sephiadir + "/" + filename + " no users loaded.");
-			return;  //Assume no datafile has been created if it doesn't exist
-		}
-
-		try {
-			Vector newUserList = new Vector();
-			while (dataFileReader.ready()) {
-				String line = dataFileReader.readLine();
-				StringTokenizer tok = new StringTokenizer(line, " ");
-				if (line.startsWith("//") || !tok.hasMoreElements())
-					continue;
-				String userName = tok.nextToken(" ");
-				//If there are no elements, throw a WTFException and continue blindly.
-				if (!tok.hasMoreElements())
-					continue;
-				String password = tok.nextToken(" ");
-				//If there are no elements, throw a WTFException and continue blindly.
-				if (!tok.hasMoreElements())
-					continue;
-				String memberTypeString = tok.nextToken("").trim();
-				int memberType = User.USER_MEMBER;
-				if (memberTypeString.equalsIgnoreCase("admin"))
-					memberType = User.USER_ADMIN;
-				User newUser = new User(userName, password, memberType);
-				newUserList.add(newUser);
+		for (int i = 0; i < userNodes.getLength(); i++) {
+			Node userNode = userNodes.item(i);
+			if (!userNode.getNodeName().equals("User"))
+				continue;
+			NamedNodeMap userAttributes = userNode.getAttributes();
+			Node currentNode;
+			currentNode = userAttributes.getNamedItem("Nick");
+			if (currentNode == null) {
+				logerror("User element has no Nick attribute.");
+				continue;
 			}
-			users = new User[newUserList.size()];
-			users = (User[])newUserList.toArray(users);
-			log(users.length + " users loaded.");
-		} catch (IOException ioe) {
-			logerror("Couldn't read data file " + filename + ".");
+			String userName = currentNode.getNodeValue();
+			currentNode = userAttributes.getNamedItem("Password");
+			if (currentNode == null) {
+				logerror("User element has no Password attribute.");
+				continue;
+			}
+			String password = currentNode.getNodeValue();
+			currentNode = userAttributes.getNamedItem("Level");
+			if (currentNode == null) {
+				logerror("User element has no Level attribute.");
+				continue;
+			}
+			String memberTypeString = currentNode.getNodeValue();
+			int memberType = User.USER_MEMBER;
+			if (memberTypeString.equalsIgnoreCase("admin"))
+				memberType = User.USER_ADMIN;
+			User newUser = new User(userName, password, memberType);
+			//TODO: Parse aliases and descriptions.
+			newUserList.add(newUser);
 		}
+		users = new User[newUserList.size()];
+		users = (User[])newUserList.toArray(users);
+		log(users.length + " users loaded.");
 	}
 	
 	void parseConfig() {
