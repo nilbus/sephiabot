@@ -1090,6 +1090,7 @@ lineLoop:
 				} else if (iequals(cmd, "reboot")) {
 					if (isAdmin(host)) {
 						ircio.privmsg(recipient, "Be right back.");
+						writeData();
 						System.exit(1);
 					} else
 						ircio.privmsg(recipient, "No.");
@@ -1097,6 +1098,7 @@ lineLoop:
 				} else if (iequals(cmd, "shutdown")) {
 					if (isVino(host)) {
 						ircio.privmsg(recipient, "Goodbye everybody!");
+						writeData();
 						System.exit(0);
 					} else {
 						ircio.privmsg(recipient, "No.");
