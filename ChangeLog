@@ -2,7 +2,7 @@ Revision 4
 + Config file can be specified at the command line with -c. Default is to search for sephiabot.cfg in the current directory.
 + Shows usage if started with --help.
 + Log directory is read from the config file. Logs are buffered until the config file can be opened.
-+ Defaults are new present for some values if not specified in the config file.
++ Defaults are now present for some values if not specified in the config file.
 ! Logs are appended to syslog.txt instead of rewriting.
 ! Changed default sephiabot.cfg
 ! Changed spaces to 4-character tabs.
