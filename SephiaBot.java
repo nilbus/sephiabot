@@ -713,7 +713,7 @@ class SephiaBot implements IRCListener {
 					} catch (WTFException wtf) {
 						ircio.privmsg(recipient, wtf.getMessage().substring(14));
 					} catch (NumberFormatException nfe) {
-						ircio.privmsg(recipient, nfe.getMessage().substring(23));
+						ircio.privmsg(recipient, nfe.getMessage());
 					}
 					
 					/*

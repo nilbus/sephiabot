@@ -7,6 +7,7 @@ class Reminder {
 	long timeSent;
 	long timeToArrive;
 	String timeExpression;
+	String originalTimeExpression;
 	Reminder next;
 	boolean notified;
 
@@ -21,7 +22,8 @@ class Reminder {
 		ParseTime pt = new ParseTime();
 		this.timeToArrive = pt.textToTime(message);
 		this.timeExpression = pt.getTimeExpression();
-		this.message = message.replaceAll(this.timeExpression + " ", "");
+		this.originalTimeExpression = pt.getOriginalTimeExpression();
+		this.message = message.replaceAll(this.originalTimeExpression + " ", "");
 		this.next = null;
 	}
 
@@ -43,6 +45,10 @@ class Reminder {
 		this.timeToArrive = timeToArrive;
 		this.notified = notified;
 		this.next = null;
+	}
+
+	public String getOriginalTimeExpression() {
+		return originalTimeExpression;
 	}
 
 	public String getTimeExpression() {

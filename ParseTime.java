@@ -13,15 +13,23 @@ public class ParseTime {
 
 	public static String time = "[0-2]?[0-9](:[0-9]{2})?( ?([ap]m?)?| in the morning| at night| in the evening)?";
 	public static String counter = "([0-9]+|an?|"+numberWords+")";
-	public static String duration = "("+counter+" ?(s(ec(ond)?s?)?|m(in(ute)?s?)?|h((ou)?rs?)?|d(ays?)?|w(ee)?ks?|mo(nth)?s?|y(ea)?rs?)|[0-9]+)";
+	public static String secondUnit = "(?<![a-zA-Z])s(ec(ond)?s?)?\\b";
+	public static String minuteUnit = "(?<![a-zA-Z])m(in(ute)?s?)?\\b";
+	public static String hourUnit = "(?<![a-zA-Z])h((ou)?rs?)?\\b";
+	public static String dayUnit = "(?<![a-zA-Z])d(ays?)?\\b";
+	public static String weekUnit = "(?<![a-zA-Z])w(ee)?ks?\\b";
+	public static String monthUnit = "(?<![a-zA-Z])mo(nth)?s?\\b";
+	public static String yearUnit = "(?<![a-zA-Z])y(ea)?rs?\\b";
+	public static String duration = "("+counter+" ?("+secondUnit+"|"+minuteUnit+"|"+hourUnit+"|"+dayUnit+"|"+weekUnit+"|"+monthUnit+"|"+yearUnit+")|[0-9]+)";
 	public static String date = "("+days+"|(the )?"+dateNumber+" of "+months+"|("+months+"( the)?|the) "+dateNumber+")"; //Wed|the 4th of july|Jul 4th|the 4th
 	public static String onReturn = "(when (I'm back|\\w+ ((gets?|comes?) (in|here|back|on(line)?)|returns?)))";
 
-	public static String pattern = "\\b(at (ab(ou)?t )?"+time+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+")\\b";
+	public static String timeExpressionPattern = "\\b(at (ab(ou)?t )?"+time+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+")\\b";
 	//Add within, sometime, after, before, later
 	//Add 'general' specifics like tonight, tomorrow, next week, a while
 	//Add remind me about
 
+	private String originalTimeExpression = null;
 	private String timeExpression = null;
 	
 	//These are not portable outside SephiaBot
@@ -36,6 +44,7 @@ public class ParseTime {
 	}
 	
 	public String getTimeExpression() {return timeExpression;}
+	public String getOriginalTimeExpression() {return originalTimeExpression;}
 	
 	/**
 	 * Finds a time expression in a String and returns a time in millis.
@@ -43,19 +52,50 @@ public class ParseTime {
 	 */
 	public long textToTime(String text) throws WTFException, 
 		   NumberFormatException {
-		Pattern when = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+		Pattern when = Pattern.compile(timeExpressionPattern, Pattern.CASE_INSENSITIVE);
 		Matcher matcher = when.matcher(text);
 		if (!matcher.find())
-			throw new WTFException("Well, when do you want me to do it?");
-		this.timeExpression = matcher.group();
-		if (iregex("^in ", timeExpression)) {
-			if (iregex("s(ec(ond)?s?)?$", timeExpression)) {
-				String dur = iregexFind(counter, timeExpression);
-				return System.currentTimeMillis() + 1000 * wordToInt(dur);
+			throw new WTFException("I can't figure out when to send that.");
+		this.originalTimeExpression = matcher.group();
+		if (iregex("^in ", originalTimeExpression)) {
+			long unit = 0;
+			String unitWord = "";
+			if (iregex(secondUnit, originalTimeExpression)) {
+				unit = 1000;
+				unitWord = "second";
+			} else if (iregex(minuteUnit, originalTimeExpression)) {
+				unit = 1000 * 60;
+				unitWord = "minute";
+			} else if (iregex(hourUnit, originalTimeExpression)) {
+				unit = 1000 * 60 * 60;
+				unitWord = "hour";
+			} else if (iregex(dayUnit, originalTimeExpression)) {
+				unit = 1000 * 60 * 60 * 24;
+				unitWord = "day";
+			} else if (iregex(weekUnit, originalTimeExpression)) {
+				unit = 1000 * 60 * 60 * 24 * 7;
+				unitWord = "week";
+			} else if (iregex(monthUnit, originalTimeExpression)) {
+				unit = 1000 * 60 * 60 * 24 * 30;
+				unitWord = "month";
+			} else if (iregex(yearUnit, originalTimeExpression)) {
+				unit = 1000 * 60 * 60 * 24 * 365;
+				unitWord = "year";
+			} else { //default to minutes
+				unit = 1000 * 60;
+				unitWord = "minute";
 			}
-			//XXX
+
+			String duration = iregexFind(counter, originalTimeExpression);
+			int dur = wordToInt(duration);
+
+			if (dur != 1)
+				unitWord += "s";
+			timeExpression = "in " + duration + " " + unitWord;
+
+			return System.currentTimeMillis() + unit * dur;
 		}
-		throw new WTFException("I recognize '" + this.timeExpression + "', but I haven't learned what it means yet.");
+		throw new WTFException("I recognize '" + this.originalTimeExpression + "', but I haven't learned what it means yet.");
 	}
 
 	public int wordToInt(String word) throws NumberFormatException {

@@ -586,8 +586,9 @@ lineLoop:
 	void removeRecentReminders(String receiver, User user) {
 		for (Reminder curr = firstReminder; curr != null; curr = curr.next)
 			if (iequals(curr.target, receiver) || (user != null && iequals(user.userName, curr.target)))
-				if (System.currentTimeMillis() < curr.timeToArrive + REMINDER_STALE_DUR)
-					removeReminder(curr);
+				if (System.currentTimeMillis() > curr.timeToArrive)
+					if (System.currentTimeMillis() < curr.timeToArrive + REMINDER_STALE_DUR)
+						removeReminder(curr);
 	}
 	
 	Reminder[] getRemindersByReceiver(String receiver, User user, boolean activeOnly) {
