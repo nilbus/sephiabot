@@ -1,51 +1,51 @@
-clock speed
-solar flares
-electromagnetic radiation from satellite debris
-static from nylon underwear
-static from plastic slide rules
-global warming
-poor power conditioning
-static buildup
-doppler effect
-hardware stress fractures
-magnetic interference from money/credit cards
-dry joints on cable plug
-we're waiting for [the phone company] to fix that line
-sounds like a Windows problem, try calling Microsoft support
-temporary routing anomaly
-somebody was calculating pi on the server
-fat electrons in the lines
-excess surge protection
-floating point processor overflow
-divide-by-zero error
+Clock speed
+Solar flares
+Electromagnetic radiation from satellite debris
+Static from nylon underwear
+Static from plastic slide rules
+Global warming
+Poor power conditioning
+Static buildup
+Doppler effect
+Hardware stress fractures
+Magnetic interference from money/credit cards
+Dry joints on cable plug
+We're waiting for [the phone company] to fix that line
+Sounds like a Windows problem, try calling Microsoft support
+Temporary routing anomaly
+Somebody was calculating pi on the server
+Fat electrons in the lines
+Excess surge protection
+Floating point processor overflow
+Divide-by-zero error
 POSIX compliance problem
-monitor resolution too high
-improperly oriented keyboard
-network packets travelling uphill (use a carrier pigeon)
+Monitor resolution too high
+Improperly oriented keyboard
+Network packets travelling uphill (use a carrier pigeon)
 Decreasing electron flux
-first Saturday after first full moon in Winter
-radiosity depletion
+First Saturday after first full moon in Winter
+Radiosity depletion
 CPU radiator broken
 It works the way the Wang did, what's the problem
-positron router malfunction
-cellular telephone interference
-techtonic stress
-piezo-electric interference
+Positron router malfunction
+Cellular telephone interference
+Techtonic stress
+Piezo-electric interference
 (l)user error
-working as designed
-dynamic software linking table corrupted
-heavy gravity fluctuation, move computer to floor rapidly
-secretary plugged hairdryer into UPS
-terrorist activities
-not enough memory, go get system upgrade
-interrupt configuration error
-spaghetti cable cause packet failure
-boss forgot system password
-bank holiday - system operating credits  not recharged
-virus attack, luser responsible
-waste water tank overflowed onto computer
+Working as designed
+Dynamic software linking table corrupted
+Heavy gravity fluctuation, move computer to floor rapidly
+Secretary plugged hairdryer into UPS
+Terrorist activities
+Not enough memory, go get system upgrade
+Interrupt configuration error
+Spaghetti cable cause packet failure
+Boss forgot system password
+Bank holiday - system operating credits  not recharged
+Virus attack, luser responsible
+Waste water tank overflowed onto computer
 Complete Transient Lockout
-bad ether in the cables
+Bad ether in the cables
 Bogon emissions
 Change in Earth's rotational speed
 Cosmic ray particles crashed through the hard disk platter
@@ -55,19 +55,19 @@ Evil dogs hypnotised the night shift
 Plumber mistook routing panel for decorative wall fixture
 Electricians made popcorn in the power supply
 Groundskeepers stole the root password
-high pressure system failure
-failed trials, system needs redesigned
-system has been recalled
-not approved by the FCC
-need to wrap system in aluminum foil to fix problem
-not properly grounded, please bury computer
+High pressure system failure
+Failed trials, system needs redesigned
+System has been recalled
+Not approved by the FCC
+Need to wrap system in aluminum foil to fix problem
+Not properly grounded, please bury computer
 CPU needs recalibration
-system needs to be rebooted
-bit bucket overflow
-descramble code needed from software company
-only available on a need to know basis
-knot in cables caused data stream to become twisted and kinked
-nesting roaches shorted out the ether cable
+System needs to be rebooted
+Bit bucket overflow
+Descramble code needed from software company
+Only available on a need to know basis
+Knot in cables caused data stream to become twisted and kinked
+Nesting roaches shorted out the ether cable
 The file system is full of it
 Satan did it
 Daemons did it
@@ -100,8 +100,8 @@ SIMM crosstalk.
 IRQ dropout
 Collapsed Backbone
 Power company testing new voltage spike (creation) equipment
-operators on strike due to broken coffee machine
-backup tape overwritten with copy of system manager's favourite CD
+Operators on strike due to broken coffee machine
+Backup tape overwritten with copy of system manager's favourite CD
 UPS interrupted the server's power
 The electrician didn't know what the yellow cable was so he yanked the ethernet out.
 The keyboard isn't plugged in
@@ -111,36 +111,36 @@ The rolling stones concert down the road caused a brown out
 The salesman drove over the CPU board.
 The monitor is plugged into the serial port
 Root nameservers are out of sync
-electro-magnetic pulses from French above ground nuke testing.
-your keyboard's space bar is generating spurious keycodes.
-the real ttys became pseudo ttys and vice-versa.
-the printer thinks its a router.
-the router thinks its a printer.
-evil hackers from Serbia.
-we just switched to FDDI.
-halon system went off and killed the operators.
-because Bill Gates is a Jehovah's witness and so nothing can work on St. Swithin's day.
-user to computer ratio too high.
-user to computer ration too low.
-we just switched to Sprint.
-it has Intel Inside
+Electro-magnetic pulses from French above ground nuke testing.
+Your keyboard's space bar is generating spurious keycodes.
+The real ttys became pseudo ttys and vice-versa.
+The printer thinks its a router.
+The router thinks its a printer.
+Evil hackers from Serbia.
+We just switched to FDDI.
+Halon system went off and killed the operators.
+Because Bill Gates is a Jehovah's witness and so nothing can work on St. Swithin's day.
+User to computer ratio too high.
+User to computer ration too low.
+We just switched to Sprint.
+It has Intel Inside
 Sticky bits on disk.
 Power Company having EMP problems with their reactor
 The ring needs another token
-new management
-telnet: Unable to connect to remote host: Connection refused
+New management
+Telnet: Unable to connect to remote host: Connection refused
 SCSI Chain overterminated
 It's not plugged in.
-because of network lag due to too many people playing deathmatch
+Because of network lag due to too many people playing deathmatch
 You put the disk in upside down.
 Daemons loose in system.
 User was distributing pornography on server; system seized by FBI.
 BNC (brain not connected)
 UBNC (user brain not connected)
 LBNC (luser brain not connected)
-disks spinning backwards - toggle the hemisphere jumper.
-new guy cross-connected phone lines with ac power bus.
-had to use hammer to free stuck disk drive heads.
+Disks spinning backwards - toggle the hemisphere jumper.
+New guy cross-connected phone lines with ac power bus.
+Had to use hammer to free stuck disk drive heads.
 Too few computrons available.
 Flat tire on station wagon with tapes.  ("Never underestimate the bandwidth of a station wagon full of tapes hurling down the highway" Andrew S. Tannenbaum) 
 Communications satellite used by the military for star wars.
@@ -157,49 +157,49 @@ Zombie processes haunting the computer
 Incorrect time synchronization
 Defunct processes
 Stubborn processes
-non-redundant fan failure 
-monitor VLF leakage
-bugs in the RAID
-no "any" key on keyboard
-root rot
+Non-redundant fan failure 
+Monitor VLF leakage
+Bugs in the RAID
+No "any" key on keyboard
+Root rot
 Backbone Scoliosis
 /pub/lunch
-excessive collisions & not enough packet ambulances
-le0: no carrier: transceiver cable problem?
-broadcast packets on wrong frequency
-popper unable to process jumbo kernel
+Excessive collisions & not enough packet ambulances
+Le0: no carrier: transceiver cable problem?
+Broadcast packets on wrong frequency
+Popper unable to process jumbo kernel
 NOTICE: alloc: /dev/null: filesystem full
-pseudo-user on a pseudo-terminal
+Pseudo-user on a pseudo-terminal
 Recursive traversal of loopback mount points
 Backbone adjustment
 OS swapped to disk
-vapors from evaporating sticky-note adhesives
-sticktion
-short leg on process table
-multicasts on broken packets
-ether leak
+Vapors from evaporating sticky-note adhesives
+Sticktion
+Short leg on process table
+Multicasts on broken packets
+Ether leak
 Atilla the Hub
-endothermal recalibration
-filesystem not big enough for Jumbo Kernel Patch
-loop found in loop in redundant loopback
-system consumed all the paper for paging
-permission denied
+Endothermal recalibration
+Filesystem not big enough for Jumbo Kernel Patch
+Loop found in loop in redundant loopback
+System consumed all the paper for paging
+Permission denied
 Reformatting Page. Wait...
 ..disk or the processor is on fire.
 SCSI's too wide.
 Proprietary Information.
 Just type 'mv * /dev/null'.
-runaway cat on system.
+Runaway cat on system.
 Did you pay the new Support Fee?
 We only support a 1200 bps connection.
 We only support a 28000 bps connection.
 Me no internet, only janitor, me just wax floors.
 I'm sorry a pentium won't do, you need an SGI to connect with us.
 Post-it Note Sludge leaked into the monitor.
-the curls in your keyboard cord are losing electricity.
+The curls in your keyboard cord are losing electricity.
 The monitor needs another box of pixels.
 RPC_PMAP_FAILURE
-kernel panic: write-only-memory (/dev/wom0) capacity exceeded.
+Kernel panic: write-only-memory (/dev/wom0) capacity exceeded.
 Write-only-memory subsystem too slow for this machine. Contact your local dealer.
 Just pick up the phone and give modem connect sounds. "Well you said we should get more lines so we don't have voice lines."
 Quantum dynamics are affecting the transistors
@@ -226,7 +226,7 @@ It's those computer people in X {city of world}.  They keep stuffing things up.
 A star wars satellite accidently blew up the WAN.
 Fatal error right in front of screen
 That function is not currently supported, but Bill Gates assures us it will be featured in the next upgrade.
-wrong polarity of neutron flow
+Wrong polarity of neutron flow
 Lusers learning curve appears to be fractal
 We had to turn off that service to comply with the CDA Bill.
 Ionization from the air-conditioning
@@ -298,19 +298,19 @@ Too many interrupts
 Not enough interrupts
 The data on your hard drive is out of balance.
 Digital Manipulator exceeding velocity parameters
-appears to be a Slow/Narrow SCSI-0 Interface problem
-microelectronic Riemannian curved-space fault in write-only file system
-fractal radiation jamming the backbone
-routing problems on the neural net
+Appears to be a Slow/Narrow SCSI-0 Interface problem
+Microelectronic Riemannian curved-space fault in write-only file system
+Fractal radiation jamming the backbone
+Routing problems on the neural net
 IRQ-problems with the Un-Interruptible-Power-Supply
 CPU-angle has to be adjusted because of vibrations coming from the nearby road
-emissions from GSM-phones
+Emissions from GSM-phones
 CD-ROM server needs recalibration
-firewall needs cooling
-asynchronous inode failure
-transient bus protocol violation
-incompatible bit-registration operators
-your process is not ISO 9000 compliant
+Firewall needs cooling
+Asynchronous inode failure
+Transient bus protocol violation
+Incompatible bit-registration operators
+Your process is not ISO 9000 compliant
 You need to upgrade your VESA local bus to a MasterCard local bus.
 The recent proliferation of Nuclear Testing
 Elves on strike. (Why do they call EMAG Elf Magic)
@@ -327,16 +327,16 @@ We need a licensed electrician to replace the light bulbs in the computer room.
 The POP server is out of Coke
 Fiber optics caused gas main leak
 Server depressed, needs Prozac
-quantum decoherence
-those damn raccoons!
-suboptimal routing experience
+Quantum decoherence
+Those damn raccoons!
+Suboptimal routing experience
 A plumber is needed, the network drain is clogged
 50% of the manual is in .pdf readme files
-the AA battery in the wallclock sends magnetic interference
-the xy axis in the trackball is coordinated with the summer solstice
-the butane lighter causes the pincushioning
-old inkjet cartridges emanate barium-based fumes
-manager in the cable duct
+The AA battery in the wallclock sends magnetic interference
+The xy axis in the trackball is coordinated with the summer solstice
+The butane lighter causes the pincushioning
+Old inkjet cartridges emanate barium-based fumes
+Manager in the cable duct
 We'll fix that in the next (upgrade, update, patch release, service pack).
 HTTPD Error 666 : BOFH was here
 HTTPD Error 4004 : very old Intel cpu - insufficient processing power
@@ -347,22 +347,22 @@ Your/our computer(s) had suffered a memory leak, and we are waiting for them to 
 The rubber band broke
 We're on Token Ring, and it looks like the token got loose.
 Stray Alpha Particles from memory packaging caused Hard Memory Error on Server.
-paradigm shift...without a clutch
+Paradigm shift...without a clutch
 PEBKAC (Problem Exists Between Keyboard And Chair)
 The cables are not the same length.
 Second-system effect.
 Chewing gum on /dev/sd3c
 Boredom in the Kernel.
-the daemons! the daemons! the terrible daemons!
+The daemons! the daemons! the terrible daemons!
 I'd love to help you -- it's just that the Boss won't let me near the computer. 
-struck by the Good Times virus
+Struck by the Good Times virus
 YOU HAVE AN I/O ERROR -> Incompetent Operator error
 Your parity check is overdrawn and you're out of cache.
 Communist revolutionaries taking over the server room and demanding all the computers in the building or they shoot the sysadmin. Poor misguided fools.
 Plasma conduit breach
 Out of cards on drive D:
 Sand fleas eating the Internet cables
-parallel processors running perpendicular today
+Parallel processors running perpendicular today
 ATM cell has no roaming feature turned on, notebooks can't connect
 Webmasters kidnapped by evil cult.
 Failure to adjust for daylight savings time.
@@ -381,7 +381,7 @@ Operators killed when huge stack of backup tapes fell over.
 Robotic tape changer mistook operator's tie for a backup tape.
 Someone was smoking in the computer room and set off the halon systems.
 Your processor has taken a ride to Heaven's Gate on the UFO behind Hale-Bopp's comet.
-it's an ID-10-T error
+It's an ID-10-T error
 Dyslexics retyping hosts file on servers
 The Internet is being scanned for viruses.
 Your computer's union contract is set to expire at midnight.
@@ -411,7 +411,7 @@ Electrical conduits in machine room are melting.
 Traffic jam on the Information Superhighway.
 Radial Telemetry Infiltration
 Cow-tippers tipped a cow onto the server.
-tachyon emissions overloading the system
+Tachyon emissions overloading the system
 Maintenance window broken
 We're out of slots on the server
 Computer room being moved.  Our systems are down for the weekend.
@@ -421,34 +421,34 @@ Feature was not beta tested
 Domain controller not responding
 Someone else stole your IP address, call the Internet detectives!
 It's not RFC-822 compliant.
-operation failed because: there is no message for this error (#1014)
-stop bit received
-internet is needed to catch the etherbunny
-network down, IP packets delivered via UPS
+Operation failed because: there is no message for this error (#1014)
+Stop bit received
+Internet is needed to catch the etherbunny
+Network down, IP packets delivered via UPS
 Firmware update in the coffee machine
 Temporal anomaly
 Mouse has out-of-cheese-error
 Borg implants are failing
 Borg nanites have infested the server
-error: one bad user found in front of screen
+Error: one bad user found in front of screen
 Please state the nature of the technical emergency
 Internet shut down due to maintenance
 Daemon escaped from pentagram
-crop circles in the corn shell
-sticky bit has come loose
+Crop circles in the corn shell
+Sticky bit has come loose
 Hot Java has gone cold
 Cache miss - please take better aim next time
 Hash table has woodworm
 Trojan horse ran out of hay
 Zombie processes detected, machine is haunted.
-overflow error in /dev/null
+Overflow error in /dev/null
 Browser's cookie is corrupted -- someone's been nibbling on it.
 Mailer-daemon is busy burning your message in hell.
 According to Microsoft, it's by design
-vi needs to be upgraded to vii
-greenpeace free'd the mallocs
+Vi needs to be upgraded to vii
+Greenpeace free'd the mallocs
 Terrorists crashed an airplane into the server room, have to remove /bin/laden. (rm -rf /bin/laden)
-astropneumatic oscillations in the water-cooling
+Astropneumatic oscillations in the water-cooling
 Somebody ran the operating system through a spelling checker.
 Rhythmic variations in the voltage reaching the power supply.
 Keyboard Actuator Failure.  Order and Replace.
