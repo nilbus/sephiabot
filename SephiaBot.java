@@ -238,8 +238,10 @@ class SephiaBot implements IRCListener {
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
 		String log;
 
-		if (recipient.equals(name))
-			recipient = nick;
+		if (recipient.toLowerCase().equals(name.toLowerCase())) {
+			recipient = nick;   						//XXX: Still testing
+			log("received private message");
+		}
 
 		if (msg.indexOf("ACTION") == 1) {
 			log = "* " + nick + " ";
@@ -442,7 +444,7 @@ class SephiaBot implements IRCListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-/*			} else if (msg.toLowerCase().equals("who is here")) {
+			} else if (msg.toLowerCase().equals("who is here") && nick.equals("Nilbus")) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 
 					int channum = channelNumber(recipient);
@@ -457,22 +459,22 @@ class SephiaBot implements IRCListener {
 							buf.append(" " + current.name);
 							current = current.next;
 						}
-						ircio.privmsg(recipient, buf.toString());
+						ircio.privmsg("Nilbus", buf.toString()); //XXX hack!
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
-				}*/
+				}
 			} else if (tok.hasMoreElements()) {
 				String cmd = tok.nextToken(" ");
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
 					cmd = tok.nextToken(" ");
 				}
 				if (cmd.toLowerCase().equals("kill")) {
-					int killerAccess = getAccess(nick, channelNumber(recipient));
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "KILL! KILL! KILL!");
 						return;
 					}
+					int killerAccess = getAccess(nick, channelNumber(recipient));
 					String killed = tok.nextToken(" ");
 					int killedAccess = getAccess(killed, channelNumber(recipient));
 					if ((killerAccess <= killedAccess || killerAccess == IRCServer.ACCESS_VOICE) && !isVino(host)) {
@@ -552,7 +554,8 @@ class SephiaBot implements IRCListener {
 						ircio.privmsg(nick, "You aint fuckin Vino, prick.");
 						return;
 					}
-				} else if (cmd.toLowerCase().equals("i'm")) {
+				} else if (cmd.toLowerCase().equals("i'm") || 
+						cmd.toLowerCase().equals("vino's")) {
 					if (!tok.hasMoreElements()) {
 						ircio.privmsg(recipient, "You're what?");
 						return;
@@ -663,15 +666,19 @@ class SephiaBot implements IRCListener {
 	}
 
 	public int getAccess(String user, int channum) {
-		if (channum == -1)
+		if (channum == -1) {
+			log ("chan -1");                      //XXX: debug
 			return -1;
+		}
 		IRCUser current = server.channels[channum].users;
 		for (int i = 0; i < server.channels[channum].numusers; i++) {
 			if (user.equalsIgnoreCase(current.name)) {
+				log (current.name + " access " + current.access); //XXX: debug
 				return current.access;
 			}
 			current = current.next;
 		}
+		log(user + " access -1");  //XXX: debug
 		return -1;
 	}
 
