@@ -367,19 +367,26 @@ class SephiaBot implements IRCListener {
 
 	//Performs a case-insensitive regexp match of string against pattern.
 	private boolean iregex(String pattern, String string) {
+		System.out.println("Matching \"" + string + "\" on pattern /" + pattern + "/");
 		Pattern p = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
 		Matcher m = p.matcher(string);
-		return m.matches();
+		System.out.println(m.find()?"Match":"No Match");
+		return m.find();
 	}
 	
 	//Performs a case-insensitive string comparison.
 	private boolean iequals(String str1, String str2) {
-		if (str1 == null && str2 == null)
+		System.out.println("Comparing \"" + str1 + "\" and \"" + str2 + "\".");
+		if (str1 == null && str2 == null) {
+			System.out.println("Match");
 			return true;
-		else if (str1 == null || str2 == null)
+		} else if (str1 == null || str2 == null) {
+			System.out.println("No Match");
 			return false;
-		else
+		} else {
+			System.out.println(str1.toLowerCase().equals(str2.toLowerCase())?"Match":"No Match");
 			return str1.toLowerCase().equals(str2.toLowerCase());
+		}
 	}
 
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
