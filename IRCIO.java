@@ -241,6 +241,10 @@ class IRCIO {
 
 	}
 
+	public void ban(String recipient, String nick, String host) {
+		setMode(nick + " *!*@" + host, recipient, "-o+b");
+	}
+	
 	public void privmsg(String recipient, String msg) {
 		String buf = "PRIVMSG " + recipient + " :" + msg + "\n";
 

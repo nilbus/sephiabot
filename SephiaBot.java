@@ -658,7 +658,7 @@ lineLoop:
 
 		updateUser(nick, host);
 		checkForMessages(nick, host, recipient);
-		checkForBlacklist(nick, recipient);
+		checkForBlacklist(nick, host, recipient);
 		
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + 5000;
@@ -703,7 +703,7 @@ lineLoop:
 
 		updateUser(nick, host);
 		checkForMessages(nick, host, recipient);
-		checkForBlacklist(nick, recipient);
+		checkForBlacklist(nick, host, recipient);
 		updateHistory(nick, msg);
 		
 		//Say hello!
@@ -879,7 +879,7 @@ lineLoop:
 						else
 							ircio.privmsg(recipient, "I don't know.");
 					} else {
-						ircio.privmsg(recipient, targetName + " is " + target.away + ".  " + targetName + " has been gone for " + makeTime(target.leaveTime) + ".");
+						ircio.privmsg(recipient, targetName + " is " + target.away + ". " + targetName + " has been gone for " + makeTime(target.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -1418,11 +1418,12 @@ lineLoop:
 		return -1;
 	}
 
-	public void checkForBlacklist(String nick, String channel) {
+	public void checkForBlacklist(String nick, String host, String channel) {
 		//Check for blacklisted nicks.
 		for (int i = 0; i < blacklist.length; i++) {
 			if (iequals(nick, blacklist[i])) {
-				ircio.privmsg(channel, "!kb " + nick + " You have been blacklisted. Please never return to this channel.");
+				ircio.ban(channel, nick, host);
+				ircio.kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
 				return;
 			}
 		}
@@ -1449,7 +1450,7 @@ lineLoop:
 			ircio.privemote(channel, "salutes as Remy enters.");
 		}
 
-		checkForBlacklist(nick, channel);
+		checkForBlacklist(nick, host, channel);
 		
 		int channum = channelNumber(channel);
 
