@@ -224,10 +224,10 @@ class SephiaBot implements IRCConnectionListener {
 		String when = tok.nextToken(" ");
 		String message = null;
 		long goalTime = 0;
-		if (iequals(when, "in")) {
+		if (iequals("in", when)) {
 //			processReminderIn(tok.nextToken(""));
-		} else if (iequals(when, "on")) {
-		} else if (iequals(when, "at")) {
+		} else if (iequals("on", when)) {
+		} else if (iequals("at", when)) {
 		} else {
 			message = msg;
 			goalTime = System.currentTimeMillis() + 1000*60;
@@ -563,7 +563,7 @@ class SephiaBot implements IRCConnectionListener {
 				if (tok.hasMoreElements() && (cmd.startsWith(",") || cmd.startsWith(":"))) { 
 					cmd = tok.nextToken(" ");
 				}
-				if (iequals(cmd, "kill")) {
+				if (iequals("kill", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "KILL! KILL! KILL!");
 						return;
@@ -630,7 +630,7 @@ class SephiaBot implements IRCConnectionListener {
 							con.getIRCIO().privmsg(recipient, "Kill who what now?"); 
 						return;
 					}
-				} else if (iequals(cmd, "tell")) {
+				} else if (iequals("tell", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "Tell who what?");
 						return;
@@ -654,7 +654,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					String message = tok.nextToken("");
 					//If the target was "everybody" or "everyone" then send the message to every user.
-					if (data.getUserByHost(host) != null && (iequals(target, "everybody") || iequals(target, "everyone")))
+					if (data.getUserByHost(host) != null && (iequals("everybody", target) || iequals("everyone", target)))
 						data.sendMessageToAllUsers(message, sender);
 					else
 						data.addMessage(target, message, sender);
@@ -737,7 +737,7 @@ class SephiaBot implements IRCConnectionListener {
 					} else
 						con.getIRCIO().privmsg(recipient, "No.");
 					return;
-				} else if (iequals(cmd, "shutdown")) {
+				} else if (iequals("shutdown", cmd)) {
 					if (data.isVino(host)) {
 						con.getIRCIO().privmsg(recipient, "Goodbye everybody!");
 						data.writeData();
@@ -746,7 +746,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
-				} else if (iequals(cmd, "reload")) {
+				} else if (iequals("reload", cmd)) {
 					if (data.isAdmin(host)) {
 						data.parseConfig();
 						con.getIRCIO().privmsg(recipient, "Done.");
@@ -754,7 +754,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
-				} else if (iequals(cmd, "save")) {
+				} else if (iequals("save", cmd)) {
 					if (data.isAdmin(host)) {
 						data.writeData();
 						con.getIRCIO().privmsg(recipient, "Done.");
@@ -762,7 +762,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "No.");
 					}
 					return;
-				} else if (iequals(cmd, "listhosts")) {
+				} else if (iequals("listhosts", cmd)) {
 					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
@@ -771,7 +771,7 @@ class SephiaBot implements IRCConnectionListener {
 						if (user.hosts[i] != null && user.hosts[i].length() > 0)
 							buffer += " " + (i+1) + ": " + user.hosts[i];
 					con.getIRCIO().privmsg(nick, buffer);
-				} else if (iequals(cmd, "logout")) {
+				} else if (iequals("logout", cmd)) {
 					User user = data.getUserByHost(host);
 					if (user == null)
 						return;
@@ -800,7 +800,7 @@ class SephiaBot implements IRCConnectionListener {
 						}
 					} catch (NumberFormatException nfe) {
 					}
-				} else if (iequals(cmd, "login")) {
+				} else if (iequals("login", cmd)) {
 					if (tok.countTokens() < 2) {
 						con.getIRCIO().privmsg(nick, "Yeah. Sure. Whatever.");
 						return;
@@ -830,7 +830,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(nick, "No cigar.");
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
-				} else if (iequals(cmd, "i'm")) {
+				} else if (iequals("i'm", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "You're what?");
 						return;
@@ -857,7 +857,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					data.writeData();
 					return;
-				} else if (iequals(cmd, "messages")) {
+				} else if (iequals("messages", cmd)) {
 					User user = data.getUserByHost(host);
 					int lastIndex, firstIndex = 0;
 					if (tok.hasMoreElements()) {
@@ -884,7 +884,7 @@ class SephiaBot implements IRCConnectionListener {
 					for (int i = firstIndex; i <= lastIndex; i++) {
 						con.getIRCIO().privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
 					}
-				} else if (iequals(cmd, "reminders")) {
+				} else if (iequals("reminders", cmd)) {
 					User user = data.getUserByHost(host);
 					int lastIndex, firstIndex = 0;
 					if (tok.hasMoreElements()) {
@@ -923,7 +923,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
 						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
-				} else if (iequals(cmd, "say")) {
+				} else if (iequals("say", cmd)) {
 					if (!data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "No.");
 						return;
@@ -939,7 +939,7 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1));
 					return;
 				//TODO: Make mode setting colloquial
-				} else if (iequals(cmd, "mode")) {
+				} else if (iequals("mode", cmd)) {
 					if (!data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "No.");
 						return;
@@ -1045,11 +1045,11 @@ class SephiaBot implements IRCConnectionListener {
 			con.getIRCIO().privmsg(channel, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
 		}
 
-		if (iequals(nick, "metapod\\")) {
+		if (iequals("metapod\\", nick)) {
 			con.getIRCIO().privmsg(channel, "Heya meta.");
 		}
 
-		if (iequals(nick, "luckyremy")) {
+		if (iequals("luckyremy", nick)) {
 			con.getIRCIO().privemote(channel, "salutes as Remy enters.");
 		}
 
