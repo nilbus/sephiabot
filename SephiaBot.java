@@ -650,38 +650,6 @@ class SephiaBot implements IRCListener {
 
 		updateHistory(nick, msg);
 		
-		//Bot has been mentioned?
-		if (iregex(name, msg)) {
-			if (gamesurge()) {
-				if (iregex("fuck you", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "Fuck you too, buddy.");
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					}
-				} else if (iregex("screw you", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "Screw you too, buddy.");
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					}
-				} else if (iregex("you suck", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
-						nextWho = System.currentTimeMillis() + 5000;
-						return;
-					}
-				}
-			}
-			if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
-				if (System.currentTimeMillis() > nextWho) { //!spam
-					ircio.privmsg(recipient, "No problem.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			}
-		}
-
 		//Say hello!
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		if (iregex(name.substring(0, nameEnd), msg)) {
@@ -1281,6 +1249,39 @@ class SephiaBot implements IRCListener {
 				ircio.privmsg(recipient, historyText[0]);
 			}
 		}
+		
+		//Bot has been mentioned?
+		if (iregex(name, msg)) {
+			if (gamesurge()) {
+				if (iregex("fuck you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "Fuck you too, buddy.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				} else if (iregex("screw you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "Screw you too, buddy.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				} else if (iregex("you suck", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						ircio.privmsg(recipient, "I suck, but you swallow, bitch.");
+						nextWho = System.currentTimeMillis() + 5000;
+						return;
+					}
+				}
+			}
+			if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					ircio.privmsg(recipient, "No problem.");
+					nextWho = System.currentTimeMillis() + 5000;
+					return;
+				}
+			}
+		}
+
 	}
 
 	private boolean validateLogin(String login, String password) {
