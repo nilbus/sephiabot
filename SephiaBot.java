@@ -8,6 +8,7 @@ TODO: Track nick changes so who is here works.
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.util.regex.*;
 
 class Message {
 	String target;
@@ -390,7 +391,7 @@ class SephiaBot implements IRCListener {
 			pm = true;
 		}
 
-		if (iregex("^.ACTION", msg) {
+		if (iregex("^.ACTION", msg)) {
 			log = "* " + nick + " ";
 			log += msg.substring(8, msg.length()-1);
 		} else {
@@ -456,7 +457,7 @@ class SephiaBot implements IRCListener {
 			for (int i = 0; i < hellos.length; i++) {
 				if (iregex("^"+hellos[i], msg)) {
 					if (System.currentTimeMillis() > nextHi) {	//!spam
-						ircio.privmsg(recipient, hellos[Random.nextInt(hellos.length)]);
+						ircio.privmsg(recipient, hellos[new Random().nextInt(hellos.length)]);
 						nextHi = System.currentTimeMillis() + 500;
 						return;
 					}
@@ -742,7 +743,7 @@ class SephiaBot implements IRCListener {
 						return;
 					}
 					String inchannel = recipient;
-					if (iequals("in", tok.nextToken()) {
+					if (iequals("in", tok.nextToken())) {
 						inchannel = tok.nextToken();
 					}
 					ircio.privmsg(inchannel, tok.nextToken("").substring(1));
