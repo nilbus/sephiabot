@@ -488,11 +488,13 @@ class SephiaBot implements IRCListener {
 		if (pm || talkingToMe(msg)) {
 
 			//Remove the bot's name
-			msg = msg.substring(msg.indexOf(" ")+1);
+			if (!pm) {
+				msg = msg.substring(msg.indexOf(" ")+1);
 
-			if (iregex("bring out the strapon", msg)) {
-				ircio.privmsg(recipient, "\u0001ACTION steps forward with a large strapon and begins mashing potatoes.\u0001");
-				return;
+				if (iregex("bring out the strapon", msg)) {
+					ircio.privmsg(recipient, "\u0001ACTION steps forward with a large strapon and begins mashing potatoes.\u0001");
+					return;
+				}
 			}
 
 			//Remove punctuation from the end
