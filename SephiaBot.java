@@ -21,6 +21,9 @@ class SephiaBot implements IRCListener {
 	private String logdir;
 	private String sephiadir; //Location of sephiabot. Quote, data files here
 	private String blacklist[];
+	private int historySize;
+	private String historyNick[];
+	private String historyText[];
 	private String config;
 
 	private Message firstMessage = null;
@@ -91,6 +94,9 @@ class SephiaBot implements IRCListener {
 		this.dataFileName = "sephiabot.dat";
 		this.usersFileName = "users.cfg";
 		this.blacklist = new String[] {};
+		this.historySize = 3;
+		this.historyNick = new String[this.historySize];
+		this.historyText = new String[this.historySize];
 
 		this.nextWho = 0;
 		this.nextHi = 0;
@@ -612,6 +618,15 @@ class SephiaBot implements IRCListener {
 		}
 	}
 
+	public void updateHistory (String nick, String msg) {
+		for (int i = this.historySize - 1; i > 0; i--) {
+			historyNick[i] = historyNick[i-1];
+			historyText[i] = historyText[i-1];
+		}
+		historyNick[0] = nick;
+		historyText[0] = msg;
+	}
+
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
 		boolean pm = false;
 		String log;
@@ -632,6 +647,8 @@ class SephiaBot implements IRCListener {
 
 		checkForBlacklist(nick, recipient);
 
+		updateHistory(nick, msg);
+		
 		//Bot has been mentioned?
 		if (iregex(name, msg)) {
 			if (gamesurge()) {
@@ -1248,8 +1265,11 @@ class SephiaBot implements IRCListener {
 			}
 		} else if (spelledMyNameWrong(botname)) {
 //			ircio.privmsg(recipient, nick + ", " + spell);
-		}
-
+		} else
+			//Act like a parrot only if the message isn't a command
+			//Only repeat when 2 people said the same thing, but not the 3rd time.
+			if (iequals(historyText[0], historyText[1]) && !iequals(historyText[1], historyText[2]) && !iequals(historyNick[0], historyNick[1]))
+				ircio.privmsg(recipient, historyText[0]);
 	}
 
 	private boolean validateLogin(String login, String password) {
@@ -1267,7 +1287,7 @@ class SephiaBot implements IRCListener {
 			while ((line = in.readLine()) != null)
 				phrases.add(line);
 			in.close();
-			if (phrases.size() == 0)
+			if (phrases.size() == 1)
 				return null;
 			Random rnd = new Random();
 			return (String)phrases.get(rnd.nextInt(phrases.size()));
