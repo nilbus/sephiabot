@@ -347,10 +347,7 @@ class SephiaBot implements IRCListener {
 				return;
 			}
 
-			//Remove punctuation from the end
-			while (msg.endsWith(".") || msg.endsWith("?") || msg.endsWith("!")){
-				msg = msg.substring(0, msg.length()-1);
-			}
+			msg = data.removePunctuation(msg, ".?!");
 
 			//BEGIN COLLOQUIAL COMMANDS
 			//These commands can be used anywhere if the bot's name is spoken first.
@@ -454,8 +451,7 @@ class SephiaBot implements IRCListener {
 			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))?", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
-					while (targetName.endsWith("!") || targetName.endsWith("?") || targetName.endsWith(","))
-						targetName = targetName.substring(0, targetName.length()-1);
+					targetName = data.removePunctuation(targetName, "!?,");
 					boolean foundAway = false;
 					if (iregex("eve?ry(b(o|ud)dy|(1|one?))", targetName)) {
 						//Find out where everybody is and tell the channel.
@@ -635,8 +631,7 @@ class SephiaBot implements IRCListener {
 					}
 					String target = tok.nextToken(" ");
 					String sender = nick;
-					while (target.endsWith(".") || target.endsWith("!") || target.endsWith(","))
-						target = target.substring(0, target.length()-1);
+					target = data.removePunctuation(target, ".!,");
 					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
 					User targetUser = getUserByNick(target);
 					if (targetUser != null)
@@ -665,8 +660,7 @@ class SephiaBot implements IRCListener {
 					}
 					String target = tok.nextToken(" ");
 					String sender = nick;
-					while (target.endsWith(".") || target.endsWith("!") || target.endsWith(","))
-						target = target.substring(0, target.length()-1);
+					target = data.removePunctuation(target, ".!,");
 					if (iequals(target, "me"))
 						target = nick;
 					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
@@ -847,8 +841,7 @@ class SephiaBot implements IRCListener {
 					} else {
 						ircio.privmsg(recipient, "Have fun!");
 						//Remove punctuation from the end
-						while (location.endsWith(".") || location.endsWith("!") || location.endsWith(",") || location.endsWith("?"))
-							location = location.substring(0, location.length()-1);
+						location = data.removePunctuation(location, ".!,?");
 						user.away = location.replaceAll("\"", "'");
 						user.leaveTime = System.currentTimeMillis();
 					}

@@ -12,7 +12,6 @@ Kali where am I? / Kali where is vino? (same person who said it.)
 make backups of the data file to load in case kali crashes while writing
 - a command where kali says the last time she saw a user speak.
 Have kali keep track of pings and pongs and print out round trip time.
-- Create a "removePunctuation" function that strips specified punctuation from words.
 Say "be right back" and "goodbye" onshutdown in every channel.
 Kick for using colors.
 

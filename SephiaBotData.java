@@ -518,6 +518,12 @@ lineLoop:
 		}
 	}
 
+	String removePunctuation(String msg, String remove) {
+		while (iregex("[" + remove + "]$", msg))
+			msg = msg.substring(0, msg.length()-1);
+		return msg;
+	}
+	
 	//Get a user by his username only.
 	User getUserByName(String name) {
 		if (iequals(vino.userName, name.trim()))
