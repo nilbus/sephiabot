@@ -1196,7 +1196,7 @@ class SephiaBot implements IRCListener {
 				} else if (iequals(cmd, "messages")) {
 					User user = getUserByHost(host);
 					boolean foundMessage = false;
-					int i = 0, lastIndex, firstIndex = 1;
+					int i = 1, lastIndex, firstIndex = 1;
 					if (tok.hasMoreElements()) {
 						try {
 							firstIndex = Integer.parseInt(tok.nextToken());
