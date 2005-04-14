@@ -334,7 +334,7 @@ class SephiaBot implements IRCConnectionListener {
 			}
 		}
 
-		if (iregex("^(good |g')?morning( all| (you )?guys| (eve?ry(b(o|ud)dy|(1|one))))?", msg)){
+		if (iregex("^(good |g')?morning", msg)){
 			con.getIRCIO().privmsg(recipient, "Morning");
 			return;
 		}
