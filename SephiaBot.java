@@ -282,12 +282,18 @@ class SephiaBot implements IRCConnectionListener {
 				boolean tickle = new Random().nextBoolean();
 				if (tickle == true) {
 					con.getIRCIO().privemote(recipient, "laughs.");
-				}
-				else {
+				} else {
 					con.getIRCIO().privmsg(recipient, "Ouch!"); 
 				}
+			} else if (iregex("tickles " + data.getName(con.getIndex()), msg)) {
+				User user = getUserByNick(con, nick);
+				if (user != null) { 
+					con.getIRCIO().privemote(recipient, "giggles."); 
+				} else {
+
+					con.getIRCIO().privemote(recipient, "slaps " + nick + " across the face.");
+				}
 			}
-	
 			return;
 		}
 	}
@@ -327,6 +333,12 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			}
 		}
+
+		if (iregex("^(good |g')?morning( all| (you )?guys| (eve?ry(b(o|ud)dy|(1|one))))?", msg)){
+			con.getIRCIO().privmsg(recipient, "Morning");
+			return;
+		}
+										 
 
 		StringTokenizer tok = new StringTokenizer(msg, ",: ");
 		String botname;
@@ -897,7 +909,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					Reminder reminders[] = data.getRemindersBySender(nick, user);
 					if (reminders.length == 0) {
-						con.getIRCIO().privmsg(recipient, "You havent sent any reminders.");
+						con.getIRCIO().privmsg(recipient, "You haven't sent any reminders.");
 						return;
 					}
 					if (firstIndex >= reminders.length) {
@@ -933,11 +945,35 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 					String inchannel = recipient;
+					//FIXME: The first word is chopped off if it's not "in"
 					if (iequals("in", tok.nextToken())) {
 						inchannel = tok.nextToken();
+					} else {
+						con.getIRCIO().privmsg(recipient, tok.nextToken("").substring(1));
+						return; 
 					}
 					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1));
 					return;
+				} else if (iregex("do|emote", cmd)) {	
+					if (!data.isAdmin(host)) {
+						con.getIRCIO().privmsg(recipient, "No.");
+						return;
+					}
+					if (!tok.hasMoreElements()) {
+						con.getIRCIO().privmsg(recipient, "What do you want me to do?");
+						return;
+					}
+					String inchannel = recipient;
+					//FIXME: The first word is chopped off if it's not "in"
+					if (iequals("in", tok.nextToken())) {
+						inchannel = tok.nextToken();
+					} else {
+						con.getIRCIO().privmsg(recipient, tok.nextToken("").substring(1));
+						return; 
+					}
+					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1)); 
+					return;				
+					
 				//TODO: Make mode setting colloquial
 				} else if (iequals("mode", cmd)) {
 					if (!data.isAdmin(host)) {
@@ -964,14 +1000,11 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().setMode(who, inchannel, mode);
 					return;
 				}
-			}
-		} else {
-			if (con.parrotOK()) {
+			} else if (con.parrotOK()) {
 				con.setLastRepeat(con.getHistory(0));
 				con.getIRCIO().privmsg(recipient, con.getHistory(0));
-			}
-		}
-		
+			}	
+	
 		//Bot has been mentioned?
 		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
 			if (!censor(con)) {
@@ -1015,9 +1048,8 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			}
 		}
-
+		}
 	}
-
 	public boolean talkingToMe(String msg, String name) {
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		return iregex("^"+name.substring(0, nameEnd), msg);
