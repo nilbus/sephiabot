@@ -1005,49 +1005,49 @@ class SephiaBot implements IRCConnectionListener {
 				con.getIRCIO().privmsg(recipient, con.getHistory(0));
 			}	
 	
-		//Bot has been mentioned?
-		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
-			if (!censor(con)) {
-				if (iregex("fuck you", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
+			//Bot has been mentioned?
+			if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
+				if (!censor(con)) {
+					if (iregex("fuck you", msg)) {
+						if (System.currentTimeMillis() > nextWho) {	//!spam
+							con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
+							nextWho = System.currentTimeMillis() + 5000;
+							return;
+						}
+					} else if (iregex("screw you", msg)) {
+						if (System.currentTimeMillis() > nextWho) {	//!spam
+							con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
+							nextWho = System.currentTimeMillis() + 5000;
+							return;
+						}
+					} else if (iregex("you suck", msg)) {
+						if (System.currentTimeMillis() > nextWho) {	//!spam
+							con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
+							nextWho = System.currentTimeMillis() + 5000;
+							return;
+						}
+					}
+				}
+				if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
+					if (System.currentTimeMillis() > nextWho) { //!spam
+						con.getIRCIO().privmsg(recipient, "No problem.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
-				} else if (iregex("screw you", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
+				} else if (iregex("bounc[ye]", msg)) {
+					if (System.currentTimeMillis() > nextWho) { //!spam
+						con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
-				} else if (iregex("you suck", msg)) {
-					if (System.currentTimeMillis() > nextWho) {	//!spam
-						con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
+				} else if (iregex("(right|correct)", msg)) {
+					if (System.currentTimeMillis() > nextWho) { //!spam
+						con.getIRCIO().privmsg(recipient, "Absolutely.");
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
 				}
 			}
-			if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
-				if (System.currentTimeMillis() > nextWho) { //!spam
-					con.getIRCIO().privmsg(recipient, "No problem.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("bounc[ye]", msg)) {
-				if (System.currentTimeMillis() > nextWho) { //!spam
-					con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("(right|correct)", msg)) {
-				if (System.currentTimeMillis() > nextWho) { //!spam
-					con.getIRCIO().privmsg(recipient, "Absolutely.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			}
-		}
 		}
 	}
 	public boolean talkingToMe(String msg, String name) {
