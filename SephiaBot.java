@@ -377,7 +377,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who (wrote|made) you", msg)) {
+			} else if (iregex("who (wrote|made|programmed|coded) you", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "I was written by Vino. Vino rocks.");
 					con.getIRCIO().privmsg(recipient, "Nilbus helped too.");
