@@ -482,11 +482,16 @@ lineLoop:
 		return users.length + 1;
 	}
 	
-	void updateUserTimes(String nick, String host) {
+	void updateUserTimes(String nick, String host, IRCServer server, String channel) {
 		User user = getUserByHost(host);
 		if (user == null)
 			return;
 		user.lastTalked = System.currentTimeMillis();
+
+		IRCChannel lastChannel = server.findChannel(channel);
+		if (lastChannel != null)
+			user.lastChannel = lastChannel;
+
 		for (int i = 0; i < 10; i++) {
 			if (iequals(user.hosts[i], host)) {
 				user.lastSeenTimes[i] = System.currentTimeMillis();

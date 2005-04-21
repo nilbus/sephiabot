@@ -4,13 +4,15 @@ class IRCServer {
   int port;
   IRCChannel channels[];
   IRCUser users[];
+  IRCConnection myConnection = null;
 
   public static int ACCESS_NONE = 0;
   public static int ACCESS_VOICE = 1;
   public static int ACCESS_HALFOP = 2;
   public static int ACCESS_OP = 3;
 
-  IRCServer(String network, int port, String[] channels) {
+  IRCServer(String network, int port, String[] channels, IRCConnection con) {
+	this.myConnection = con;
     this.network = network;
     this.port = port;
     this.channels = new IRCChannel[channels.length];
@@ -19,6 +21,7 @@ class IRCServer {
 	// sense.)
     for (int i = 0; i < channels.length; i++) {
       this.channels[i] = new IRCChannel(channels[i]);
+	  this.channels[i].myServer = this;
     }
   }
 
@@ -28,6 +31,13 @@ class IRCServer {
 			  return i;
 	  return -1;
   }
+
+  IRCChannel findChannel(String channel) {
+	  for (int i = 0; i < channels.length; i++)
+		  if (channels[i].name.equals(channel))
+			  return channels[i];
+	  return null;
+  }
 }
 
 class IRCChannel {
@@ -35,10 +45,23 @@ class IRCChannel {
   String name;
   IRCUser users;
   int numusers = 0;
+  IRCServer myServer;
 
   IRCChannel(String name) {
     this.name = name;
   }
+  
+  /*XXX: is this really necessary?  Remove me if not.
+  static int find(String channel, IRCConnection[] connections) {
+	  for (int j = 0; j < connections.length; j++) {
+		  IRCChannel[] channels = connections[j].getServer().channels;
+		  for (int i = 0; i < channels.length; i++)
+			  if (channels[i].name.equals(channel))
+				  return channels[i];
+	  }
+	  return null;
+  }
+  */
 
   void addUser(String user, String host, int access) {
 

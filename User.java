@@ -8,6 +8,8 @@ class User {
 	String description;
 	long leaveTime;
 	long lastTalked;
+	IRCChannel lastChannel = null;
+
 	int memberType = USER_NOBODY;
 
 	static final int USER_NOBODY = 0;

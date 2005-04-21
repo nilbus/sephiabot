@@ -119,8 +119,8 @@ class SephiaBot implements IRCConnectionListener {
 		for (int i = 0; i < connections.length; i++) {
 			connections[i].getIRCIO().poll();
 
-			checkForReminders(connections[i]);
 		}
+		checkForReminders(connections);
 		
 		try {
 			Thread.sleep(100);
@@ -196,20 +196,41 @@ class SephiaBot implements IRCConnectionListener {
 		}
 	}
 
-	public void checkForReminders(IRCConnection con) {
+	public void checkForReminders(IRCConnection[] connections) {
 		Reminder reminders[] = data.getUnnotifiedReminders();
 		if (reminders.length <= 0)
 			return;
 		for (int i = 0; i < reminders.length; i++) {
 			Reminder reminder = reminders[i];
-			reminder.notified = true;
-			for (int j = 0; j < con.getServer().channels.length; j++) {
-				if (!con.getServer().channels[j].userInChannel(reminder.target))
-					continue;
-				String sender = reminder.sender;
-				if (iequals(reminder.sender, reminder.target))
-					sender = "yourself";
-				con.getIRCIO().privmsg(con.getServer().channels[j].name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+			IRCChannel channel = null;
+			User target = data.getUserByName(reminder.target);
+			IRCConnection con = null;
+
+			String sender = reminder.sender;
+			if (iequals(reminder.sender, reminder.target))
+				sender = "yourself";
+
+			//Jorge would call this a hack, because it uses short circuiting :p
+			if (target != null && target.lastChannel != null) {
+				//Try the easy way
+				channel = target.lastChannel;
+				con = channel.myServer.myConnection;
+			} else {
+				//otherwise we must look for this person in every channel
+				search:
+				for (int k = 0; k < connections.length; k++) {
+					con = connections[k];
+					IRCChannel[] channels = con.getServer().channels;
+					for (int j = 0; j < channels.length; j++)
+						if (channels[j].userInChannel(reminder.target)) {
+							channel = channels[j];
+							break search;
+						}
+				}
+			}
+			if (con != null && channel != null) {
+				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+				reminder.notified = true;
 			}
 		}
 		data.writeData();
@@ -262,7 +283,7 @@ class SephiaBot implements IRCConnectionListener {
 		
 		msg = msg.trim();
 
-		data.updateUserTimes(nick, host);
+		data.updateUserTimes(nick, host, con.getServer(), recipient);
 		checkForMessages(con, nick, host, recipient);
 		checkForBlacklist(con, nick, host, recipient);
 		
@@ -315,7 +336,7 @@ class SephiaBot implements IRCConnectionListener {
 
 		msg = msg.trim();
 
-		data.updateUserTimes(nick, host);
+		data.updateUserTimes(nick, host, con.getServer(), recipient);
 		checkForMessages(con, nick, host, recipient);
 		checkForBlacklist(con, nick, host, recipient);
 		con.updateHistory(nick, msg);
@@ -1074,6 +1095,11 @@ class SephiaBot implements IRCConnectionListener {
 		if (iequals("luckyremy", nick)) {
 			con.getIRCIO().privemote(channel, "salutes as Remy enters.");
 		}
+
+		User user = data.getUserByHost(host);
+		IRCChannel ircChan = con.getServer().findChannel(channel);
+		if (user != null && ircChan != null)
+			user.lastChannel = ircChan;
 
 		checkForBlacklist(con, nick, host, channel);
 		

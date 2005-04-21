@@ -67,7 +67,7 @@ class IRCConnection implements IRCListener {
 
 		ircio = new IRCIO(this, network, port);
 		ircio.login(channels, name);
-		server = new IRCServer(network, port, channels);
+		server = new IRCServer(network, port, channels, this);
 
 	}
 
