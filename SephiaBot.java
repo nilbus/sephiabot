@@ -750,7 +750,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "No.");
 					return;
 				} else if (iequals("shutdown", cmd)) {
-					if (data.isVino(host)) {
+					if (data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "Goodbye everybody!");
 						data.writeData();
 						System.exit(0);
@@ -988,9 +988,7 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().setMode(who, inchannel, mode);
 					return;
 				}
-			} else if (con.parrotOK()) {
-				con.setLastRepeat(con.getHistory(0));
-				con.getIRCIO().privmsg(recipient, con.getHistory(0));
+
 			}	
 	
 			//Bot has been mentioned?
@@ -1036,6 +1034,10 @@ class SephiaBot implements IRCConnectionListener {
 					}
 				}
 			}
+		//Wasn't talking to the bot
+		} else if (con.parrotOK()) {
+			con.setLastRepeat(con.getHistory(0));
+			con.getIRCIO().privmsg(recipient, con.getHistory(0));
 		}
 	}
 	public boolean talkingToMe(String msg, String name) {
