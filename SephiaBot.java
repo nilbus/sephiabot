@@ -935,7 +935,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
 						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
-				} else if (iequals("say", cmd)) {
+				} else if (iregex("say|do|emote", cmd)) {
 					if (!data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "No.");
 						return;
@@ -944,36 +944,24 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "Say what?!?");
 						return;
 					}
-					String inchannel = recipient;
-					//FIXME: The first word is chopped off if it's not "in"
-					if (iequals("in", tok.nextToken())) {
-						inchannel = tok.nextToken();
-					} else {
-						con.getIRCIO().privmsg(recipient, tok.nextToken("").substring(1));
-						return; 
+					String firstWord = tok.nextToken();
+					String everythingElse = "";
+					if (iequals("in", firstWord) && tok.hasMoreTokens()) {
+						recipient = tok.nextToken();
+						if (tok.hasMoreElements()) {
+							firstWord = tok.nextToken();
+						} else {
+							con.getIRCIO().privmsg(recipient, "Say what?!?");
+							return;
+						}
 					}
-					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1));
+					if (tok.hasMoreTokens())
+						everythingElse = tok.nextToken("");
+					if (iequals("say", cmd))
+						con.getIRCIO().privmsg(recipient, firstWord + everythingElse);
+					else
+						con.getIRCIO().privemote(recipient, firstWord + everythingElse);
 					return;
-				} else if (iregex("do|emote", cmd)) {	
-					if (!data.isAdmin(host)) {
-						con.getIRCIO().privmsg(recipient, "No.");
-						return;
-					}
-					if (!tok.hasMoreElements()) {
-						con.getIRCIO().privmsg(recipient, "What do you want me to do?");
-						return;
-					}
-					String inchannel = recipient;
-					//FIXME: The first word is chopped off if it's not "in"
-					if (iequals("in", tok.nextToken())) {
-						inchannel = tok.nextToken();
-					} else {
-						con.getIRCIO().privmsg(recipient, tok.nextToken("").substring(1));
-						return; 
-					}
-					con.getIRCIO().privmsg(inchannel, tok.nextToken("").substring(1)); 
-					return;				
-					
 				//TODO: Make mode setting colloquial
 				} else if (iequals("mode", cmd)) {
 					if (!data.isAdmin(host)) {
