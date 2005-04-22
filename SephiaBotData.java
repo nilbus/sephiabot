@@ -7,8 +7,6 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
-import org.w3c.dom.*;
-
 class SephiaBotData {
 
 	private String spell;

@@ -129,11 +129,11 @@ class SephiaBot implements IRCConnectionListener {
 	}
 
 	private boolean iregex(String pattern, String string) {
-		return data.iregex(pattern, string);
+		return SephiaBotData.iregex(pattern, string);
 	}
 	
 	private boolean iequals(String str1, String str2) {
-		return data.iequals(str1, str2);
+		return SephiaBotData.iequals(str1, str2);
 	}
 
 	   

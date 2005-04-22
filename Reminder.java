@@ -1,5 +1,3 @@
-import java.util.regex.*;
-
 class Reminder {
 	String target;
 	String sender;
