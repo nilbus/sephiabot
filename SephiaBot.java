@@ -231,10 +231,10 @@ class SephiaBot implements IRCConnectionListener {
 			if (con != null && channel != null) {
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
+				data.writeData();
+				data.findNextReminderTime();
 			}
 		}
-		data.writeData();
-		data.findNextReminderTime();
 	}
 	
 	/*

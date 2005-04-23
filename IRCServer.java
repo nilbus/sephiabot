@@ -34,7 +34,7 @@ class IRCServer {
 
   IRCChannel findChannel(String channel) {
 	  for (int i = 0; i < channels.length; i++)
-		  if (channels[i].name.equals(channel))
+		  if (SephiaBotData.iequals(channels[i].name, channel))
 			  return channels[i];
 	  return null;
   }
