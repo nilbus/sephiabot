@@ -137,22 +137,8 @@ class SephiaBot implements IRCConnectionListener {
 	}
 
 	   
-	//Find a user by his IRC nick. If an IRC nick is found matching the specified nick, any users logged in
-	// with that host are returned. Otherwise, any user names matching the specified nick are returned. Note
-	// that if someone's occupies a nick but is not logged in as that nick, this function will return null.
-	public User getUserByNick(IRCConnection con, String name) {
-		for (int i = 0; i < con.getServer().channels.length; i++) {
-			for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
-				if (curr.name.equals(name)) {
-					return data.getUserByHost(curr.host);
-				}
-			}
-		}
-		return data.getUserByName(name);
-	}
-	
+	//Check if this person has any messages, or missed reminders.
 	public void checkForMessages(IRCConnection con, String nick, String host, String recipient) {
-		//Check if this person has any messages.
 		User user = data.getUserByHost(host);
 		int totalMessages = 0;
 		Message messages[] = data.getMessagesByReceiver(nick, user);
@@ -196,6 +182,8 @@ class SephiaBot implements IRCConnectionListener {
 		}
 	}
 
+	//Announce any reminders that have just happened or that haven't been
+	// announced yet.
 	public void checkForReminders(IRCConnection[] connections) {
 		Reminder reminders[] = data.getUnnotifiedReminders();
 		if (reminders.length <= 0)
@@ -203,6 +191,7 @@ class SephiaBot implements IRCConnectionListener {
 		for (int i = 0; i < reminders.length; i++) {
 			Reminder reminder = reminders[i];
 			IRCChannel channel = null;
+			//Find this reminder's target's user, if any
 			User target = data.getUserByName(reminder.target);
 			IRCConnection con = null;
 
@@ -210,9 +199,11 @@ class SephiaBot implements IRCConnectionListener {
 			if (iequals(reminder.sender, reminder.target))
 				sender = "yourself";
 
+			//Search for the server and channel this person last spoke in,
+			// or if not known, just find them.
 			//Jorge would call this a hack, because it uses short circuiting :p
 			if (target != null && target.lastChannel != null) {
-				//Try the easy way
+				//the easy way
 				channel = target.lastChannel;
 				con = channel.myServer.myConnection;
 			} else {
@@ -222,12 +213,13 @@ class SephiaBot implements IRCConnectionListener {
 					con = connections[k];
 					IRCChannel[] channels = con.getServer().channels;
 					for (int j = 0; j < channels.length; j++)
-						if (channels[j].userInChannel(reminder.target)) {
+						if (channels[j].userInChannel(target, reminder.target)) {
 							channel = channels[j];
 							break search;
 						}
 				}
 			}
+			//Don't send the reminder if they're offline.
 			if (con != null && channel != null) {
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
@@ -236,43 +228,6 @@ class SephiaBot implements IRCConnectionListener {
 			}
 		}
 	}
-	
-	/*
-	public void processReminder(String sender, String target, String msg) {
-		StringTokenizer tok = new StringTokenizer(msg, " ");
-		if (!tok.hasMoreElements())
-			return;
-		String when = tok.nextToken(" ");
-		String message = null;
-		long goalTime = 0;
-		if (iequals("in", when)) {
-//			processReminderIn(tok.nextToken(""));
-		} else if (iequals("on", when)) {
-		} else if (iequals("at", when)) {
-		} else {
-			message = msg;
-			goalTime = System.currentTimeMillis() + 1000*60;
-//			sendReminder(sender, target, message, goalTime);
-		}
-	}
-	
-	public boolean processReminderIn(String sender, String target, String msg) {
-		StringTokenizer tok = new StringTokenizer(msg, " ");
-		if (!tok.hasMoreElements())
-			return false;
-		String number = tok.nextToken();
-		if (!tok.hasMoreElements())
-			return false;
-		String time = tok.nextToken();
-		long goalTime = System.currentTimeMillis() + data.stringToNumber(number) + data.stringToTime(time);
-//		sendReminder(sender, target, message, goalTime);
-		return true;
-	}
-	
-	public void sendReminder(String sender, String target, String message, String goalTime) {
-//		data.addReminder(target, message, sender, goalTime);
-	}
-	*/
 	
 	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg) {
 		String log;
@@ -307,7 +262,7 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privmsg(recipient, "Ouch!"); 
 				}
 			} else if (iregex("tickles " + data.getName(con.getIndex()), msg)) {
-				User user = getUserByNick(con, nick);
+				User user = data.getUserByNick(connections, nick);
 				if (user != null) { 
 					con.getIRCIO().privemote(recipient, "giggles."); 
 				} else {
@@ -459,7 +414,7 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			} else if (!censor(con) && iregex("wan(na |t to )cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User user = getUserByNick(con, nick);
+					User user = data.getUserByNick(connections, nick);
 					if (data.isVino(host) || user != null && iequals(user.userName, "Yukie")) {
 						con.getIRCIO().privmsg(recipient, "Take me, " + nick + "!");
 					} else {
@@ -503,7 +458,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					if (iequals(targetName, botname))
 						return;
-					User target = getUserByNick(con, targetName);
+					User target = data.getUserByNick(connections, targetName);
 					if (target == null) {
 						con.getIRCIO().privmsg(recipient, "Like I know.");
 						return;
@@ -603,7 +558,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					String killed = tok.nextToken(" ");
 					User killerUser = data.getUserByHost(host);
-					User killedUser = getUserByNick(con, killed);
+					User killedUser = data.getUserByNick(connections, killed);
 					if ((killerUser == null || (killedUser != null && killedUser.memberType > killerUser.memberType)) && !data.isVino(host)) {
 						con.getIRCIO().privemote(recipient, "giggles at " + nick);
 					} else if (iequals(killed, botname)) {
@@ -673,7 +628,7 @@ class SephiaBot implements IRCConnectionListener {
 					String sender = nick;
 					target = data.removePunctuation(target, ".!,");
 					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
-					User targetUser = getUserByNick(con, target);
+					User targetUser = data.getUserByNick(connections, target);
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the message as his username instead so that all the messages are sent by the same user.
@@ -693,7 +648,7 @@ class SephiaBot implements IRCConnectionListener {
 						data.addMessage(target, message, sender);
 					data.writeData();
 					con.getIRCIO().privmsg(recipient, "OK, I'll make sure to let them know.");
-				} else if (iregex("^remind(er)?$", cmd)) {
+				} else if (iequals("remind", cmd)) {
 					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that] [something]
 					// Bit, remind [person] [to OR that] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
@@ -703,13 +658,13 @@ class SephiaBot implements IRCConnectionListener {
 					String target = tok.nextToken(" ");
 					boolean myself = false;
 					String sender = nick;
-					target = data.removePunctuation(target, ".!,");
+					target = data.removePunctuation(target, ".!,:");
 					if (iregex("(me|myself)", target)) {
 						myself = true;
 						target = nick;
 					}
 					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
-					User targetUser = getUserByNick(con, target);
+					User targetUser = data.getUserByNick(connections, target);
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the reminders as his username instead so that all the reminders are sent by the same user.
@@ -874,7 +829,7 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 					String location = tok.nextToken("").trim();
-					if (iregex("^ba+ck", location)) {
+					if (iregex("^ba+c?k", location)) {
 						if (user.away == null) {
 							con.getIRCIO().privmsg(recipient, "Of course you are honey.");
 						} else {
@@ -956,7 +911,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
 						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
-				} else if (iregex("say|do|emote", cmd)) {
+				} else if (iregex("^(say|do|emote)$", cmd)) {
 					if (!data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "No.");
 						return;

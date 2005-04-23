@@ -442,7 +442,7 @@ lineLoop:
 		return msg;
 	}
 	
-	//Get a user by his username only.
+	//Get a user by his username or alias only.
 	User getUserByName(String name) {
 		if (iequals(vino.userName, name.trim()))
 			return vino;
@@ -456,17 +456,47 @@ lineLoop:
 		return null;
 	}
 	
-	//Guarunteed the person is logged in. Gets a User from a host.
+	//Guarantees the person is logged in. Gets a User from a host.
 	User getUserByHost(String host) {
 		//First check for Vino.
 		if (isVino(host))
 			return vino;
 		for (int i = 0; i < users.length; i++) {
 			for (int j = 0; j < 10; j++)
-				if (users[i].hosts[j] != null && users[i].hosts[j].equalsIgnoreCase(host.trim()))
+				if (users[i].hosts[j] != null && iequals(users[i].hosts[j], host.trim()))
 					return users[i];
 		}
 		return null;
+	}
+	
+	//Search for a user by an IRC nick.
+	//If the nick is found in a channel, search for a user with that host;
+	//   if the host doesn't match a logged in user, return null.
+	//   otherwise return the logged in user.
+	//If the nick doesn't exist (offline), search by username/alias
+	public User getUserByNick(IRCConnection[] connections, String name) {
+		boolean foundSquatter = false; //found the nick, but isn't logged in
+		for (int j = 0; j < connections.length; j++) {
+			IRCConnection con = connections[j];
+			for (int i = 0; i < con.getServer().channels.length; i++) {
+				for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
+					if (iequals(curr.name, name)) {
+						User result = getUserByHost(curr.host);
+						if (result != null)
+							return result;
+						else
+							//Keep searching incase the host is different on
+							// a different server.
+							foundSquatter = true;
+					}
+				}
+			}
+		}
+		if (foundSquatter)
+			return null;
+
+		//No one is online with this nick; search by username/alias
+		return getUserByName(name);
 	}
 	
 	User getUser(int i) {
@@ -516,7 +546,7 @@ lineLoop:
 		Vector messages = new Vector(10);
 		Message currMsg = firstMessage;
 		while (currMsg != null) {
-			if (iequals(currMsg.target, receiver) || (user != null && iequals(user.userName, currMsg.target))) {
+			if (iequals(currMsg.target, receiver) || (user != null && iequals(currMsg.target, user.userName))) {
 				messages.add(currMsg);
 			}
 			currMsg = currMsg.next;

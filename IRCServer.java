@@ -51,18 +51,6 @@ class IRCChannel {
     this.name = name;
   }
   
-  /*XXX: is this really necessary?  Remove me if not.
-  static int find(String channel, IRCConnection[] connections) {
-	  for (int j = 0; j < connections.length; j++) {
-		  IRCChannel[] channels = connections[j].getServer().channels;
-		  for (int i = 0; i < channels.length; i++)
-			  if (channels[i].name.equals(channel))
-				  return channels[i];
-	  }
-	  return null;
-  }
-  */
-
   void addUser(String user, String host, int access) {
 
     if (users == null) {
@@ -115,12 +103,19 @@ class IRCChannel {
     }
   }
 
-  boolean userInChannel(String nick) {
-	  for (IRCUser user = users; user != null; user = user.next)
-		  if (user.name.equalsIgnoreCase(nick))
-			  return true;
-	  return false;
-  }
+	//Check if the nick or user or its aliases are in this channel
+	boolean userInChannel(User user, String nick) {
+		nick = nick.trim();
+		for (IRCUser ircUser = users; ircUser != null; ircUser = ircUser.next){
+			if (SephiaBotData.iequals(ircUser.name, nick))
+				return true;
+			if (user != null)
+				for (int j = 0; j < user.aliases.length; j++)
+					if (SephiaBotData.iequals(user.aliases[j], nick))
+						return true;
+		}
+		return false;
+	}
 }
 
 class IRCUser {
