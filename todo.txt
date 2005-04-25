@@ -2,14 +2,28 @@ Ed:
 drop to and that from the beginning of reminders
 finish reminders
 last/seen
-make sure you get reminders if your host
+remind any nick on the uesr's host, if online.
 when logging in, remove host from any other user
 sleep in connect poll
 handle nick taken
 verify diconnect handling
 merge remind and tell
+tell when server load too high
 
-Vino:
+Heather:
+who am I = who is (me)
+g'night
+make morning a stricter regex
+pinch?
+auto-bring back from away if you speak after being gone for a while.
+karma
+tickle
+ask
+"bit is cool" -> I'm cool. (cool|is t(he|eh) man|is awesome|rocks)
+pong when pinged
+
+
+Jorge:
 kali remembers the last thing someone said and says it when someone asks where you are
 kick for spamming
 person.
