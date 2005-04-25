@@ -1,107 +1,107 @@
 class IRCServer {
 
-  String network;
-  int port;
-  IRCChannel channels[];
-  IRCUser users[];
-  IRCConnection myConnection = null;
+	String network;
+	int port;
+	IRCChannel channels[];
+	IRCUser users[];
+	IRCConnection myConnection = null;
 
-  public static int ACCESS_NONE = 0;
-  public static int ACCESS_VOICE = 1;
-  public static int ACCESS_HALFOP = 2;
-  public static int ACCESS_OP = 3;
+	public static int ACCESS_NONE = 0;
+	public static int ACCESS_VOICE = 1;
+	public static int ACCESS_HALFOP = 2;
+	public static int ACCESS_OP = 3;
 
-  IRCServer(String network, int port, String[] channels, IRCConnection con) {
+	IRCServer(String network, int port, String[] channels, IRCConnection con) {
 	this.myConnection = con;
-    this.network = network;
-    this.port = port;
-    this.channels = new IRCChannel[channels.length];
-	// It is important to maintain the order of the channels here, because the positions of
-	// the channels are also their index when calling into SephiaBotData (if that made any
-	// sense.)
-    for (int i = 0; i < channels.length; i++) {
-      this.channels[i] = new IRCChannel(channels[i]);
-	  this.channels[i].myServer = this;
-    }
-  }
+		this.network = network;
+		this.port = port;
+		this.channels = new IRCChannel[channels.length];
+		// It is important to maintain the order of the channels here, because the positions of
+		// the channels are also their index when calling into SephiaBotData (if that made any
+		// sense.)
+		for (int i = 0; i < channels.length; i++) {
+			this.channels[i] = new IRCChannel(channels[i]);
+		this.channels[i].myServer = this;
+		}
+	}
 
-  int getChannelIndex(String channel) {
-	  for (int i = 0; i < channels.length; i++)
-		  if (channels[i].name.equals(channel))
-			  return i;
-	  return -1;
-  }
+	int getChannelIndex(String channel) {
+		for (int i = 0; i < channels.length; i++)
+			if (channels[i].name.equals(channel))
+				return i;
+		return -1;
+	}
 
-  IRCChannel findChannel(String channel) {
-	  for (int i = 0; i < channels.length; i++)
-		  if (SephiaBotData.iequals(channels[i].name, channel))
-			  return channels[i];
-	  return null;
-  }
+	IRCChannel findChannel(String channel) {
+		for (int i = 0; i < channels.length; i++)
+			if (SephiaBotData.iequals(channels[i].name, channel))
+				return channels[i];
+		return null;
+	}
 }
 
 class IRCChannel {
 
-  String name;
-  IRCUser users;
-  int numusers = 0;
-  IRCServer myServer;
+	String name;
+	IRCUser users;
+	int numusers = 0;
+	IRCServer myServer;
 
-  IRCChannel(String name) {
-    this.name = name;
-  }
-  
-  void addUser(String user, String host, int access) {
+	IRCChannel(String name) {
+		this.name = name;
+	}
 
-    if (users == null) {
-      users = new IRCUser(user, host, access);
-      numusers = 1;
-      return;
-    }
+	void addUser(String user, String host, int access) {
 
-    IRCUser curr = users;
-    while (true) {
-      if (curr.name.equals(user)) {
-        curr.access = access;
-        return;
-      }
-      if (curr.next == null) {
-        curr.next = new IRCUser(user, host, access);
-        numusers++;
-        return;
-      }
-      curr = curr.next;
-    }
-  }
+		if (users == null) {
+			users = new IRCUser(user, host, access);
+			numusers = 1;
+			return;
+		}
 
-  void remUser(String user) {
+		IRCUser curr = users;
+		while (true) {
+			if (curr.name.equals(user)) {
+				curr.access = access;
+				return;
+			}
+			if (curr.next == null) {
+				curr.next = new IRCUser(user, host, access);
+				numusers++;
+				return;
+			}
+			curr = curr.next;
+		}
+	}
 
-    if (users == null) {
-      numusers = 0;
-      return;
-    }
+	void remUser(String user) {
 
-    if (users.next == null) {
-      users = null;
-      numusers = 0;
-      return;
-    }
+		if (users == null) {
+			numusers = 0;
+			return;
+		}
 
-    IRCUser curr = users;
-    IRCUser last = users;
-    while (true) {
-      if (curr.name.equals(user)) {
-        last.next = curr.next;
-        numusers--;
-        return;
-      }
-      if (curr.next == null) {
-        return;
-      }
-      last = curr;
-      curr = curr.next;
-    }
-  }
+		if (users.next == null) {
+			users = null;
+			numusers = 0;
+			return;
+		}
+
+		IRCUser curr = users;
+		IRCUser last = users;
+		while (true) {
+			if (curr.name.equals(user)) {
+				last.next = curr.next;
+				numusers--;
+				return;
+			}
+			if (curr.next == null) {
+				return;
+			}
+			last = curr;
+			curr = curr.next;
+		}
+	}
 
 	//Check if the nick or user or its aliases are in this channel
 	boolean userInChannel(User user, String nick) {
@@ -120,16 +120,15 @@ class IRCChannel {
 
 class IRCUser {
 
-  String name;
-  String host;
-  int access;
+	String name;
+	String host;
+	int access;
 
-  IRCUser next;
+	IRCUser next;
 
-  IRCUser(String name, String host, int access) {
-    this.name = name;
-	this.host = host;
-    this.access = access;
-  }
-
+	IRCUser(String name, String host, int access) {
+		this.name = name;
+		this.host = host;
+		this.access = access;
+	}
 }
