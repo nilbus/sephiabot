@@ -1,9 +1,3 @@
-/*
-TODO: Reminders
-TODO: Better handling of dropped connections, etc.
-TODO: On JOINs, channel is prefixed with a :. Make sure this is accounted for.
-TODO: Track nick changes so who is here works.
-*/
 import java.util.*;
 
 class SephiaBot implements IRCConnectionListener {
@@ -360,7 +354,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who is here", msg) && nick.equals("Nilbus")) {
+			} else if (iregex("who('s| is) here", msg) && nick.equals("Nilbus")) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 
 					int channum = channelNumber(con.getIndex(), recipient);
@@ -371,32 +365,29 @@ class SephiaBot implements IRCConnectionListener {
 					} else {
 						StringBuffer buf = new StringBuffer("Users in this channel:");
 						IRCUser current = con.getServer().channels[channum].users;
-						for (int i = 0; i < con.getServer().channels[channum].numusers; i++) {
-							buf.append(" " + current.name);
-							current = current.next;
+						for (IRCUser curr = con.getServer().channels[channum].users; curr != null; curr = curr.next) {
+							buf.append(" " + curr.name);
 						}
-						//con.getIRCIO().privmsg(recipient, buf.toString());
-						con.getIRCIO().privmsg("Nilbus", buf.toString()); //XXX: debug
+						con.getIRCIO().privmsg(recipient, buf.toString());
 						nextWho = System.currentTimeMillis() + 5000;
 						return;
 					}
 				}
-			} else if (iregex("who is vino", msg)) {
+			} else if (iregex("who('s| is) vino", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "A dirty cuban.");
 					con.getIRCIO().privmsg(recipient, "And my daddy.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who is remy", msg)
-					|| iregex("who is luckyremy",msg)) {
+			} else if (iregex("who('s| is) (lucky)?remy",msg)) {
 				if (System.currentTimeMillis() > nextWho) {	 //!spam
 					con.getIRCIO().privmsg(recipient, "Father of the Black Sheep.");
 					con.getIRCIO().privmsg(recipient, "Harbinger of Doom.");
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
 				}
-			} else if (iregex("who ?i?\'?s", msg)) {
+			} else if (iregex("who('s| is)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User target = data.getUserByName(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
 					if (target == null)
@@ -570,6 +561,12 @@ class SephiaBot implements IRCConnectionListener {
 						if (killedAccess != -1) {
 							con.getIRCIO().privmsg(recipient, "It would be my pleasure.");
 							con.getIRCIO().kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
+						} else if (iequals("yourself", killed))	{ //reboot
+							if (data.isAdmin(host)) {
+								shutdown("*gags and passes out.", true);
+							} else {
+								con.getIRCIO().privmsg(recipient, "No.");
+							}
 						} else if (killed.equalsIgnoreCase("message")) {
 							if (!tok.hasMoreElements()) {
 								con.getIRCIO().privmsg(recipient, "Which message? I need a number");
@@ -665,6 +662,10 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
 					User targetUser = data.getUserByNick(connections, target);
+					//if that didn't work, try by name
+					if (targetUser == null)
+						targetUser = data.getUserByName(target);
+					//did we find a user?
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the reminders as his username instead so that all the reminders are sent by the same user.
@@ -719,17 +720,13 @@ class SephiaBot implements IRCConnectionListener {
 					}
 				} else if (iregex("^re(boot|start)$", cmd)) {
 					if (data.isAdmin(host)) {
-						con.getIRCIO().privmsg(recipient, "Be right back.");
-						data.writeData();
-						System.exit(1);
+						shutdown("Be right back.", true);
 					} else
 						con.getIRCIO().privmsg(recipient, "No.");
 					return;
-				} else if (iequals("shutdown", cmd)) {
+				} else if (iregex("^(shutdown|die|leave)$", cmd)) {
 					if (data.isAdmin(host)) {
-						con.getIRCIO().privmsg(recipient, "Goodbye everybody!");
-						data.writeData();
-						System.exit(0);
+						shutdown("Goodbye. :(", false);
 					} else {
 						con.getIRCIO().privmsg(recipient, "No.");
 					}
@@ -1021,123 +1018,152 @@ class SephiaBot implements IRCConnectionListener {
 		return iregex("^"+name.substring(0, nameEnd), msg);
 	}
 
-	public void checkForBlacklist(IRCConnection con, String nick, String host, String channel) {
+	public void checkForBlacklist(IRCConnection con, String nick, String host, String channelName) {
 		//Check for blacklisted nicks.
 		if (data.checkForBlacklist(nick)) {
-			con.getIRCIO().ban(channel, nick, host);
-			con.getIRCIO().kick(channel, nick, "You have been blacklisted. Please never return to this channel.");
+			con.getIRCIO().ban(channelName, nick, host);
+			con.getIRCIO().kick(channelName, nick, "You have been blacklisted. Please never return to this channel.");
 			return;
 		}
 	}
 		
-	public void messageChannelJoin(IRCConnection con, String nick, String host, String channel) {
+	public void messageChannelJoin(IRCConnection con, String nick, String host, String channelName) {
 
 		String log;
 
-		log = "--> " + nick + " has joined " + channel;
+		log = "--> " + nick + " has joined " + channelName;
 
-		con.logfile(channel, log);
+		con.logfile(channelName, log);
 
 		//Say something as you enter the channel!
 		if (iequals(nick, data.getName(con.getIndex()))) {
-			con.getIRCIO().privmsg(channel, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
+			con.getIRCIO().privmsg(channelName, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
 		}
 
 		if (iequals("metapod\\", nick)) {
-			con.getIRCIO().privmsg(channel, "Heya meta.");
+			con.getIRCIO().privmsg(channelName, "Heya meta.");
 		}
 
 		if (iequals("luckyremy", nick)) {
-			con.getIRCIO().privemote(channel, "salutes as Remy enters.");
+			con.getIRCIO().privemote(channelName, "salutes as Remy enters.");
 		}
 
+		//Set lastChannel
 		User user = data.getUserByHost(host);
-		IRCChannel ircChan = con.getServer().findChannel(channel);
-		if (user != null && ircChan != null)
-			user.lastChannel = ircChan;
+		IRCChannel ircchan = con.getServer().findChannel(channelName);
+		if (user != null && ircchan != null)
+			user.lastChannel = ircchan;
 
-		checkForBlacklist(con, nick, host, channel);
-		
-		int channum = channelNumber(con.getIndex(), channel);
+		//blacklist
+		checkForBlacklist(con, nick, host, channelName);
 
-		if (channum > -1) {
-			con.getServer().channels[channelNumber(con.getIndex(), channel)].addUser(nick, host, IRCServer.ACCESS_NONE);
+		//Add user to channel's user list
+		if (ircchan != null) {
+			ircchan.addUser(nick, host, IRCServer.ACCESS_NONE);
+		} else {
+			logerror("couldn't find channel name in SephiaBot.messageChannelJoin");
+			return;
 		}
-
 	}
 
-	public void messageChannelPart(IRCConnection con, String nick, String host, String channel, String message) {
+	public void messageChannelPart(IRCConnection con, String nick, String host, String channelName, String message, boolean kicked) {
 
 		String log;
 
-		log = "<-- " + nick + " has left " + channel;
+		String how = (kicked?"left ":"been kicked from ");
+		log = "<-- " + nick + " has " + how + channelName;
 		if (message != null) {
 			log += " (" + message + ")";
 		}
+		con.logfile(channelName, log);
 
-		con.logfile(channel, log);
+		//unset lastChannel if leaving
+		User user = data.getUserByHost(host);
+		IRCChannel ircChan = con.getServer().findChannel(channelName);
+		if (user != null && ircChan == user.lastChannel)
+			user.lastChannel = null;
 
+		checkForBlacklist(con, nick, host, channelName);
+
+		//remove user from channel's user list
+		IRCChannel ircchan = con.getServer().findChannel(channelName);
+		if (ircchan != null) {
+			ircchan.deleteUser(nick);
+		} else {
+			logerror("couldn't find channel name in SephiaBot.messageChannelPart");
+			return;
+		}
+	}
+
+	public void messageQuit(IRCConnection con, String nick, String host, String msg) {
+		String log;
+		log = "<-- " + nick + " has quit ";
+		if (msg != null) {
+			log += " (" + msg + ")";
+		}
+		con.logfile(null, log);
+
+		//unset lastChannel
+		User user = data.getUserByHost(host);
+		if (user != null)
+			user.lastChannel = null;
+
+		//remove user from all channels
+		IRCChannel[] channels = con.getServer().channels;
+		for (int i = 0; i < channels.length; i++)
+			channels[i].deleteUser(nick);
 	}
 
 	public void messageNickChange(IRCConnection con, String nick, String host, String newname) {
-
 		String log;
-
 		log = "--- " + nick + " changed his name to " + newname;
-
 		con.logfile(null, log);
 
+		//update user's nick in all channels
+		IRCChannel[] channels = con.getServer().channels;
+		for (int i = 0; i < channels.length; i++)
+			channels[i].updateUser(nick, newname, null, IRCServer.ACCESS_UNKNOWN);
 	}
 
-	public void messageModeChange(IRCConnection con, String nick, String host, String channel, String mode, String recipient) {
+	public void messageModeChange(IRCConnection con, String nick, String host, String channelName, String mode, String recipient) {
 
 		String log;
 
 		log = "--- " + nick + " set mode " + mode + " on " + recipient;
 
-		con.logfile(channel, log);
+		con.logfile(channelName, log);
 
-		int channum = channelNumber(con.getIndex(), channel);
-		int access;
-		if (mode.equalsIgnoreCase("-v") || mode.equalsIgnoreCase("-o")) {
+		int access = IRCServer.ACCESS_UNKNOWN;
+		if (mode.equalsIgnoreCase("-v") || mode.equalsIgnoreCase("-o"))
 			access = IRCServer.ACCESS_NONE;
-			con.getServer().channels[channum].addUser(recipient, host, access);
-		} else if (mode.equalsIgnoreCase("+o")) {
+		else if (mode.equalsIgnoreCase("+o"))
 			access = IRCServer.ACCESS_OP;
-			con.getServer().channels[channum].addUser(recipient, host, access);
-		} else if (mode.equalsIgnoreCase("+v")) {
+		else if (mode.equalsIgnoreCase("+v"))
 			access = IRCServer.ACCESS_VOICE;
-			con.getServer().channels[channum].addUser(recipient, host, access);
-		}
 
+		//update user's nick in the channel's user list
+		IRCChannel ircchan = con.getServer().findChannel(channelName);
+		if (ircchan != null) {
+			ircchan.updateUser(nick, null, null, access);
+		} else {
+			logerror("couldn't find channel name in SephiaBot.messageModeChange");
+			return;
+		}
 	}
 
-	public void messageQuit(IRCConnection con, String nick, String host, String msg) {
+	public void messageChanList(IRCConnection con, String channelName, String list) {
 
-		String log;
-
-		log = "<-- " + nick + " has quit ";
-		if (msg != null) {
-			log += " (" + msg + ")";
-		}
-
-		con.logfile(null, log);
-
-	}
-
-	public void messageChanList(IRCConnection con, String channel, String list) {
-
-		int channum = channelNumber(con.getIndex(), channel);
+		int channum = channelNumber(con.getIndex(), channelName);
 
 		StringTokenizer tok = new StringTokenizer(list, " ");
 //		int usersInWhois = 0;
 //		String userhostString = "";
 		
-		con.getIRCIO().who(channel);
+		con.getIRCIO().who(channelName);
 		
 		while (tok.hasMoreElements()) {
 			String user = tok.nextToken();
-			int access;
+			int access = IRCServer.ACCESS_UNKNOWN;
 			if (user.startsWith("@")) {
 				access = IRCServer.ACCESS_OP;
 			} else if (user.startsWith("%")) {
@@ -1200,9 +1226,9 @@ hostFinder:
 
 	}
 
-	public int channelNumber(int serverID, String channel) {
+	public int channelNumber(int serverID, String channelName) {
 		for (int channum = 0; channum < data.getNumChannels(serverID); channum++) {
-			if (channel.equalsIgnoreCase(data.getChannel(serverID, channum))) {
+			if (channelName.equalsIgnoreCase(data.getChannel(serverID, channum))) {
 				return channum;
 			}
 		}
@@ -1223,21 +1249,35 @@ hostFinder:
 		return data.getLogdir();
 	}
 
+	public void shutdown(String message, boolean reboot) {
+		for (int i = 0; i < connections.length; i++) {
+			IRCConnection con = connections[i];
+			for (int j = 0; j < con.getServer().channels.length; j++) {
+				IRCChannel chan = con.getServer().channels[j];
+				if (message.startsWith("*"))
+					connections[i].getIRCIO().privemote(chan.name, message.substring(1));
+				else
+					connections[i].getIRCIO().privmsg(chan.name, message);
+				data.writeData();
+				System.exit(reboot?1:0);
+			}
+		}
+	}
 }
 
 // This needs a better name
 interface IRCConnectionListener {
 
 	public void messageReceived(IRCConnection con, String msg);
-	public void messageModeChange(IRCConnection con, String nick, String host, String channel, String mode, String recipient);
+	public void messageModeChange(IRCConnection con, String nick, String host, String channelName, String mode, String recipient);
 	public void messageNickChange(IRCConnection con, String nick, String host, String newname);
-	public void messageChannelJoin(IRCConnection con, String nick, String host, String channel);
-	public void messageChannelPart(IRCConnection con, String nick, String host, String channel, String message);
+	public void messageChannelJoin(IRCConnection con, String nick, String host, String channelName);
+	public void messageChannelPart(IRCConnection con, String nick, String host, String channelName, String message, boolean kick);
 	public void messagePrivMsg(IRCConnection con, String nick, String host, String recipient, String msg);
 	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg);
 	public void messageQuit(IRCConnection con, String nick, String host, String message);
 
-	public void messageChanList(IRCConnection con, String channel, String list);
+	public void messageChanList(IRCConnection con, String channelName, String list);
 	public void messageUserHosts(IRCConnection con, String users);
 	public void messageWho(IRCConnection con, String userchannel, String usernick, String username, String host, String realname);
 

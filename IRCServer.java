@@ -3,9 +3,9 @@ class IRCServer {
 	String network;
 	int port;
 	IRCChannel channels[];
-	IRCUser users[];
 	IRCConnection myConnection = null;
 
+	public static int ACCESS_UNKNOWN = -1;
 	public static int ACCESS_NONE = 0;
 	public static int ACCESS_VOICE = 1;
 	public static int ACCESS_HALFOP = 2;
@@ -16,9 +16,9 @@ class IRCServer {
 		this.network = network;
 		this.port = port;
 		this.channels = new IRCChannel[channels.length];
-		// It is important to maintain the order of the channels here, because the positions of
-		// the channels are also their index when calling into SephiaBotData (if that made any
-		// sense.)
+		// It is important to maintain the order of the channels here,
+		// because the positions of the channels are also their index when
+		// calling into SephiaBotData (if that made any sense.)
 		for (int i = 0; i < channels.length; i++) {
 			this.channels[i] = new IRCChannel(channels[i]);
 		this.channels[i].myServer = this;
@@ -27,7 +27,7 @@ class IRCServer {
 
 	int getChannelIndex(String channel) {
 		for (int i = 0; i < channels.length; i++)
-			if (channels[i].name.equals(channel))
+			if (SephiaBotData.iequals(channels[i].name, channel))
 				return i;
 		return -1;
 	}
@@ -44,7 +44,6 @@ class IRCChannel {
 
 	String name;
 	IRCUser users;
-	int numusers = 0;
 	IRCServer myServer;
 
 	IRCChannel(String name) {
@@ -55,51 +54,68 @@ class IRCChannel {
 
 		if (users == null) {
 			users = new IRCUser(user, host, access);
-			numusers = 1;
 			return;
 		}
 
 		IRCUser curr = users;
 		while (true) {
-			if (curr.name.equals(user)) {
+			if (SephiaBotData.iequals(curr.name, user)) {
 				curr.access = access;
 				return;
 			}
 			if (curr.next == null) {
 				curr.next = new IRCUser(user, host, access);
-				numusers++;
 				return;
 			}
 			curr = curr.next;
 		}
 	}
 
-	void remUser(String user) {
+	//do nothing if user was not found
+	void deleteUser(String user) {
 
 		if (users == null) {
-			numusers = 0;
 			return;
 		}
 
 		if (users.next == null) {
-			users = null;
-			numusers = 0;
+			if (SephiaBotData.iequals(users.name, user)) {
+				users = null;
+			}
 			return;
 		}
 
 		IRCUser curr = users;
-		IRCUser last = users;
-		while (true) {
-			if (curr.name.equals(user)) {
-				last.next = curr.next;
-				numusers--;
-				return;
-			}
-			if (curr.next == null) {
+		IRCUser last = null;
+		while (curr != null) {
+			if (SephiaBotData.iequals(curr.name, user)) {
+				if (last == null) //first node
+					users = curr.next;
+				else
+					last.next = curr.next;
 				return;
 			}
 			last = curr;
 			curr = curr.next;
+		}
+	}
+
+	IRCUser getUser(String name) {
+		for (IRCUser curr = users; curr != null; curr = curr.next)
+			if (SephiaBotData.iequals(name, curr.name))
+				return curr;
+		return null;
+	}
+	
+	void updateUser(String oldname, String newname, String host, int access) {
+		IRCUser user = getUser(oldname);
+		if (user != null) {
+			if (newname != null)
+				user.name = newname;
+			if (host != null)
+				user.host = host;
+			if (access != IRCServer.ACCESS_UNKNOWN)
+				user.access = access;
 		}
 	}
 

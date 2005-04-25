@@ -86,18 +86,13 @@ class IRCConnection implements IRCListener {
 
 	public int getAccess(String user, int channum) {
 		if (channum == -1) {
-//			log ("chan -1");                      //XXX: debug
 			return -1;
 		}
-		IRCUser current = server.channels[channum].users;
-		for (int i = 0; i < server.channels[channum].numusers; i++) {
-			if (SephiaBotData.iequals(user, current.name)) {
-//				log (current.name + " access " + current.access); //XXX: debug
-				return current.access;
+		for (IRCUser curr = server.channels[channum].users; curr != null; curr = curr.next) {
+			if (SephiaBotData.iequals(user, curr.name)) {
+				return curr.access;
 			}
-			current = current.next;
 		}
-//		log(user + " access -1");  //XXX: debug
 		return -1;
 	}
 
@@ -151,7 +146,11 @@ class IRCConnection implements IRCListener {
 	}
 	
 	public void messageChannelPart(String nick, String host, String channel, String message) {
-		listener.messageChannelPart(this, nick, host, channel, message);
+		listener.messageChannelPart(this, nick, host, channel, message, false);
+	}
+
+	public void messageChannelKick(String nick, String host, String channel, String message) {
+		listener.messageChannelPart(this, nick, host, channel, message, true);
 	}
 
 	public void messagePrivMsg(String nick, String host, String recipient, String msg) {
@@ -210,6 +209,7 @@ interface IRCListener {
 	public void messageNickChange(String nick, String host, String newname);
 	public void messageChannelJoin(String nick, String host, String channel);
 	public void messageChannelPart(String nick, String host, String channel, String message);
+	public void messageChannelKick(String nick, String host, String channel, String message);
 	public void messagePrivMsg(String nick, String host, String recipient, String msg);
 	public void messagePrivEmote(String nick, String host, String recipient, String msg);
 	public void messageQuit(String nick, String host, String message);

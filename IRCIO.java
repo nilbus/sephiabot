@@ -180,7 +180,7 @@ class IRCIO {
 			nick = "";
 		}
 
-		buf = tok.nextToken();
+		buf = tok.nextToken(); //COMMAND
 
 		try {
 			int command = Integer.parseInt(buf);
@@ -254,6 +254,18 @@ class IRCIO {
 				mode = mode.substring(1);
 			}
 			listener.messageModeChange(nick, host, recipient, mode, victim);
+			return;
+		} else if (buf.equals("KICK")) {
+			String channel = tok.nextToken();
+			recipient = tok.nextToken();
+			String message;
+			if (tok.hasMoreTokens()) {
+				message = tok.nextToken("");
+				message = message.substring(2);
+			} else {
+				message = null;
+			}
+			listener.messageChannelPart(recipient, host, channel, message);
 			return;
 		} else if (buf.equals("JOIN")) {
 			String channel = tok.nextToken("");
