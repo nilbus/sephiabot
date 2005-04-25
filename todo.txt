@@ -1,24 +1,24 @@
-kali remembers the last thing someone said and says it when someone asks where
-you are
+Ed:
+drop to and that from the beginning of reminders
+finish reminders
+last/seen
+make sure you get reminders if your host
+when logging in, remove host from any other user
+sleep in connect poll
+handle nick taken
+verify diconnect handling
+merge remind and tell
+
+Vino:
+kali remembers the last thing someone said and says it when someone asks where you are
 kick for spamming
-fix all the channel maintanance stuff
-If a message starts with "to" have kali warn about using messages in the first
 person.
-Kali's name in PMs should be optional. ATM if you put her name in a PM it
-doesn't recognize the command.
-kali remind me on day at time in duration do this
-kali reminders
-kali kill reminder #
 kali kill person bans for 30s to avoid autorejoiners.
 Kali where am I? / Kali where is vino? (same person who said it.)
 make backups of the data file to load in case kali crashes while writing
-- a command where kali says the last time she saw a user speak.
 Have kali keep track of pings and pongs and print out round trip time.
-Say "be right back" and "goodbye" onshutdown in every channel.
 Kick for using colors.
-
-<Person> Vino, blah blah
-<Kali> Person, vino is away. blah blh
+Mention away status when people talk to users who are away.
 
 kali, i'm your daddy
 /me slaps kali
