@@ -87,8 +87,12 @@ class IRCIO {
 
 			out.flush();
 
+			//TODO: make this stuipd bot smarter at connecting
 			while (!registered) {
 				poll();
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException ie) {}
 			}
 
 			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";

@@ -71,10 +71,6 @@ class IRCConnection implements IRCListener {
 
 	}
 
-	void poll() {
-		ircio.poll();
-	}
-
 	public void updateHistory (String nick, String msg) {
 		for (int i = this.historySize - 1; i > 0; i--) {
 			historyNick[i] = historyNick[i-1];

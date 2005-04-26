@@ -2,13 +2,12 @@ Ed:
 remind again if past duration since actual send time, not target time
 finish reminders
 last/seen
-remind any nick on the uesr's host, if online
-when logging in, remove host from any other user
 sleep in connect poll
 handle nick taken
 verify diconnect handling
 merge remind and tell
 tell when server load too high
+make mode setting colloquial - op nilbus, etc
 
 
 Heather:
