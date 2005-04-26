@@ -802,8 +802,9 @@ class SephiaBot implements IRCConnectionListener {
 						}
 						// If getUserByHost returns non-null then the user is logged into this user already,
 						// or is logged in as another user and may not re-log in.
-						if (data.getUserByHost(host) != null) {
-							con.getIRCIO().privmsg(nick, "Silly you. You're already logged in.");
+						User ghost = data.getUserByHost(host);
+						if (ghost != null) {
+							con.getIRCIO().privmsg(nick, "Silly you. You're already logged in as " + ghost.userName);
 							return;
 						}
 						data.loginUser(user, host);
