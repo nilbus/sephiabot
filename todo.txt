@@ -1,8 +1,8 @@
 Ed:
-drop to and that from the beginning of reminders
+remind again if past duration since actual send time, not target time
 finish reminders
 last/seen
-remind any nick on the uesr's host, if online.
+remind any nick on the uesr's host, if online
 when logging in, remove host from any other user
 sleep in connect poll
 handle nick taken

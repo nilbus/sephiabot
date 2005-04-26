@@ -21,7 +21,8 @@ class Reminder {
 		this.timeToArrive = pt.textToTime(message);
 		this.timeExpression = pt.getTimeExpression();
 		this.originalTimeExpression = pt.getOriginalTimeExpression();
-		this.message = message.replaceAll(this.originalTimeExpression + " ", "");
+		this.message = message.replaceAll(this.originalTimeExpression, "").trim().
+				replaceAll("^(that|to)", "").trim();
 		this.next = null;
 	}
 
