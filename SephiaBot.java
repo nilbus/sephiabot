@@ -9,7 +9,7 @@ class SephiaBot implements IRCConnectionListener {
 	private long nextWho;
 	private long nextHi;
 
-	// For every place censor() is used, IRCConnection must set currChannel higher in the stack for it to work correctly.
+	//XXX: For every place censor() is used, IRCConnection must set currChannel higher in the stack for it to work correctly.
 	private boolean censor(IRCConnection con) { return data.getCensor(con.getIndex(), con.getCurrentChannel()); }
 
 	public static void main(String args[]) {

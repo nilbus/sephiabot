@@ -14,7 +14,8 @@ class IRCIO {
 	private BufferedReader in;
 	private BufferedWriter out;
 
-	static final long TIMEOUT = 60*1000;	//60 seconds
+	private static final long TIMEOUT = 60*1000;	//60 seconds
+	private static final int CONNECT_ATTEMPTS = 5;
 
 	private boolean connected = false;
 	private boolean registered = false;
@@ -28,18 +29,19 @@ class IRCIO {
 		this.port = port;
 
 		connect();
-		
 	}
 
-	void connect() {
+	void connect() throws RuntimeException {
 		connected = false;
-		while (!connected) {
+		for (int i = 0; i < CONNECT_ATTEMPTS; i++) {
+			reconnect();
+			if (connected)
+				return;
 			try {
 				Thread.sleep(1000);
-			} catch (InterruptedException ie) {
-			}
-			reconnect();
+			} catch (InterruptedException ie) {}
 		}
+		throw new RuntimeException("Couldn't connect after " + CONNECT_ATTEMPTS + " tries. Giving up.");
 	}
 
 	private void reconnect() {

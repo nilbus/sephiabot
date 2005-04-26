@@ -1,12 +1,11 @@
 Ed:
 remind again if past duration since actual send time, not target time
+merge remind and tell
 finish reminders
 last/seen
-sleep in connect poll
 handle nick taken
 verify diconnect handling
-merge remind and tell
-tell when server load too high
+morning - spam proof
 make mode setting colloquial - op nilbus, etc
 
 
