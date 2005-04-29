@@ -4,13 +4,13 @@ class Reminder {
 	String message;
 	long timeSent;
 	long timeToArrive;
+	long timeNotified;
 	String timeExpression;
 	String originalTimeExpression;
 	Reminder next;
 	boolean notified;
 
 	//This constructor will figure out the timeToArrive itself, or throw a WTFException
-	//For now, (until I write it) this constructor sets the time phrase to message instead of timeSent, for testing.
 	Reminder(String target, String message, String sender) throws WTFException {
 		System.out.println("Message: '"+message+"'\n");
 		this.target = target;

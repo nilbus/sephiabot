@@ -1,18 +1,14 @@
 Ed:
-remind again if past duration since actual send time, not target time
-merge remind and tell
-finish reminders
-last/seen
 handle nick taken
 verify diconnect handling
-morning - spam proof
+merge remind and tell
+finish reminders
 make mode setting colloquial - op nilbus, etc
 
 
 Heather:
 who am I = who is (me)
 g'night
-make morning a stricter regex
 pinch?
 auto-bring back from away if you speak after being gone for a while.
 karma

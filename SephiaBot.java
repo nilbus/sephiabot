@@ -218,6 +218,7 @@ class SephiaBot implements IRCConnectionListener {
 			if (con != null && channel != null) {
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
+				reminder.timeNotified = System.currentTimeMillis();
 				data.writeData();
 				data.findNextReminderTime();
 			}
@@ -305,9 +306,12 @@ class SephiaBot implements IRCConnectionListener {
 			}
 		}
 
-		if (iregex("^(good |g')?morning", msg)){
-			con.getIRCIO().privmsg(recipient, "Morning");
-			return;
+		if (System.currentTimeMillis() > nextHi) {  //!spam
+			if (iregex("^(good |g')?morning?,?( all| (you )?guys| (eve?ry(b(o|ud)dy|(1| ?one)))| " + data.getName(con.getIndex()) + ")?[DpP\\W]*$", msg)) {
+				con.getIRCIO().privmsg(recipient, "Good morning :D");
+				nextHi = System.currentTimeMillis() + 1000;
+				return;
+			}
 		}
 										 
 
@@ -962,6 +966,18 @@ class SephiaBot implements IRCConnectionListener {
 					System.out.println("MODE " + inchannel + " " + mode + " " + who + "\n");
 					con.getIRCIO().setMode(who, inchannel, mode);
 					return;
+				} else if (iregex("^(last|seen)$", cmd)) {
+					if (!tok.hasMoreTokens()) {
+						con.getIRCIO().privmsg(recipient, "When did I last see who?");
+						return;
+					}
+					nick = tok.nextToken();
+					User target = data.getUserByNick(connections, nick);
+					if (target == null)
+						con.getIRCIO().privmsg(recipient, "I wasn't really paying attention to " + nick + ".");
+					else
+						con.getIRCIO().privmsg(recipient, "Last time I saw " + target.userName + " was " + makeTime(target.lastTalked) + " ago.");
+					
 				}
 
 			}	
