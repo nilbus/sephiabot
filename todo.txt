@@ -1,9 +1,9 @@
 Ed:
-handle nick taken
 verify diconnect handling
 merge remind and tell
 finish reminders
 make mode setting colloquial - op nilbus, etc
+parrot per channel, not server
 
 
 Heather:

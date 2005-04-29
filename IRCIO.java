@@ -39,6 +39,8 @@ class IRCIO {
 	private boolean registered = false;
 	private long lastMessage = 0;
 	private long lastPing = 0;
+	
+	public String getName() {return name;}
 
 	public IRCIO(IRCListener listener, String network, int port) {
 
@@ -100,6 +102,7 @@ class IRCIO {
 			String msg = "NICK " + name + "\n";
 			out.write(msg, 0, msg.length());
 			listener.log(msg);
+			poll(); //Make sure we got a nick
 
 			msg = "USER sephiabot localhost " + network + " :" + name + "\n";
 			out.write(msg, 0, msg.length());
@@ -107,7 +110,7 @@ class IRCIO {
 
 			out.flush();
 
-			//TODO: make this stuipd bot smarter at connecting
+			//FIXME: gets stuck if connection times out or fails somehow
 			while (!registered) {
 				poll();
 				try {
@@ -115,7 +118,7 @@ class IRCIO {
 				} catch (InterruptedException ie) {}
 			}
 
-			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
+//			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
 			out.write(msg, 0, msg.length());
 			listener.log(msg);
 
@@ -136,22 +139,18 @@ class IRCIO {
 		}
 	}
 
-	void poll() {
+	void poll() throws IOException {
 		String msg;
-		try {
-			while (in.ready()) {
-				msg = in.readLine();
-				lastMessage = System.currentTimeMillis();
-				lastPing = 0;
-				if (!pong(msg)) {
-					decipherMessage(msg);
-				}
-				if (msg.indexOf("001") != -1) {
-					registered = true;
-				}
+		while (in.ready()) {
+			msg = in.readLine();
+			lastMessage = System.currentTimeMillis();
+			lastPing = 0;
+			if (!pong(msg)) {
+				decipherMessage(msg);
 			}
-		} catch (IOException ioe) {
-			listener.logerror("Couldn't poll for input: " + ioe.getMessage());
+			if (msg.indexOf("001") != -1) {
+				registered = true;
+			}
 		}
 		if (lastPing != 0 && System.currentTimeMillis() - lastPing > TIMEOUT) {
 			listener.logerror("Ping timeout.");
@@ -185,7 +184,7 @@ class IRCIO {
 		}
 	}
 
-	void decipherMessage(String msg) {
+	void decipherMessage(String msg) throws IOException {
 
 		listener.log(msg);
 
@@ -242,6 +241,12 @@ class IRCIO {
 				
 			case 433:
 //:NetFire.TX.US.GameSurge.net 433 * Kali :Nickname is already in use.
+				name = name + "-";
+				msg = "NICK " + name + "\n";
+				out.write(msg, 0, msg.length());
+				listener.log(msg);
+				out.flush();
+				poll(); //Try again
 				return;
 				
 			default:

@@ -17,6 +17,7 @@
  */
 
 import java.util.*;
+import java.io.IOException;
 
 class SephiaBot implements IRCConnectionListener {
 
@@ -129,15 +130,18 @@ class SephiaBot implements IRCConnectionListener {
 
 	void poll() {
 		for (int i = 0; i < connections.length; i++) {
-			connections[i].getIRCIO().poll();
-
+			IRCIO io = connections[i].getIRCIO();
+			try {
+				io.poll();
+			} catch (IOException ioe) {
+				logerror("Couldn't poll for input on connection to " + io.getName() + ": " + ioe.getMessage());
+			}
 		}
 		checkForReminders(connections);
 		
 		try {
 			Thread.sleep(100);
 		} catch (InterruptedException ie) {}
-
 	}
 
 	private boolean iregex(String pattern, String string) {
