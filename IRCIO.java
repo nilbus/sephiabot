@@ -33,7 +33,6 @@ class IRCIO {
 	private BufferedWriter out;
 
 	private static final long TIMEOUT = 60*1000;	//60 seconds
-	private static final int CONNECT_ATTEMPTS = 5;
 
 	private boolean connected = false;
 	private boolean registered = false;
@@ -42,7 +41,7 @@ class IRCIO {
 	
 	public String getName() {return name;}
 
-	public IRCIO(IRCListener listener, String network, int port) {
+	public IRCIO(IRCListener listener, String network, int port) throws IOException {
 
 		this.listener = listener;
 		this.network = network;
@@ -51,95 +50,94 @@ class IRCIO {
 		connect();
 	}
 
-	void connect() throws RuntimeException {
-		connected = false;
-		for (int i = 0; i < CONNECT_ATTEMPTS; i++) {
-			reconnect();
-			if (connected)
-				return;
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException ie) {}
-		}
-		throw new RuntimeException("Couldn't connect after " + CONNECT_ATTEMPTS + " tries. Giving up.");
-	}
-
-	private void reconnect() {
-		listener.log("Connecting to " + network + " on port " + port);
+	public void disconnect() {
 		try {
-			if (socket != null)
-				socket.close();
-			socket = new Socket(network, port);
-			if (in != null)
-				in.close();
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			if (out != null)
-				out.close();
-			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-			connected = true;
-			registered = false;
-			lastMessage = 0;
-			lastPing = 0;
-			listener.log("Connection complete.");
-		} catch (UnknownHostException uhe) {
-			listener.logerror("Unknown host.");
-		} catch (IOException ioe) {
-			listener.logerror("IO Exception trying to connect to server.");
-		}
+			socket.close();
+		} catch (IOException ioe) {}
+		try {
+			in.close();
+		} catch (IOException ioe) {}
+		try {
+			out.close();
+		} catch (IOException ioe) {}
+		connected = false;
+	}
+	
+	public boolean isConnected() {
+		return connected;
+	}
+	
+	void connect() throws IOException {
+		connected = false;
+		registered = false;
+		listener.log("Connecting to " + network + " on port " + port);
+		if (socket != null)
+			socket.close();
+		socket = new Socket(network, port);
+		if (in != null)
+			in.close();
+		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		if (out != null)
+			out.close();
+		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+		connected = true;
+		lastMessage = 0;
+		lastPing = 0;
+		listener.log("Connection complete.");
 	}
 
-	public void login(String[] channels, String name) {
+	public void login(String[] channels, String name) throws IOException {
+		if (!connected) return;
+		
 		this.name = name;
 		this.channels = channels;
 		login();
 	}
 
-	void login() {
-		if (!connected)
-			return;
-		try {
-
-			String msg = "NICK " + name + "\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-			poll(); //Make sure we got a nick
-
-			msg = "USER sephiabot localhost " + network + " :" + name + "\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-
-			out.flush();
-
-			//FIXME: gets stuck if connection times out or fails somehow
-			while (!registered) {
-				poll();
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException ie) {}
-			}
-
-//			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
-			out.write(msg, 0, msg.length());
-			listener.log(msg);
-
-//			msg = "MODE " + name + " +x\n";
-//			out.write(msg, 0, msg.length());
-//			listener.log(msg);
-
-			for (int i = 0; i < channels.length; i++) {
-				msg = "JOIN " + channels[i] + "\n";
-				out.write(msg, 0, msg.length());
-				listener.log(msg);
-			}
-
-			out.flush();
-
-		} catch (IOException ioe) {
-			listener.logerror("Couldn't write out.");
+	void login() throws IOException {
+		if (!connected) return;
+		
+		String msg = "NICK " + name + "\n";
+		out.write(msg, 0, msg.length());
+		listener.log(msg);
+		poll(); //Make sure we got a nick
+		
+		msg = "USER sephiabot localhost " + network + " :" + name + "\n";
+		out.write(msg, 0, msg.length());
+		listener.log(msg);
+		out.flush();
+		
+		for (int i = 0; i < 100; i++) {   // wait at least 10 sec before giving up 
+			if (registered)
+				break;
+			poll();
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ie) {}
 		}
+		if (!registered)
+			throw new SocketTimeoutException();
+		
+		//			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
+		out.write(msg, 0, msg.length());
+		listener.log(msg);
+		
+		//			msg = "MODE " + name + " +x\n";
+		//			out.write(msg, 0, msg.length());
+		//			listener.log(msg);
+		
+		for (int i = 0; i < channels.length; i++) {
+			msg = "JOIN " + channels[i] + "\n";
+			out.write(msg, 0, msg.length());
+			listener.log(msg);
+		}
+		
+		out.flush();
 	}
 
 	void poll() throws IOException {
+		if (!connected) return;
+		
 		String msg;
 		while (in.ready()) {
 			msg = in.readLine();
@@ -153,31 +151,23 @@ class IRCIO {
 			}
 		}
 		if (lastPing != 0 && System.currentTimeMillis() - lastPing > TIMEOUT) {
-			listener.logerror("Ping timeout.");
-			
-			connect();
-			login();
+			listener.logerror("PING timeout.");
+			throw new SocketTimeoutException("Ping Timeout");
 		} else if (registered && lastPing == 0 && System.currentTimeMillis() - lastMessage > TIMEOUT) {
 			lastPing = System.currentTimeMillis();
 			String outmsg = "PING " + lastPing + "\n";
-			try {
-				out.write(outmsg);
-				out.flush();
-			} catch (IOException ioe) {
-				listener.logerror("Couldn't ping the server.");
-			}
+			out.write(outmsg);
+			out.flush();
 		}
 	}
 
-	boolean pong(String msg) {
+	boolean pong(String msg) throws IOException {
+		if (!connected) return false;
+		
 		if (msg.indexOf("PING") == 0) {
 			String outmsg = "PONG :" + msg.substring(msg.indexOf(":")+1) + "\n";
-			try {
-				out.write(outmsg);
-				out.flush();
-			} catch (IOException ioe) {
-				listener.logerror("Couldn't respond to a ping.");
-			}
+			out.write(outmsg);
+			out.flush();
 			return true;
 		} else {
 			return false;
@@ -185,7 +175,8 @@ class IRCIO {
 	}
 
 	void decipherMessage(String msg) throws IOException {
-
+		if (!connected) return;
+		
 		listener.log(msg);
 
 		String nick;
@@ -329,6 +320,7 @@ class IRCIO {
 	}
 
 	public void kick(String recipient, String user, String msg) {
+		if (!connected) return;
 		
 		String buf = "KICK " + recipient + " " + user;
 		if (msg != null) {
@@ -345,10 +337,14 @@ class IRCIO {
 	}
 
 	public void ban(String recipient, String nick, String host) {
+		if (!connected) return;
+		
 		setMode(nick + " *!*@" + host, recipient, "-o+b");
 	}
 	
 	public void privmsg(String recipient, String msg) {
+		if (!connected) return;
+		
 		String buf = "PRIVMSG " + recipient + " :" + msg + "\n";
 
 		try {
@@ -373,6 +369,8 @@ class IRCIO {
 	}
 	
 	public void privemote(String recipient, String msg) {
+		if (!connected) return;
+		
 		String buf = "PRIVMSG " + recipient + " :\u0001ACTION " + msg + "\u0001\n";
 
 		try {
@@ -391,6 +389,8 @@ class IRCIO {
 	}
 
 	public void userhost(String target) {
+		if (!connected) return;
+		
 		String buf = "USERHOST " + target + "\n";
 		
 		try {
@@ -403,6 +403,8 @@ class IRCIO {
 	}
 
 	public void who(String target) {
+		if (!connected) return;
+		
 		String buf = "WHO " + target + "\n";
 		
 		try {
@@ -415,6 +417,8 @@ class IRCIO {
 	}
 	
 	public void setMode(String recipient, String inchannel, String mode) {
+		if (!connected) return;
+		
 		try {
 	String msg = "MODE " + inchannel + " " + mode + " " + recipient + "\n";
 	out.write(msg, 0, msg.length());

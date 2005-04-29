@@ -1,5 +1,6 @@
 Ed:
-verify diconnect handling
+take real nick back
+changed nick + reload
 merge remind and tell
 finish reminders
 make mode setting colloquial - op nilbus, etc

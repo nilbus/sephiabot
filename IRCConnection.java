@@ -37,6 +37,8 @@ class IRCConnection implements IRCListener {
 
 	private int index;
 	private int currChannel;
+	
+	public static final int CONNECT_ATTEMPTS = 5;
 
 	public IRCConnection(IRCConnectionListener listener, int index) {
 		this.listener = listener;
@@ -79,7 +81,7 @@ class IRCConnection implements IRCListener {
 		}
 	}
 
-	void connect(String channels[], String network, int port, String name) {
+	public void connect(String channels[], String network, int port, String name) throws IOException {
 
 		initLogs(channels);
 
@@ -87,6 +89,17 @@ class IRCConnection implements IRCListener {
 		ircio.login(channels, name);
 		server = new IRCServer(network, port, channels, this);
 
+	}
+	
+	public void disconnect() {
+		if (ircio != null)
+			ircio.disconnect();
+	}
+	
+	public boolean isConnected() {
+		if (ircio == null)
+			return false;
+		return ircio.isConnected();
 	}
 
 	public void updateHistory (String nick, String msg) {

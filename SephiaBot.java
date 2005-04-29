@@ -18,6 +18,7 @@
 
 import java.util.*;
 import java.io.IOException;
+import java.net.UnknownHostException;
 
 class SephiaBot implements IRCConnectionListener {
 
@@ -59,9 +60,10 @@ class SephiaBot implements IRCConnectionListener {
 		SephiaBot sephiaBot = new SephiaBot(cfgPath);
 		sephiaBot.connect();
 
-		while (true) {
+		while (sephiaBot.hasConnections()) {
 			sephiaBot.poll();
 		}
+		sephiaBot.log("All connections have been closed. Exiting.");
 	}
 
 	public SephiaBot(String config) {
@@ -79,6 +81,13 @@ class SephiaBot implements IRCConnectionListener {
 		this.connections = new IRCConnection[data.getNumNetworks()];
 	}
 
+	boolean hasConnections() {
+		for (int i = 0; i < connections.length; i++)
+			if (connections[i].isConnected())
+				return true;
+		return false;
+	}
+	
 	String makeTime(long time) {
 		long dur = Math.abs(time - System.currentTimeMillis()); 
 		String result = "";
@@ -123,7 +132,19 @@ class SephiaBot implements IRCConnectionListener {
 				channels[j] = data.getChannel(i, j);
 
 			connections[i] = new IRCConnection(this, i);
-			connections[i].connect(channels, data.getNetwork(i), data.getPort(i), data.getName(i));
+			//Try CONNECT_ATTEMPT times, or until connected
+			for (int j = 0; !connections[i].isConnected() && j < IRCConnection.CONNECT_ATTEMPTS; j++)
+				try {
+					connections[i].connect(channels, data.getNetwork(i), data.getPort(i), data.getName(i));
+				} catch (UnknownHostException ioe) {
+					log("Connection failed: Host not found: " + ioe.getMessage() + ". Giving up.");
+					connections[i].disconnect();
+					break;
+				} catch (IOException ioe) {
+					log("Connection attempt " + (j+1) + " failed: " + ioe.getMessage() + ". " +
+							(j < IRCConnection.CONNECT_ATTEMPTS-1?"Trying again.":"Giving up."));
+					connections[i].disconnect();
+				}
 		}
 		
 	}
@@ -135,6 +156,15 @@ class SephiaBot implements IRCConnectionListener {
 				io.poll();
 			} catch (IOException ioe) {
 				logerror("Couldn't poll for input on connection to " + io.getName() + ": " + ioe.getMessage());
+				log("Reconnecting.");
+				try {
+					io.connect();
+					io.login();
+				} catch (IOException ioe2) {
+					logerror("Couldn't reconnect: " + ioe2.getMessage());
+					io.disconnect();
+					broadcast(io.getName() + " died. :(");
+				}
 			}
 		}
 		checkForReminders(connections);
@@ -1289,7 +1319,7 @@ hostFinder:
 		return data.getLogdir();
 	}
 
-	public void shutdown(String message, boolean reboot) {
+	public void broadcast(String message) {
 		for (int i = 0; i < connections.length; i++) {
 			IRCConnection con = connections[i];
 			for (int j = 0; j < con.getServer().channels.length; j++) {
@@ -1298,9 +1328,13 @@ hostFinder:
 					connections[i].getIRCIO().privemote(chan.name, message.substring(1));
 				else
 					connections[i].getIRCIO().privmsg(chan.name, message);
-				data.writeData();
-				System.exit(reboot?1:0);
 			}
 		}
+	}
+	
+	public void shutdown(String message, boolean reboot) {
+		broadcast(message);
+		data.writeData();
+		System.exit(reboot?1:0);
 	}
 }
