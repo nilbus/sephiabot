@@ -1,6 +1,6 @@
 Ed:
 take real nick back
-changed nick + reload
+different nick & reload
 merge remind and tell
 finish reminders
 make mode setting colloquial - op nilbus, etc

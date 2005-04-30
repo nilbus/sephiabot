@@ -327,7 +327,7 @@ class SephiaBot implements IRCConnectionListener {
 		String log;
 		String msg = origmsg;
 
-		if (iequals(recipient, data.getName(con.getIndex()))) {
+		if (iregex("^"+data.getName(con.getIndex())+"-+$", recipient)) {
 			recipient = nick;
 			pm = true;
 		}
@@ -1106,6 +1106,7 @@ class SephiaBot implements IRCConnectionListener {
 		con.logfile(channelName, log);
 
 		//Say something as you enter the channel!
+		nick = nick.replaceFirst("-+$", "");
 		if (iequals(nick, data.getName(con.getIndex()))) {
 			con.getIRCIO().privmsg(channelName, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
 		}

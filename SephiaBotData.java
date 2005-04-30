@@ -54,7 +54,7 @@ class SephiaBotData {
 	private String usersFileName;
 	
 	public static final int USER_VINO = 0;
-	public static final int REMINDER_STALE_DUR = 120000; //2 min
+	public static final int REMINDER_STALE_DUR = 2 * 60 * 1000; //2 min
 
 	private SephiaBotData() {
 	}
