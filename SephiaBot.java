@@ -29,6 +29,8 @@ class SephiaBot implements IRCConnectionListener {
 	private long nextWho;
 	private long nextHi;
 
+	private long lastNickAttempt = 0;
+
 	//XXX: For every place censor() is used, IRCConnection must set currChannel higher in the stack for it to work correctly.
 	private boolean censor(IRCConnection con) { return data.getCensor(con.getIndex(), con.getCurrentChannel()); }
 
@@ -153,6 +155,11 @@ class SephiaBot implements IRCConnectionListener {
 		for (int i = 0; i < connections.length; i++) {
 			IRCIO io = connections[i].getIRCIO();
 			try {
+				if (!data.getName(i).equals(io.getName()) &&
+						System.currentTimeMillis() > lastNickAttempt + 60000) { //If we didn't get the nick we wanted
+					lastNickAttempt = System.currentTimeMillis();
+					io.changeNick(data.getName(i));
+				}
 				io.poll();
 			} catch (IOException ioe) {
 				logerror("Couldn't poll for input on connection to " + io.getName() + ": " + ioe.getMessage());
@@ -1190,6 +1197,10 @@ class SephiaBot implements IRCConnectionListener {
 		log = "--- " + nick + " changed his name to " + newname;
 		con.logfile(null, log);
 
+		//Is this my nick?
+		if (nick.equals(con.getIRCIO().getName()))
+			con.getIRCIO().setName(newname);
+		
 		//update user's nick in all channels
 		IRCChannel[] channels = con.getServer().channels;
 		for (int i = 0; i < channels.length; i++)

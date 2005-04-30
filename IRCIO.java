@@ -40,6 +40,7 @@ class IRCIO {
 	private long lastPing = 0;
 	
 	public String getName() {return name;}
+	public void setName(String newName) {name = newName;}
 
 	public IRCIO(IRCListener listener, String network, int port) throws IOException {
 
@@ -232,7 +233,9 @@ class IRCIO {
 				
 			case 433:
 //:NetFire.TX.US.GameSurge.net 433 * Kali :Nickname is already in use.
-				name = name + "-";
+				tok.nextToken(); //discard my current nick
+				String takenName = tok.nextToken();
+				name = takenName + "-";
 				msg = "NICK " + name + "\n";
 				out.write(msg, 0, msg.length());
 				listener.log(msg);
@@ -426,4 +429,12 @@ class IRCIO {
 			System.out.println(msg);
 		} catch (IOException e) {System.out.println(e.getMessage());}
 	}
+
+	public void changeNick(String name) throws IOException {
+		String msg = "NICK " + name + "\n";
+		out.write(msg, 0, msg.length());
+		out.flush();
+		listener.log(msg);
+	}
+
 }
