@@ -437,20 +437,6 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 				}
-			} else if (iregex("who('s| is) vino", msg)) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-					con.getIRCIO().privmsg(recipient, "A dirty cuban.");
-					con.getIRCIO().privmsg(recipient, "And my daddy.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("who('s| is) (lucky)?remy",msg)) {
-				if (System.currentTimeMillis() > nextWho) {	 //!spam
-					con.getIRCIO().privmsg(recipient, "Father of the Black Sheep.");
-					con.getIRCIO().privmsg(recipient, "Harbinger of Doom.");
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
 			} else if (iregex("who('s| is)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User target = data.getUserByName(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
@@ -474,20 +460,6 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "Take me, " + nick + "!");
 					} else {
 						con.getIRCIO().privmsg(recipient, "Fuck no.");
-					}
-					nextWho = System.currentTimeMillis() + 5000;
-					return;
-				}
-			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))? vino", msg)) {
-				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User vino = data.getUser(SephiaBotData.USER_VINO);
-					if (vino.away == null) {
-						if (vino.lastTalked > 0)
-							con.getIRCIO().privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone. The last time he said anything was " + makeTime(vino.lastTalked) + " ago.");
-						else
-							con.getIRCIO().privmsg(recipient, "If he's not here, I dunno. He hasn't told me he's gone.");
-					} else {
-						con.getIRCIO().privmsg(recipient, "He's " + vino.away + ". He's been gone for " + makeTime(vino.leaveTime) + ".");
 					}
 					nextWho = System.currentTimeMillis() + 5000;
 					return;
@@ -619,8 +591,6 @@ class SephiaBot implements IRCConnectionListener {
 					} else if (iequals(killed, botname)) {
 						con.getIRCIO().privmsg(recipient, ":(");
 					} else {
-						if (data.isVino(host))
-							killerUser = data.getUser(SephiaBotData.USER_VINO);
 						int killedAccess = con.getAccess(killed, channelNumber(con.getIndex(), recipient));
 						if (killedAccess != -1) {
 							con.getIRCIO().privmsg(recipient, "It would be my pleasure.");

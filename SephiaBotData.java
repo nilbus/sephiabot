@@ -44,7 +44,6 @@ class SephiaBotData {
 	private long nextReminder;
 	private Reminder firstReminder = null;
 
-	private User vino;
 	private User users[];
 
 	private String syslogBuffer;
@@ -53,7 +52,6 @@ class SephiaBotData {
 	private String dataFileName;
 	private String usersFileName;
 	
-	public static final int USER_VINO = 0;
 	public static final int REMINDER_STALE_DUR = 2 * 60 * 1000; //2 min
 
 	private SephiaBotData() {
@@ -106,7 +104,6 @@ class SephiaBotData {
 		this.dataFileName = "sephiabot.dat";
 		this.usersFileName = "users.xml";
 		this.blacklist = new String[] {};
-		this.vino = new User("Vino", "xxxxx", User.USER_ADMIN);
 		this.nextReminder = 0;
 	}
 	
@@ -132,7 +129,7 @@ class SephiaBotData {
 			int awayMsgThrownOut = 0;
 			firstMessage = null;		//Keep messages and reminders already in memory from persisting.
 			firstReminder = null;
-			logout(vino, -1);			//Log all users out and use only persistent login information.
+			//Log all users out and use only persistent login information.
 			for (int i = 0; i < users.length; i++)
 				logout(users[i], -1);
 lineLoop:
@@ -220,21 +217,6 @@ lineLoop:
 							currRem = currRem.next;
 						currRem.next = new Reminder(target, message, nick, notified, timeToArrive, timeSent);
 					}
-				//vinohost, vinoaway, and vinoleavetime should not be necessary anymore. Vino's info is loaded like any other user.
-				// It's left in here for backwards compatibility.
-				} else if (command.equals("vinohost")) {
-					int hostsLoaded = 0;
-					while (tok.hasMoreElements() && hostsLoaded < 10) {
-						this.vino.lastSeenTimes[hostsLoaded] = System.currentTimeMillis();   //When converting from old "hosts", default to current time.
-						this.vino.hosts[hostsLoaded++] = tok.nextToken(" ").trim();
-					}
-					log("Loaded " + hostsLoaded + " vinohosts");
-				} else if (command.equals("vinoaway")) {
-					this.vino.away = tok.nextToken("").trim();
-					log("Loaded vinoaway " + this.vino.away);
-				} else if (command.equals("vinoleavetime")) {
-					this.vino.leaveTime = Long.parseLong(tok.nextToken("").trim());
-					log("Loaded vinoleavetime " + this.vino.leaveTime);
 				}
 			}
 
@@ -264,45 +246,11 @@ lineLoop:
 		}
 
 		try {
-			String buffer;
+			String buffer, userBuffer;
 
 			buffer = "// This file is read on boot. Do not modify unless you know what you are doing.\n";
 			dataFileWriter.write(buffer, 0, buffer.length());
 		
-			String userBuffer = "userdata " + vino.userName;
-			for (int i = 0; i < 10; i++) {
-				if (vino.hosts[i] != null && vino.hosts[i].length() > 0) {
-					//Check the array up until now for duplicate entries.
-					boolean foundDuplicate = false;
-					for (int j = 0; j < i; j++) {
-						if (vino.hosts[j] != null && vino.hosts[j].equals(vino.hosts[i])) {
-							foundDuplicate = true;
-							break;
-						}
-					}
-					if (!foundDuplicate) {
-						buffer = userBuffer + " host " + vino.hosts[i] + " " + vino.lastSeenTimes[i] + "\n";
-						dataFileWriter.write(buffer, 0, buffer.length());
-					}
-				}
-			}
-
-			if (this.vino.away != null) {
-				buffer = userBuffer;
-				buffer += " away " + this.vino.away + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-
-				buffer = userBuffer;
-				buffer += " leavetime " + this.vino.leaveTime + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-			}
-			
-			if (vino.lastTalked > 0) {
-				buffer = userBuffer;
-				buffer += " lasttalked " + this.vino.lastTalked + "\n";
-				dataFileWriter.write(buffer, 0, buffer.length());
-			}
-
 			for (int i = 0; i < users.length; i++) {
 				User user = users[i];
 				userBuffer = "userdata " + user.userName;
@@ -462,8 +410,6 @@ lineLoop:
 	
 	//Get a user by his username or alias only.
 	User getUserByName(String name) {
-		if (iequals(vino.userName, name.trim()))
-			return vino;
 		for (int i = 0; i < users.length; i++) {
 			if (iequals(users[i].userName, name.trim()))
 				return users[i];
@@ -476,9 +422,6 @@ lineLoop:
 	
 	//Guarantees the person is logged in. Gets a User from a host.
 	User getUserByHost(String host) {
-		//First check for Vino.
-		if (isVino(host))
-			return vino;
 		for (int i = 0; i < users.length; i++) {
 			for (int j = 0; j < 10; j++)
 				if (users[i].hosts[j] != null && iequals(users[i].hosts[j], host.trim()))
@@ -518,14 +461,11 @@ lineLoop:
 	}
 	
 	User getUser(int i) {
-		if (i == 0)
-			return vino;
-		else
-			return users[i-1];
+		return users[i];
 	}
 
 	int getNumUsers() {
-		return users.length + 1;
+		return users.length;
 	}
 	
 	void updateUserTimes(String nick, String host, IRCServer server, String channel) {
@@ -606,7 +546,6 @@ lineLoop:
 	void sendMessageToAllUsers(String message, String nick) {
 		for (int i = 0; i < users.length; i++)
 			addMessage(users[i].userName, message, nick);
-		addMessage("Vino", message, nick);
 	}
 	
 	//Called ten times a second, so must be relatively fast.
@@ -709,8 +648,6 @@ lineLoop:
 	}
 	
 	boolean validateLogin(String login, String password) {
-		if (iequals(login, "vino") && password.equals("xxxxx"))
-			return true;
 		for (int i = 0; i < users.length; i++)
 			if (iequals(users[i].userName, login) && users[i].password.equals(password))
 				return true;
@@ -781,18 +718,11 @@ lineLoop:
 	}
 	
 	boolean isVino(String host) {
-		for (int i = 0; i < 10; i++) {
-			if (vino.hosts[i] != null && iequals(host, vino.hosts[i]))
-				return true;
-		}
 		return false;
 	}
 
 	boolean isVino(User user) {
-		if (user == vino)
-			return true;
-		else
-			return false;
+		return false;
 	}
 	
 	boolean checkForBlacklist(String nick) {
