@@ -334,7 +334,7 @@ class SephiaBot implements IRCConnectionListener {
 		String log;
 		String msg = origmsg;
 
-		if (iregex("^"+data.getName(con.getIndex())+"-+$", recipient)) {
+		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient)) {
 			recipient = nick;
 			pm = true;
 		}
