@@ -3,6 +3,7 @@ merge remind and tell
 finish reminders
 make mode setting colloquial - op nilbus, etc
 parrot per channel, not server
+build with ant
 
 
 Heather:
@@ -33,4 +34,3 @@ kali, i'm your daddy
 kali, asl
 kali, do you love me?
 kali, I love you.
-kali, fuck me

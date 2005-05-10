@@ -954,21 +954,46 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					String firstWord = tok.nextToken();
 					String everythingElse = "";
+					String targetChannel = recipient;
 					if (iequals("in", firstWord) && tok.hasMoreTokens()) {
-						recipient = tok.nextToken();
+						targetChannel = tok.nextToken();
 						if (tok.hasMoreElements()) {
 							firstWord = tok.nextToken();
 						} else {
-							con.getIRCIO().privmsg(recipient, "Say what?!?");
+							con.getIRCIO().privmsg(targetChannel, "Say what?!?");
 							return;
 						}
 					}
 					if (tok.hasMoreTokens())
 						everythingElse = tok.nextToken("");
+					
+					//Check recipient
+					IRCChannel channel = null;
+					IRCConnection sayCon = con;
+					channel = sayCon.getServer().findChannel(targetChannel); //first try the same server
+					if (channel == null)
+						for (int i = 0; i < connections.length; i++) { //search other servers
+							if (connections[i] != sayCon) { //the current one has already been searched
+								channel = connections[i].getServer().findChannel(targetChannel);
+								if (channel != null) {
+									sayCon = connections[i];
+									break;
+								}
+							}
+						}
+					if (channel == null) {
+						con.getIRCIO().privmsg(recipient, "I'm not in that channel.");
+						return;
+					}
+					
 					if (iequals("say", cmd))
-						con.getIRCIO().privmsg(recipient, firstWord + everythingElse);
+						sayCon.getIRCIO().privmsg(channel.name, firstWord + everythingElse);
 					else
-						con.getIRCIO().privemote(recipient, firstWord + everythingElse);
+						sayCon.getIRCIO().privemote(channel.name, firstWord + everythingElse);
+
+					if (!targetChannel.equals(recipient))
+						con.getIRCIO().privmsg(recipient, "okay");
+
 					return;
 				//TODO: Make mode setting colloquial
 				} else if (iequals("mode", cmd)) {

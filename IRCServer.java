@@ -51,6 +51,8 @@ class IRCServer {
 	}
 
 	IRCChannel findChannel(String channel) {
+		if (!channel.startsWith("#"))
+			channel = "#" + channel;
 		for (int i = 0; i < channels.length; i++)
 			if (SephiaBotData.iequals(channels[i].name, channel))
 				return channels[i];
