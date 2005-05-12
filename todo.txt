@@ -19,6 +19,8 @@ pong when pinged
 
 
 Jorge:
+Commits to bsbhd.com svn repositories are informed about in the appropriate
+channels. http://cia.navi.cx/doc/clients
 kali remembers the last thing someone said and says it when someone asks where you are
 kick for spamming
 person.
