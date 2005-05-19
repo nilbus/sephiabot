@@ -439,11 +439,16 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (iregex("who('s| is)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					User target = data.getUserByName(msg.substring(msg.lastIndexOf(' ')+1, msg.length()));
-					if (target == null)
-						con.getIRCIO().privmsg(recipient, "Nobody important.");
-					else
-						con.getIRCIO().privmsg(recipient, target.description);
+					String whoisName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
+					if (talkingToMe(whoisName, data.getName(con.getIndex())))
+						con.getIRCIO().privmsg(recipient, "I am an advanced SephiaBot channel bot.");
+					else {
+						User target = data.getUserByName(whoisName);
+						if (target == null)
+							con.getIRCIO().privmsg(recipient, "Nobody important.");
+						else
+							con.getIRCIO().privmsg(recipient, target.description);
+					}
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
