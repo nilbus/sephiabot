@@ -39,7 +39,7 @@ class IRCServer {
 		// calling into SephiaBotData (if that made any sense.)
 		for (int i = 0; i < channels.length; i++) {
 			this.channels[i] = new IRCChannel(channels[i]);
-		this.channels[i].myServer = this;
+			this.channels[i].myServer = this;
 		}
 	}
 
