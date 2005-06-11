@@ -851,7 +851,7 @@ class SephiaBot implements IRCConnectionListener {
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
 					return;
-				} else if (iequals("i('|"| a)?m", cmd)) {
+				} else if (iequals("i('|\"| a)?m", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "You're what?");
 						return;
