@@ -1,4 +1,7 @@
 Ed:
+make remember stuff
+todo list
+phone list
 merge remind and tell
 finish reminders
 make mode setting colloquial - op nilbus, etc

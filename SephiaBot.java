@@ -387,7 +387,7 @@ class SephiaBot implements IRCConnectionListener {
 
 			//Remove the bot's name
 			if (!pm)
-				msg = msg.substring(msg.indexOf(" ")+1);
+				msg.replaceFirst(botname + "[,: ]+", "");
 
 			if (iregex("bring out the strapon", msg)) {
 				con.getIRCIO().privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
@@ -398,7 +398,7 @@ class SephiaBot implements IRCConnectionListener {
 
 			//BEGIN COLLOQUIAL COMMANDS
 			//These commands can be used anywhere if the bot's name is spoken first.
-			if (iregex("who are you\\W*$", msg)) {
+			if (iregex("^who are you\\W*$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "I am an advanced SephiaBot channel bot.");
 					con.getIRCIO().privmsg(recipient, "I'll kick your " + (censor(con)?"butt":"ass") + " in days that end in 'y'.");
@@ -406,20 +406,20 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if ( iregex("what does marsellus wallace look like", msg)) {
+			} else if ( iregex("^what does marsellus wallace look like\\W*$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "He's black.");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("who (wrote|made|programmed|coded) you", msg)) {
+			} else if (iregex("^who (wrote|made|programmed|coded|created) you\\W*$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "I was written by Vino. Vino rocks.");
 					con.getIRCIO().privmsg(recipient, "Nilbus helped too.");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("who('s| is) here", msg) && nick.equals("Nilbus")) {
+			} else if (iregex("^who('s| is) here\\W*$", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 
 					int channum = channelNumber(con.getIndex(), recipient);
@@ -437,7 +437,7 @@ class SephiaBot implements IRCConnectionListener {
 					}
 				}
 				return;
-			} else if (iregex("who('s| is)", msg)) {
+			} else if (iregex("^who('s| is)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String whoisName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
 					if (talkingToMe(whoisName, data.getName(con.getIndex())))
@@ -452,13 +452,17 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (!censor(con) && iregex("are you (sexy|hot)", msg)) {
+			} else if (iregex("^are you (sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					con.getIRCIO().privmsg(recipient, "Fuck yes.");
+					String compliment = data.iregexFind("(sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg);
+					if (censor(con))
+						con.getIRCIO().privmsg(recipient, "I am sooo freaking " + compliment + "!");
+					else
+						con.getIRCIO().privmsg(recipient, "Fuck yes.");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (!censor(con) && iregex("wan(na |t to )cyber", msg)) {
+			} else if (!censor(con) && iregex("^wan(na |t to )cyber", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User user = data.getUserByNick(connections, nick);
 					if (data.isVino(host) || user != null && iequals(user.userName, "Yukie")) {
@@ -469,7 +473,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))?", msg)) {
+			} else if (iregex("^wh?[aeu]re?('?[sz]| i[sz]| si| be?)( m(a[ih]|y))?", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String targetName = msg.substring(msg.lastIndexOf(' ')+1, msg.length());
 					targetName = data.removePunctuation(targetName, "!?,");
@@ -507,7 +511,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("who am i", msg)) {
+			} else if (iregex("^who am i", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					User target = data.getUserByHost(host);
 					if (data.isVino(host)) {
@@ -521,13 +525,13 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("who('| i)?s your daddy", msg)) {
+			} else if (iregex("^who('| i)?s your daddy", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "Vino's my daddy, ugh! Spank me again Vino!");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("knock knock", msg)) {
+			} else if (iregex("^knock knock", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "Who's there?");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
@@ -847,7 +851,7 @@ class SephiaBot implements IRCConnectionListener {
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
 					return;
-				} else if (iequals("i'm", cmd)) {
+				} else if (iequals("i('|"| a)?m", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "You're what?");
 						return;
