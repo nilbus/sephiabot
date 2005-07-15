@@ -387,7 +387,7 @@ class SephiaBot implements IRCConnectionListener {
 
 			//Remove the bot's name
 			if (!pm)
-				msg.replaceFirst(botname + "[,: ]+", "");
+				msg = msg.replaceFirst(botname + "[,: ]+", "");
 
 			if (iregex("bring out the strapon", msg)) {
 				con.getIRCIO().privemote(recipient, "steps forward with a large strapon and begins mashing potatoes.");
@@ -851,7 +851,7 @@ class SephiaBot implements IRCConnectionListener {
 						log("Failed login attempt by " + nick + "!" + host + " with " + login + "/" + passwd + ".");
 					}
 					return;
-				} else if (iequals("i('|\"| a)?m", cmd)) {
+				} else if (iregex("^i('|\"| a)?m$", cmd)) {
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "You're what?");
 						return;
