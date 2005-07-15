@@ -24,6 +24,7 @@
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.net.*;
 
 class SephiaBotData {
 
@@ -53,6 +54,9 @@ class SephiaBotData {
 	private String usersFileName;
 	
 	public static final int REMINDER_STALE_DUR = 2 * 60 * 1000; //2 min
+
+	private String gbFlavor;
+	private int gbFlavorDay;
 
 	private SephiaBotData() {
 	}
@@ -988,6 +992,36 @@ lineLoop:
 		log("network changed to " + server.network);
 		log("nick changed to " + server.name);
 		log("port changed to " + server.port);
+	}
+
+	String goodberrysFlavorOfTheDay() {
+		int day = new GregorianCalendar().get(GregorianCalendar.DAY_OF_MONTH);
+		if (day != gbFlavorDay) {
+			try {
+				String line;
+				int start = -1, end = -1;
+				BufferedReader buf = new BufferedReader(new InputStreamReader(new URL("http://www.goodberrys.com").openConnection().getInputStream()));
+
+				do {
+					line = buf.readLine();
+					if (line == null) break;
+					if (!line.matches("msg\\[" + day + "\\] = .*"))
+						continue;
+
+					start = line.indexOf("msg[" + day + "]") + 9 + (""+day).length();
+					end = line.indexOf("\";", start);
+				} while (start == -1);
+				if (start < 0 || end < 0)
+					return "It's a secret.";
+
+				gbFlavor = line.substring(start, end);
+				gbFlavorDay = day;
+			} catch (IOException e) {
+				return "It's a secret!";
+			}
+		}
+
+		return "Today's flavor is " + gbFlavor;
 	}
 }
 

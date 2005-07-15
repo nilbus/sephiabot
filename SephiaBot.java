@@ -1082,6 +1082,8 @@ class SephiaBot implements IRCConnectionListener {
 						nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						return;
 					}
+				} else if (iregex("(ice[ -]*cream|custard|gb|good[ -]*berr?y[s']*|(today('s)? )?flavor( of? the? day)?|fotd)", msg)) {
+					con.getIRCIO().privmsg(recipient, data.goodberrysFlavorOfTheDay());
 				}
 			}
 		//Wasn't talking to the bot
