@@ -901,9 +901,9 @@ class SephiaBot implements IRCConnectionListener {
 					lastIndex = firstIndex + 5;
 					if (lastIndex >= messages.length)
 						lastIndex = messages.length-1;
-					con.getIRCIO().privmsg(recipient, "You have sent the following messages:");
+					con.getIRCIO().privmsg(nick, "You have sent the following messages:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
-						con.getIRCIO().privmsg(recipient, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
+						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
 					}
 					return;
 				} else if (iequals("reminders", cmd)) {
@@ -929,7 +929,7 @@ class SephiaBot implements IRCConnectionListener {
 					lastIndex = firstIndex + 5;
 					if (lastIndex >= reminders.length)
 						lastIndex = reminders.length-1;
-					con.getIRCIO().privmsg(recipient, "You have sent the following reminders:");
+					con.getIRCIO().privmsg(nick, "You have sent the following reminders:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
 						Reminder reminder = reminders[i];
 						String target = reminder.target;
@@ -943,7 +943,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 						else
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(recipient, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+						con.getIRCIO().privmsg(nick, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 					}
 					return;
 				} else if (iregex("^(say|do|emote)$", cmd)) {
