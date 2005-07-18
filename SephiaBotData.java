@@ -190,8 +190,8 @@ lineLoop:
 					long time = Long.parseLong(tok.nextToken(" ").trim());
 					String message = " " + tok.nextToken("").trim();
 
-					//Throw out if more then a week old.
-					if (timeInWeeks(time, System.currentTimeMillis()) >= 1) {
+					//Throw out if more then a week old, unless to or from a user.
+					if (getUserByName(nick) != null && getUserByName(target) != null && timeInWeeks(time, System.currentTimeMillis()) >= 1) {
 						messagesThrownOut++;
 						continue;
 					} else
@@ -295,8 +295,8 @@ lineLoop:
 			if (this.firstMessage != null) {
 				Message currMessage = this.firstMessage;
 				do {
-					//If the message is more then a week old, do not store it.
-					if (timeInWeeks(currMessage.time, System.currentTimeMillis()) <= 0) {
+					//If the message is more then a week old, do not store it, unless to or from a user.
+					if (getUserByName(currMessage.sender) != null || getUserByName(currMessage.target) != null || timeInWeeks(currMessage.time, System.currentTimeMillis()) <= 0) {
 						buffer = "message " + currMessage.sender + " " + currMessage.target + " " + currMessage.time + currMessage.message + "\n";
 						dataFileWriter.write(buffer, 0, buffer.length());
 					}
