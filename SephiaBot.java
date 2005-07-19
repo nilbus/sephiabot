@@ -629,7 +629,7 @@ class SephiaBot implements IRCConnectionListener {
 									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 									return;
 								}
-								con.getIRCIO().privmsg(recipient, "Message removed from " + messages[msgIndex].sender + " to " + messages[msgIndex].target + " " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
+								con.getIRCIO().privmsg(recipient, "Message removed for " + messages[msgIndex].target + ", " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
 								data.removeMessage(messages[msgIndex]);
 							} catch (NumberFormatException nfe) {
 								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
@@ -654,7 +654,7 @@ class SephiaBot implements IRCConnectionListener {
 									timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 								else
 									timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-								con.getIRCIO().privmsg(recipient, "Reminder removed from " + reminder.sender + " to " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+								con.getIRCIO().privmsg(recipient, "Reminder removed for " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 								data.removeReminder(reminder);
 							} catch (NumberFormatException nfe) {
 								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
@@ -943,15 +943,12 @@ class SephiaBot implements IRCConnectionListener {
 						String target = reminder.target;
 						if (iequals(reminder.target, nick))
 							target = "you";
-						String sender = reminder.sender;
-						if (iequals(reminder.sender, nick))
-							sender = "you";
 						String timeToArrive;
 						if (System.currentTimeMillis() > reminder.timeToArrive)
 							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 						else
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(nick, "Reminder " + (i+1) + ": For " + target + ", sent " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+						con.getIRCIO().privmsg(nick, "Reminder " + (i+1) + ": For " + target + ", " + timeToArrive + ": " + reminder.message);
 					}
 					return;
 				} else if (iregex("^(say|do|emote)$", cmd)) {
