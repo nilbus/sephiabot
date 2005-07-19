@@ -171,7 +171,7 @@ class SephiaBot implements IRCConnectionListener {
 				} catch (IOException ioe2) {
 					logerror("Couldn't reconnect: " + ioe2.getMessage());
 					io.disconnect();
-					broadcast(io.getName() + " died. :(");
+					//broadcast(io.getName() + " died. :(");
 				}
 			}
 		}
@@ -606,7 +606,8 @@ class SephiaBot implements IRCConnectionListener {
 							con.getIRCIO().kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
 						} else if (iequals("yourself", killed))	{ //reboot
 							if (data.isAdmin(host)) {
-								shutdown("*gags and passes out.", true);
+								shutdown(true);
+								con.getIRCIO().privemote(recipient, "gags and passes out.");
 							} else {
 								con.getIRCIO().privmsg(recipient, "No.");
 							}
@@ -752,13 +753,15 @@ class SephiaBot implements IRCConnectionListener {
 					return;
 				} else if (iregex("^re(boot|start)$", cmd)) {
 					if (data.isAdmin(host)) {
-						shutdown("Be right back.", true);
+						con.getIRCIO().privmsg(recipient, "Be right back.");
+						shutdown(true);
 					} else
 						con.getIRCIO().privmsg(recipient, "No.");
 					return;
 				} else if (iregex("^(shutdown|die|leave)$", cmd)) {
 					if (data.isAdmin(host)) {
-						shutdown("Goodbye. :(", false);
+						con.getIRCIO().privmsg(recipient, "Goodbye. :(");
+						shutdown(false);
 					} else {
 						con.getIRCIO().privmsg(recipient, "No.");
 					}
@@ -1348,8 +1351,7 @@ hostFinder:
 		}
 	}
 	
-	public void shutdown(String message, boolean reboot) {
-		broadcast(message);
+	public void shutdown(boolean reboot) {
 		data.writeData();
 		System.exit(reboot?1:0);
 	}
