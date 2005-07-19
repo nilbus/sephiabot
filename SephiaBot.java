@@ -29,6 +29,7 @@ class SephiaBot implements IRCConnectionListener {
 	private long nextWho;
 	private long nextHi;
 	private long SPAM_WAIT = 1000;
+	private boolean greet = true;
 
 	private long lastNickAttempt = 0;
 
@@ -37,30 +38,33 @@ class SephiaBot implements IRCConnectionListener {
 
 	public static void main(String args[]) {
 		String cfgPath = "sephiabot.xml";
-		final String usage = "\nUsage: sephiabot [-c config file]\n" +
-			" Default is to search for sephiabot.xml in the current directory.";
+		boolean greet = true;
+		final String usage = "\nUsage: sephiabot [-c config file] [--nogreet]\n" +
+			" Default config file: ./sephiabot.xml";
 
 		if (args != null && args.length > 0) {
 			for (int i = 0; i < args.length; i++) {
 				if (args[i].equals("--help")) {
 					System.out.println(usage);
 					System.exit(0);
-				}
-			}
-			if (args[0].equals("-c"))
-				if (args.length > 1)
-					cfgPath = args[1];
-				else {
-					System.out.println("You must specify the path of your config file with -c" + usage);
+				} else if (args[i].equals("-c")) {
+					if (args.length > i+1 && !args[i+1].startsWith("-"))
+						cfgPath = args[i+1];
+					else {
+						System.out.println("You must specify the path of your config file with -c" + usage);
+						System.exit(0);
+					}
+					i++; //Skip the next argument
+				} else if (args[i].equals("--nogreet")) {
+					greet = false;
+				} else {
+					System.out.println("Invalid argument: " + args[i] + usage);
 					System.exit(0);
 				}
-			else {
-				System.out.println("Invalid arguments." + usage);
-				System.exit(0);
 			}
 		}
 
-		SephiaBot sephiaBot = new SephiaBot(cfgPath);
+		SephiaBot sephiaBot = new SephiaBot(cfgPath, greet);
 		sephiaBot.connect();
 
 		while (sephiaBot.hasConnections()) {
@@ -69,10 +73,11 @@ class SephiaBot implements IRCConnectionListener {
 		sephiaBot.log("All connections have been closed. Exiting.");
 	}
 
-	public SephiaBot(String config) {
+	public SephiaBot(String config, boolean greet) {
 
 		this.nextWho = 0;
 		this.nextHi = 0;
+		this.greet = greet;
 
 		this.data = new SephiaBotData(config);
 		
@@ -1119,7 +1124,7 @@ class SephiaBot implements IRCConnectionListener {
 
 		//Say something as you enter the channel!
 		nick = nick.replaceFirst("-+$", "");
-		if (iequals(nick, data.getName(con.getIndex()))) {
+		if (greet && iequals(nick, data.getName(con.getIndex()))) {
 			String greeting = data.getGreeting(con.getIndex(), con.getCurrentChannel());
 			if (greeting != null && greeting.length() > 0)
 				con.getIRCIO().privmsg(channelName, greeting);

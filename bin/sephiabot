@@ -1,10 +1,11 @@
-while true
-do
-  cd ~/sephiabot
-  java SephiaBot $* 2>> ~/sephiabot/syslog.txt
-  retval=$?
+cd ~/sephiabot
+java SephiaBot $* 2>> ~/sephiabot/syslog.txt
+retval=$?
+
+while true; do
   if test $retval -ne 1; then
     break; # if 0 is returned then just quit
   fi
-  
+  java SephiaBot --nogreet $* 2>> ~/sephiabot/syslog.txt
+  retval=$?
 done 
