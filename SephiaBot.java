@@ -1117,7 +1117,9 @@ class SephiaBot implements IRCConnectionListener {
 		//Say something as you enter the channel!
 		nick = nick.replaceFirst("-+$", "");
 		if (iequals(nick, data.getName(con.getIndex()))) {
-			con.getIRCIO().privmsg(channelName, data.getGreeting(con.getIndex(), con.getCurrentChannel()));
+			String greeting = data.getGreeting(con.getIndex(), con.getCurrentChannel());
+			if (greeting != null && greeting.length() > 0)
+				con.getIRCIO().privmsg(channelName, greeting);
 		}
 
 		if (iequals("metapod\\", nick)) {
