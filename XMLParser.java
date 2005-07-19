@@ -124,7 +124,8 @@ public class XMLParser {
 			data.setCensor(data.stringToBoolean(node.getChildNodes().item(0).toString()), server, channel);
 			return true;
 		} else if (node.getNodeName().equals("Greeting")) {
-			data.setGreeting(node.getChildNodes().item(0).toString(), server, channel);
+			if (node.getChildNodes().item(0) != null)
+				data.setGreeting(node.getChildNodes().item(0).toString(), server, channel);
 			return true;
 		} else if (node.getNodeName().equals("HelloReplies")) {
 			data.setHelloReplies(node.getChildNodes().item(0).toString(), server, channel);

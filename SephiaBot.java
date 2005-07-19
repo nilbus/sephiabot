@@ -457,7 +457,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			} else if (iregex("^are you (sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg)) {
+			} else if (iregex("^(are you|you( a|')re) (sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String compliment = data.iregexFind("(sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg);
 					if (censor(con))
