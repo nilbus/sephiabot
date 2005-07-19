@@ -33,6 +33,7 @@ make backups of the data file to load in case kali crashes while writing
 Have kali keep track of pings and pongs and print out round trip time.
 Kick for using colors.
 Mention away status when people talk to users who are away.
+purge command kicks everyone without op.
 
 kali, i'm your daddy
 /me slaps kali
