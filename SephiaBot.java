@@ -313,6 +313,9 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privemote(recipient, "hugs " + nick + "!");
 				else
 					con.getIRCIO().privmsg(recipient, "Get the fuck off.");
+			} else if (iregex("(slaps|smacks|hits|punches|kicks) " + data.getName(con.getIndex()), msg)) {
+				String action = msg.replaceFirst(" .*", "");
+				con.getIRCIO().privemote(recipient, action + " back harder!");
 			} else if (iregex("p[ea]ts " + data.getName(con.getIndex()), msg)) {
 				con.getIRCIO().privemote(recipient, "purrs.");
 			} else if (iregex("pokes " + data.getName(con.getIndex()), msg)) {
@@ -461,7 +464,10 @@ class SephiaBot implements IRCConnectionListener {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					String compliment = data.iregexFind("(sexy|h(o|aw)t|beautiful|awesome|cool|swell)", msg);
 					if (censor(con))
-						con.getIRCIO().privmsg(recipient, "I am sooo freaking " + compliment + "!");
+						if (compliment.equals("sexy"))
+							con.getIRCIO().privmsg(recipient, "I'm too sexy for my shirt!");
+						else
+							con.getIRCIO().privmsg(recipient, "I am so " + compliment + ".");
 					else
 						con.getIRCIO().privmsg(recipient, "Fuck yes.");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
@@ -1088,7 +1094,10 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 				} else if (iregex("(ice[ -]*cream|custard|gb|good[ -]*berr?y[s']*|(today('s)? )?flavor( of? the? day)?|fotd)", msg)) {
-					con.getIRCIO().privmsg(recipient, data.goodberrysFlavorOfTheDay());
+					int offset = 0;
+					//if (iregex("tomorrow", msg));
+					//	offset++;
+					con.getIRCIO().privmsg(recipient, data.goodberrysFlavorOfTheDay(offset));
 				}
 			}
 		//Wasn't talking to the bot

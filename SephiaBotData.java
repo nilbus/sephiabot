@@ -994,8 +994,10 @@ lineLoop:
 		log("port changed to " + server.port);
 	}
 
-	String goodberrysFlavorOfTheDay() {
-		int day = new GregorianCalendar().get(GregorianCalendar.DAY_OF_MONTH);
+	String goodberrysFlavorOfTheDay(int offset) {
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.add(GregorianCalendar.DATE, offset);
+		int day = cal.get(GregorianCalendar.DAY_OF_MONTH) + offset;
 		if (day != gbFlavorDay) {
 			try {
 				String line;
@@ -1021,7 +1023,14 @@ lineLoop:
 			}
 		}
 
-		return "Today's flavor is " + gbFlavor;
+		String dayWord = "";
+		if (offset == 0)
+			dayWord = "Today";
+		else if (offset == 1)
+			dayWord = "Tomorrow";
+		else
+			dayWord = "Unsupported offset"; // ;-)
+		return dayWord + "'s flavor is " + gbFlavor;
 	}
 }
 
