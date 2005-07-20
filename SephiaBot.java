@@ -703,8 +703,8 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privmsg(recipient, "OK, I'll make sure to let them know.");
 					return;
 				} else if (iequals("remind", cmd)) {
-					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that] [something]
-					// Bit, remind [person] [to OR that] [something] ([at time] || [on day]) OR ([in duration])
+					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that OR about] [something]
+					// Bit, remind [person] [to OR that OR about] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
 						con.getIRCIO().privmsg(recipient, "Remind who what when?");
 						return;

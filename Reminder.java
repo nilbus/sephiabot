@@ -40,7 +40,7 @@ class Reminder {
 		this.timeExpression = pt.getTimeExpression();
 		this.originalTimeExpression = pt.getOriginalTimeExpression();
 		this.message = message.replaceAll(this.originalTimeExpression, "").trim().
-				replaceFirst("^(that|to)", "").trim();
+				replaceFirst("^(that|to|about)", "").trim();
 		this.next = null;
 	}
 
