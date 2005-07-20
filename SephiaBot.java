@@ -1095,9 +1095,9 @@ class SephiaBot implements IRCConnectionListener {
 					}
 				} else if (iregex("(ice[ -]*cream|custard|gb|good[ -]*berr?y[s']*|(today('s)? )?flavor( of? the? day)?|fotd)", msg)) {
 					int offset = 0;
-					//if (iregex("tomorrow", msg));
-					//	offset++;
-					con.getIRCIO().privmsg(recipient, data.goodberrysFlavorOfTheDay(offset));
+					if (iregex("tomorrow", msg))
+						offset++;
+					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
 				}
 			}
 		//Wasn't talking to the bot

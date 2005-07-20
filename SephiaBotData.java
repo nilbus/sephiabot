@@ -24,7 +24,6 @@
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
-import java.net.*;
 
 class SephiaBotData {
 
@@ -55,11 +54,7 @@ class SephiaBotData {
 	
 	public static final int REMINDER_STALE_DUR = 2 * 60 * 1000; //2 min
 
-	private String gbFlavor;
-	private int gbFlavorDay;
-
-	private SephiaBotData() {
-	}
+	private SephiaBotData() { }
 	
 	SephiaBotData(String config) {
 		this.globals = new GlobalConfig();
@@ -992,45 +987,6 @@ lineLoop:
 		log("network changed to " + server.network);
 		log("nick changed to " + server.name);
 		log("port changed to " + server.port);
-	}
-
-	String goodberrysFlavorOfTheDay(int offset) {
-		GregorianCalendar cal = new GregorianCalendar();
-		cal.add(GregorianCalendar.DATE, offset);
-		int day = cal.get(GregorianCalendar.DAY_OF_MONTH) + offset;
-		if (day != gbFlavorDay) {
-			try {
-				String line;
-				int start = -1, end = -1;
-				BufferedReader buf = new BufferedReader(new InputStreamReader(new URL("http://www.goodberrys.com").openConnection().getInputStream()));
-
-				do {
-					line = buf.readLine();
-					if (line == null) break;
-					if (!line.matches("msg\\[" + day + "\\] = .*"))
-						continue;
-
-					start = line.indexOf("msg[" + day + "]") + 9 + (""+day).length();
-					end = line.indexOf("\";", start);
-				} while (start == -1);
-				if (start < 0 || end < 0)
-					return "It's a secret.";
-
-				gbFlavor = line.substring(start, end);
-				gbFlavorDay = day;
-			} catch (IOException e) {
-				return "It's a secret!";
-			}
-		}
-
-		String dayWord = "";
-		if (offset == 0)
-			dayWord = "Today";
-		else if (offset == 1)
-			dayWord = "Tomorrow";
-		else
-			dayWord = "Unsupported offset"; // ;-)
-		return dayWord + "'s flavor is " + gbFlavor;
 	}
 }
 
