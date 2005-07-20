@@ -1,12 +1,13 @@
+Multithread connection attempts
+
 Ed:
-make remember stuff
-todo list
-phone list
-merge remind and tell
-finish reminders
-make mode setting colloquial - op nilbus, etc
+track channel traffic, and re-remind appropriately
 parrot per channel, not server
-build with ant
+accept stdin commands
+finish reminders
+merge remind and tell
+bot remembers things you tell it?
+make mode setting colloquial - op nilbus, etc
 
 
 Heather:
@@ -15,7 +16,6 @@ g'night
 pinch?
 auto-bring back from away if you speak after being gone for a while.
 karma
-tickle
 ask
 "bit is cool" -> I'm cool. (cool|is t(he|eh) man|is awesome|rocks)
 pong when pinged
@@ -30,7 +30,8 @@ person.
 kali kill person bans for 30s to avoid autorejoiners.
 Kali where am I? / Kali where is vino? (same person who said it.)
 make backups of the data file to load in case kali crashes while writing
-Have kali keep track of pings and pongs and print out round trip time.
+Have kali keep track of pings and pongs and print out round trip time. ->
+annoying?
 Kick for using colors.
 Mention away status when people talk to users who are away.
 purge command kicks everyone without op.
