@@ -25,12 +25,13 @@ public class Custard {
 	private static int month = -1;
 	private static String[] flavor = new String[32];
 	
+	public static int getMonth() { return month; }
 	// Updates the cache of this month's flavors
 	private static void update() {
 		// Initialize
 		month = new GregorianCalendar().get(Calendar.MONTH);
 		for (int i = 1; i < 32; i++)
-			flavor[i] = "It's a secret.";
+			flavor[i] = "a secret.";
 		try {
 			String line;
 			int start = -1, end = -1;
