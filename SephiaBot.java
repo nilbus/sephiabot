@@ -331,7 +331,7 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privemote(recipient, "giggles."); 
 				} else {
 
-					con.getIRCIO().privemote(recipient, "slaps " + nick + " across the face.");
+					con.getIRCIO().privemote(recipient, "slaps " + nick + ".");
 				}
 			}
 			return;
@@ -373,15 +373,6 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			}
 		}
-
-		if (System.currentTimeMillis() > nextHi) {  //!spam
-			if (iregex("^(good |g')?morning?,?( all| (you )?guys| (eve?ry(b(o|ud)dy|(1| ?one)))| " + data.getName(con.getIndex()) + ")?[DpP\\W]*$", msg)) {
-				con.getIRCIO().privmsg(recipient, "Good morning :D");
-				nextHi = System.currentTimeMillis() + 1000;
-				return;
-			}
-		}
-										 
 
 		StringTokenizer tok = new StringTokenizer(msg, ",: ");
 		String botname;
@@ -700,7 +691,7 @@ class SephiaBot implements IRCConnectionListener {
 					else
 						data.addMessage(target, message, sender);
 					data.writeData();
-					con.getIRCIO().privmsg(recipient, "OK, I'll make sure to let them know.");
+					con.getIRCIO().privmsg(recipient, "Okay, I'll make sure to let them know.");
 					return;
 				} else if (iequals("remind", cmd)) {
 					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that OR about] [something]
@@ -736,7 +727,7 @@ class SephiaBot implements IRCConnectionListener {
 					try {
 						Reminder reminder = data.addReminder(target, tok.nextToken("").substring(1), sender);
 
-						con.getIRCIO().privmsg(recipient, "OK, I'll remind " + 
+						con.getIRCIO().privmsg(recipient, "Okay, I'll remind " + 
 							(myself?"you":target) +" "+ reminder.getTimeExpression());
 					} catch (WTFException wtf) {
 						con.getIRCIO().privmsg(recipient, wtf.getMessage().substring(14));

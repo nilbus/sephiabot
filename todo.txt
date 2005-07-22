@@ -12,7 +12,6 @@ make mode setting colloquial - op nilbus, etc
 
 Heather:
 who am I = who is (me)
-g'night
 pinch?
 auto-bring back from away if you speak after being gone for a while.
 karma
