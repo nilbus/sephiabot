@@ -1,6 +1,7 @@
 Multithread connection attempts
 
 Ed:
+"Thanks bit" not just "Bit, thanks"
 track channel traffic, and re-remind appropriately
 parrot per channel, not server
 accept stdin commands

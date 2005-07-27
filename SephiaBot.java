@@ -259,15 +259,31 @@ class SephiaBot implements IRCConnectionListener {
 			if (iequals(reminder.sender, reminder.target))
 				sender = "yourself";
 
-			//Search for the server and channel this person last spoke in,
-			// or if not known, just find them.
-			//Jorge would call this a hack, because it uses short circuiting :p
-			if (target != null && target.lastChannel != null) {
-				//the easy way
-				channel = target.lastChannel;
-				con = channel.myServer.myConnection;
+			//Leave a message in the user's Home, if specified,
+			// search for the last server/channel they spoke in,
+			// or just find them anywhere.
+			if (target != null) {
+				if (target.home != null) {
+					// They have a Home in users.xml
+					for (int k = 0; k < connections.length; k++) {
+						con = connections[k];
+						channel = con.getServer().findChannel(target.home);
+						if (channel != null)
+							break;
+					}
+					if (channel == null) {
+						// Couldn't find the user's home channel.
+						// Reset home, and try again next time.
+						target.home = null;
+						return;
+					}
+				} else if (target.lastChannel != null) {
+					// Channel where they last spoke
+					channel = target.lastChannel;
+					con = channel.myServer.myConnection;
+				}
 			} else {
-				//otherwise we must look for this person in every channel
+				// Otherwise, we must look for this person in every channel
 				search:
 				for (int k = 0; k < connections.length; k++) {
 					con = connections[k];
@@ -279,7 +295,7 @@ class SephiaBot implements IRCConnectionListener {
 						}
 				}
 			}
-			//Don't send the reminder if they're offline.
+			// Don't send the reminder if they're offline.
 			if (con != null && channel != null) {
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
