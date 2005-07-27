@@ -1141,7 +1141,9 @@ class SephiaBot implements IRCConnectionListener {
 		nick = nick.replaceFirst("-+$", "");
 		if (greet && iequals(nick, data.getName(con.getIndex()))) {
 			String greeting = data.getGreeting(con.getIndex(), con.getCurrentChannel());
-			if (greeting != null && greeting.length() > 0)
+			if (greeting != null && greeting.length() > 0 &&
+					// Do not greet if greeting is "-"
+					!greeting.equals("-"))
 				con.getIRCIO().privmsg(channelName, greeting);
 		}
 
