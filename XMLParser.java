@@ -225,7 +225,7 @@ public class XMLParser {
 			if (!userNode.getNodeName().equals("User"))
 				continue;
 			NodeList groupSubNodes = userNode.getChildNodes();
-			String userName = null, password = null, groupNames = null, description = null, home = null;
+			String userName = null, password = null, groupNames = null, description = null;
 			Vector aliasList = new Vector (3);
 			for (int j = 0; j < groupSubNodes.getLength(); j++) {
 				Node subNode = groupSubNodes.item(j);
@@ -239,8 +239,6 @@ public class XMLParser {
 					description = subNode.getChildNodes().item(0).toString();
 				else if (subNode.getNodeName().equals("Alias"))
 					aliasList.add(subNode.getChildNodes().item(0).toString());
-				else if (subNode.getNodeName().equals("Home"))
-					home = subNode.getChildNodes().item(0).toString();
 			}
 			if (userName == null || password == null || groupNames == null)
 				continue;
@@ -255,7 +253,7 @@ public class XMLParser {
 			}
 			if (memberType < User.USER_MEMBER)
 				continue;
-			User newUser = new User(userName, password, memberType, home);
+			User newUser = new User(userName, password, memberType);
 			if (description != null)
 				newUser.description = description;
 			if (newUserList.size() > 0) {

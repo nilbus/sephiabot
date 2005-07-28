@@ -24,7 +24,6 @@ class User {
 	String away;
 	String password;
 	String description;
-	String home;
 	long leaveTime;
 	long lastTalked;
 	IRCChannel lastChannel = null;
@@ -35,7 +34,7 @@ class User {
 	static final int USER_MEMBER = 1;
 	static final int USER_ADMIN = 2;
 	
-	User(String userName, String password, int memberType, String home) {
+	User(String userName, String password, int memberType) {
 		this.userName = userName;
 		this.password = password;
 		this.memberType = memberType;
@@ -43,6 +42,5 @@ class User {
 		this.lastSeenTimes = new long[10];
 		this.description = "A person.";
 		this.aliases = new String[0];
-		this.home = home;
 	}
 }
