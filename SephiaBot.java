@@ -1100,10 +1100,21 @@ class SephiaBot implements IRCConnectionListener {
 						nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						return;
 					}
-				} else if (iregex("(ice[ -]*cream|custard|gb|good[ -]*berr?y[s']*|(today('s)? )?flavor( of? the? day)?|fotd)", msg)) {
+				} else if (iregex("(custard|flavor( of? the? day)?|fotd)", msg)) {
 					int offset = 0;
-					if (iregex("tomorrow", msg))
+					if (iregex("tomorrow", msg)) {
 						offset++;
+					} else {
+						ParseTime pt = new ParseTime();
+						try {
+							pt.textToTime(msg);
+							// If time expression is found, our answer might be wrong.
+							con.getIRCIO().privmsg(recipient, "I don't know. Ask me " + pt.getTimeExpression() + ".");
+							return;
+						} catch (WTFException e) {
+							// Continue as normal if no time expression found
+						}
+					}
 					if (Custard.getMonth() == -1)
 						con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
 					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
