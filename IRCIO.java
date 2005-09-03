@@ -119,13 +119,14 @@ class IRCIO {
 		if (!registered)
 			throw new SocketTimeoutException();
 		
-		//			msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
+		//msg = "PRIVMSG AuthServ@Services.GameSurge.net :auth Sephia xxxxx\n";
+		msg = "PRIVMSG nickserv :id mnms\n";
 		out.write(msg, 0, msg.length());
 		listener.log(msg);
 		
-		//			msg = "MODE " + name + " +x\n";
-		//			out.write(msg, 0, msg.length());
-		//			listener.log(msg);
+		//msg = "MODE " + name + " +x\n";
+		//out.write(msg, 0, msg.length());
+		//listener.log(msg);
 		
 		for (int i = 0; i < channels.length; i++) {
 			msg = "JOIN " + channels[i] + "\n";
