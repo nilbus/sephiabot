@@ -597,6 +597,12 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
+			} else if (iregex("^bot[ -]*snack", msg)) {
+				if (System.currentTimeMillis() > nextWho) {	//!spam
+					con.getIRCIO().privmsg(recipient, "Yaaaaaay!");
+					nextWho = System.currentTimeMillis() + SPAM_WAIT;
+				}
+				return;
 				
 			//BEGIN COMMAND SECTION.
 			//These are one-word commands only. The command is the first thing you say after the bot name. botname, command arguments.
