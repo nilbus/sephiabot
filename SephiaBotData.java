@@ -440,12 +440,13 @@ lineLoop:
 			IRCConnection con = connections[j];
 			for (int i = 0; i < con.getServer().channels.length; i++) {
 				for (IRCUser curr = con.getServer().channels[i].users; curr != null; curr = curr.next) {
+					// A user is in a channel w/ the searched nick
 					if (iequals(curr.name, name)) {
 						User result = getUserByHost(curr.host);
 						if (result != null)
 							return result;
 						else
-							//Keep searching incase the host is different on
+							//Keep searching in case the host is different on
 							// a different server.
 							foundSquatter = true;
 					}
@@ -755,7 +756,7 @@ lineLoop:
 
 	//Bot system log
 	public void log(String log) {
-		                
+						
 		String orig = log;
 		//If the log file hasn't been opened yet, save up the log entries until it opens.
 		if (syslog == null) {

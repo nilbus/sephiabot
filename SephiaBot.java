@@ -693,8 +693,11 @@ class SephiaBot implements IRCConnectionListener {
 					String target = tok.nextToken(" ");
 					String sender = nick;
 					target = data.removePunctuation(target, ".!,");
-					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
+					//If the target is logged in and using an unregistered nick
 					User targetUser = data.getUserByNick(connections, target);
+					if (targetUser == null)
+						//If the target is a registered nick
+						targetUser = data.getUserByName(target);
 					if (targetUser != null)
 						target = targetUser.userName;
 					//If the sending user is logged in, send the message as his username instead so that all the messages are sent by the same user.
