@@ -313,6 +313,7 @@ class SephiaBot implements IRCConnectionListener {
 
 		con.logfile(recipient, log);
 		
+        String botname = data.getName(con.getIndex());
 		msg = msg.trim();
 
 		data.updateUserTimes(nick, host, con.getServer(), recipient);
@@ -322,26 +323,26 @@ class SephiaBot implements IRCConnectionListener {
 		if (System.currentTimeMillis() > nextWho) { //!spam
 			nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						
-			if (iregex("hugs " + data.getName(con.getIndex()), msg)) {
+			if (iregex("hugs " + botname, msg)) {
 				if (data.isVino(host))
 					con.getIRCIO().privemote(recipient, "hugs Vino!");
 				else if (censor(con))
 					con.getIRCIO().privemote(recipient, "hugs " + nick + "!");
 				else
 					con.getIRCIO().privmsg(recipient, "Get the fuck off.");
-			} else if (iregex("(slaps|smacks|hits|punches|kicks) " + data.getName(con.getIndex()), msg)) {
+			} else if (iregex("(slaps|smacks|hits|punches|kicks) " + botname, msg)) {
 				String action = msg.replaceFirst(" .*", "");
 				con.getIRCIO().privemote(recipient, action + " back harder!");
-			} else if (iregex("p[ea]ts " + data.getName(con.getIndex()), msg)) {
+			} else if (iregex("p[ea]ts " + botname, msg)) {
 				con.getIRCIO().privemote(recipient, "purrs.");
-			} else if (iregex("pokes " + data.getName(con.getIndex()), msg)) {
+			} else if (iregex("pokes " + botname, msg)) {
 				boolean tickle = new Random().nextBoolean();
 				if (tickle == true) {
 					con.getIRCIO().privemote(recipient, "laughs.");
 				} else {
 					con.getIRCIO().privmsg(recipient, "Ouch!"); 
 				}
-			} else if (iregex("tickles " + data.getName(con.getIndex()), msg)) {
+			} else if (iregex("tickles " + botname, msg)) {
 				User user = data.getUserByNick(connections, nick);
 				if (user != null) { 
 					con.getIRCIO().privemote(recipient, "giggles."); 
@@ -349,6 +350,9 @@ class SephiaBot implements IRCConnectionListener {
 
 					con.getIRCIO().privemote(recipient, "slaps " + nick + ".");
 				}
+			} else if (iregex(botname, msg) &&
+                    iregex("bot[ -]*snack", msg)) {
+                con.getIRCIO().privmsg(recipient, "Yaaaaaay!");
 			}
 			return;
 		}
