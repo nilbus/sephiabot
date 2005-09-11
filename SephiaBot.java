@@ -1024,10 +1024,6 @@ class SephiaBot implements IRCConnectionListener {
 						sayCon.getIRCIO().privmsg(channel.name, firstWord + everythingElse);
 					else
 						sayCon.getIRCIO().privemote(channel.name, firstWord + everythingElse);
-
-					if (!targetChannel.equals(recipient))
-						con.getIRCIO().privmsg(recipient, "okay");
-
 					return;
 				//TODO: Make mode setting colloquial
 				} else if (iequals("mode", cmd)) {
