@@ -32,6 +32,7 @@ create table channel (
 drop table if not exists blacklist;
 create table blacklist (
     id int not null auto_increment primary key,
+	customConfigID int not null,
     regex tinytext not null);
 
 drop table if not exists group;
