@@ -1,7 +1,7 @@
 drop table if not exists config;
 create table config (
     id int not null auto_increment primary key,
-    customConfigID foreign key default 1;
+    customConfigID default 1;
     sephiadir tinytext,
     datafilename tinytext,
     usersfilename tinytext,
@@ -25,7 +25,7 @@ create table server (
 drop table if not exists channel;
 create table channel (
     id int not null auto_increment primary key,
-    serverID int not null foreign key,
+    serverID int not null,
     name tinytext not null,
     greeting tinytext);
 
@@ -42,13 +42,13 @@ create table group (
 drop table if not exists user;
 create table groupPermission (
     id int not null auto_increment primary key,
-    groupID int not null foreign key,
+    groupID int not null,
     varchar(32) name not null);
         
 drop table if not exists host;
 create table host (
     id int not null auto_increment primary key,
-    userID int not null foreign key,
+    userID int not null,
     hostname tinytext not null);
 
 drop table if not exists message;
@@ -64,9 +64,16 @@ create table message (
 drop table if not exists paste;
 create table paste (
     id int not null auto_increment primary key,
-    channelID int foreign key,
+    channelID int,
     nick tinytext,
     summary tinytext,
     contents mediumtext,
     submittime datetime,
     IP tinytext);
+
+drop table if not exists alert;
+create table alert (
+    id int not null auto_increment primary key,
+    channelID int,
+    message tinytext,
+    sent dateTime not null);
