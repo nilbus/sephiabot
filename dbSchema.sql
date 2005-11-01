@@ -1,19 +1,19 @@
 drop table if exists sephia_config;
 create table sephia_config (
     id int not null auto_increment primary key,
-    customConfigID default 1;
+    customConfigID int default 1,
     sephiadir tinytext,
     datafilename tinytext,
     usersfilename tinytext,
-    logdir tinytext,
+    logdir tinytext);
 
 drop table if exists sephia_customConfig;
 create table sephia_customConfig (
     id int not null auto_increment primary key,
-    hello tinytext;
-    censor boolean;
-    greeting tinytext;
-    helloreplies tinytext;
+    hello tinytext,
+    censor bit,
+    greeting tinytext,
+    helloreplies tinytext);
     
 drop table if exists sephia_server;
 create table sephia_server (
@@ -47,7 +47,7 @@ drop table if exists sephia_groupPermission;
 create table sephia_groupPermission (
     id int not null auto_increment primary key,
     groupID int not null,
-    varchar(32) name not null);
+    name varchar(32) not null);
 
 drop table if exists sephia_groupMembership;
 create table sephia_groupMembership (
@@ -80,9 +80,9 @@ create table sephia_message (
     target tinytext not null,
     sender tinytext not null,
     message tinytext not null,
-    timeSent long not null,
-    timeToArrive long not null,
-    notified boolean default 0);
+    timeSent int not null,
+    timeToArrive int not null,
+    notified bit default 0);
 
 drop table if exists sephia_paste;
 create table sephia_paste (
