@@ -293,7 +293,7 @@ class SephiaBot implements IRCConnectionListener {
 			}
 			// Don't send the reminder if they're offline.
 			if (con != null && channel != null) {
-				con.getIRCIO().privmsg(recipient, nick + ", you had reminders!");
+				con.getIRCIO().privmsg(channel.name, reminder.target + ", you had reminders!");
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
 				reminder.timeNotified = System.currentTimeMillis();
