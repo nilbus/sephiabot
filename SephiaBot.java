@@ -204,12 +204,8 @@ class SephiaBot implements IRCConnectionListener {
 		data.removeRecentReminders(nick, user);
 		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
 
-		if (messages.length > 0 && reminders.length > 0)
-			con.getIRCIO().privmsg(recipient, nick + ", you have messages and reminders!");
-		else if (messages.length > 0)
+		if (messages.length > 0)
 			con.getIRCIO().privmsg(recipient, nick + ", you have messages!");
-		else if (reminders.length > 0)
-			con.getIRCIO().privmsg(recipient, nick + ", you had reminders!");
 		else
 			return;
 		
@@ -297,6 +293,7 @@ class SephiaBot implements IRCConnectionListener {
 			}
 			// Don't send the reminder if they're offline.
 			if (con != null && channel != null) {
+				con.getIRCIO().privmsg(recipient, nick + ", you had reminders!");
 				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
 				reminder.timeNotified = System.currentTimeMillis();
@@ -313,7 +310,7 @@ class SephiaBot implements IRCConnectionListener {
 
 		con.logfile(recipient, log);
 		
-        String botname = data.getName(con.getIndex());
+		String botname = data.getName(con.getIndex());
 		msg = msg.trim();
 
 		data.updateUserTimes(nick, host, con.getServer(), recipient);
@@ -351,8 +348,8 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privemote(recipient, "slaps " + nick + ".");
 				}
 			} else if (iregex(botname, msg) &&
-                    iregex("bot[ -]*snack", msg)) {
-                con.getIRCIO().privmsg(recipient, "Yaaaaaay!");
+					iregex("bot[ -]*snack", msg)) {
+				con.getIRCIO().privmsg(recipient, "Yaaaaaay!");
 			}
 			return;
 		}
