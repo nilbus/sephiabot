@@ -29,18 +29,28 @@ class Reminder {
 	boolean notified;
 
 	//This constructor will figure out the timeToArrive itself, or throw a WTFException
-	Reminder(String target, String message, String sender) throws WTFException {
+	Reminder(String target, String message, String sender) {
 		System.out.println("Message: '"+message+"'\n");
 		this.target = target;
 		this.sender = sender;
+		this.message = message;
 		this.timeSent = System.currentTimeMillis();
 		this.notified = false;
 		ParseTime pt = new ParseTime();
-		this.timeToArrive = pt.textToTime(message);
-		this.timeExpression = pt.getTimeExpression();
-		this.originalTimeExpression = pt.getOriginalTimeExpression();
-		this.message = message.replaceAll(this.originalTimeExpression, "").trim().
-				replaceFirst("^(that|to|about)", "").trim();
+		try {
+			this.timeToArrive = pt.textToTime(message);
+			this.timeExpression = pt.getTimeExpression();
+			this.originalTimeExpression = pt.getOriginalTimeExpression();
+		} catch (WTFException e) {
+			// This is a reminder with no time
+			this.timeToArrive = 0;
+			this.timeExpression = "when I see them.";
+			this.originalTimeExpression = null;
+			this.notified = true;
+		}
+		if (this.originalTimeExpression != null)
+			this.message = message.replaceAll(this.originalTimeExpression, "").
+					trim().replaceFirst("^(that|to|about)", "").trim();
 		this.next = null;
 	}
 

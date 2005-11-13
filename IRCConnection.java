@@ -137,9 +137,11 @@ class IRCConnection implements IRCListener {
 				if (recipient != null && !recipient.equalsIgnoreCase(server.channels[i].name)) {
 					continue;
 				}
-				logOut[i].write(msg, 0, msg.length());
-				logOut[i].newLine();
-				logOut[i].flush();
+				if (logOut[i] != null) {
+					logOut[i].write(msg, 0, msg.length());
+					logOut[i].newLine();
+					logOut[i].flush();
+				}
 			}
 		} catch (IOException ioe) {
 			logerror("Couldn't log to file!");

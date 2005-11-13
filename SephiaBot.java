@@ -180,7 +180,7 @@ class SephiaBot implements IRCConnectionListener {
 				}
 			}
 		}
-		checkForReminders(connections);
+		checkForTimedMessages(connections);
 		
 		try {
 			Thread.sleep(100);
@@ -195,40 +195,26 @@ class SephiaBot implements IRCConnectionListener {
 		return SephiaBotData.iequals(str1, str2);
 	}
 
-	   
 	//Check if this person has any messages, or missed reminders.
 	public void checkForMessages(IRCConnection con, String nick, String host, String recipient) {
 		User user = data.getUserByHost(host);
-		int totalMessages = 0;
-		Message messages[] = data.getMessagesByReceiver(nick, user);
+		int totalReminders = 0;
+
+		// Don't remind again if they just saw it < REMINDER_STALE_DUR ago
 		data.removeRecentReminders(nick, user);
 		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
-
-		if (messages.length > 0)
-			con.getIRCIO().privmsg(recipient, nick + ", you have messages!");
-		else
+		if (reminders.length == 0)
 			return;
-		
-		for (int i = 0; i < messages.length; i++) {
-			Message message = messages[i];
-			if (totalMessages >= 5) {
-				con.getIRCIO().privmsg(recipient, "You have more messages.");
-				return;
-			}
-			totalMessages++;
-			con.getIRCIO().privmsg(recipient, "Message from " + message.sender + " [" + makeTime(message.time) + " ago]:" + message.message);
-			data.removeMessage(message);
-		}
-		
+
 		for (int i = 0; i < reminders.length; i++) {
 			Reminder reminder = reminders[i];
 			if (!reminder.notified)
 				continue;
-			if (totalMessages >= 5) {
-				con.getIRCIO().privmsg(recipient, "You have more reminders.");
+			if (totalReminders >= 5) {
+				con.getIRCIO().privmsg(recipient, "You have more messages.");
 				return;
 			}
-			totalMessages++;
+			totalReminders++;
 			String sender = reminder.sender;
 			if (iequals(reminder.sender, reminder.target))
 				sender = "yourself";
@@ -240,15 +226,16 @@ class SephiaBot implements IRCConnectionListener {
 	//Announce any reminders that have just happened or that haven't been
 	// announced yet.
 	//This function is called in the poll loop. It must not take long.
-	public void checkForReminders(IRCConnection[] connections) {
-		Reminder reminders[] = data.getUnnotifiedReminders();
+	public void checkForTimedMessages(IRCConnection[] connections) {
+		Reminder reminders[] = data.getPendingReminders();
 		if (reminders.length <= 0)
 			return;
+
 		for (int i = 0; i < reminders.length; i++) {
 			Reminder reminder = reminders[i];
 			IRCChannel channel = null;
-			//Find this reminder's target's user, if any
-			User target = data.getUserByName(reminder.target);
+			//Find the User this reminder's target nick belongs to, if any
+			User target = data.getUserByName(reminder.target); // Might be null
 			IRCConnection con = null;
 
 			String sender = reminder.sender;
@@ -260,7 +247,7 @@ class SephiaBot implements IRCConnectionListener {
 			// or just find them anywhere.
 			if (target != null) {
 				if (target.home != null) {
-					// They have a Home in users.xml
+					// They have a home set
 					for (int k = 0; k < connections.length; k++) {
 						con = connections[k];
 						channel = con.getServer().findChannel(target.home);
@@ -269,17 +256,25 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					if (channel == null) {
 						// Couldn't find the user's home channel.
-						// Reset home, and try again next time.
+						// Reset home.
+						log("Can't find home '" + target.home + " for " +
+								target + ".  Removing Home.");
+						//TODO: We should maybe restore the home later, in
+						//		case it's gone from a missing connection
+						//		that could be restored.
 						target.home = null;
 						return;
 					}
-				} else if (target.lastChannel != null) {
+				}
+				// home might have changed. Check again.
+				if (target.home == null && target.lastChannel != null) {
 					// Channel where they last spoke
 					channel = target.lastChannel;
 					con = channel.myServer.myConnection;
 				}
-			} else {
-				// Otherwise, we must look for this person in every channel
+			}
+			// If we haven't found them yet, look in every channel
+			if (con == null || channel == null) {
 				search:
 				for (int k = 0; k < connections.length; k++) {
 					con = connections[k];
@@ -291,10 +286,11 @@ class SephiaBot implements IRCConnectionListener {
 						}
 				}
 			}
-			// Don't send the reminder if they're offline.
+			// Don't send the reminder if they're not in a channel
 			if (con != null && channel != null) {
-				con.getIRCIO().privmsg(channel.name, reminder.target + ", you had reminders!");
-				con.getIRCIO().privmsg(channel.name, reminder.target + ", reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+				con.getIRCIO().privmsg(channel.name, reminder.target +
+					", message from " + sender + " [" +
+					makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 				reminder.notified = true;
 				reminder.timeNotified = System.currentTimeMillis();
 				data.writeData();
@@ -636,26 +632,8 @@ class SephiaBot implements IRCConnectionListener {
 							} else {
 								con.getIRCIO().privmsg(recipient, "No.");
 							}
-						} else if (killed.equalsIgnoreCase("message")) {
-							if (!tok.hasMoreElements()) {
-								con.getIRCIO().privmsg(recipient, "Which message? I need a number");
-								return;
-							}
-							try {
-								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
-								User user = data.getUserByHost(host);
-								Message messages[] = data.getMessagesBySender(nick, user);
-								if (msgIndex >= messages.length || msgIndex < 0) {
-									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
-									return;
-								}
-								con.getIRCIO().privmsg(recipient, "Message removed for " + messages[msgIndex].target + ", " + makeTime(messages[msgIndex].time) + " ago:" + messages[msgIndex].message);
-								data.removeMessage(messages[msgIndex]);
-							} catch (NumberFormatException nfe) {
-								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
-							}
-							return;
-						} else if (killed.equalsIgnoreCase("reminder")) {
+						} else if (iregex("^(reminder|message)$", killed)) {
+							killed = killed.toLowerCase();
 							if (!tok.hasMoreElements()) {
 								con.getIRCIO().privmsg(recipient, "Which reminder? I need a number");
 								return;
@@ -665,7 +643,7 @@ class SephiaBot implements IRCConnectionListener {
 								User user = data.getUserByHost(host);
 								Reminder reminders[] = data.getRemindersBySender(nick, user);
 								if (msgIndex >= reminders.length || msgIndex < 0) {
-									con.getIRCIO().privmsg(recipient, "You don't have that many reminders.");
+									con.getIRCIO().privmsg(recipient, "You don't have that many " + killed + "s.");
 									return;
 								}
 								Reminder reminder = reminders[msgIndex];
@@ -674,7 +652,7 @@ class SephiaBot implements IRCConnectionListener {
 									timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 								else
 									timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-								con.getIRCIO().privmsg(recipient, "Reminder removed for " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+								con.getIRCIO().privmsg(recipient, killed + " removed for " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
 								data.removeReminder(reminder);
 							} catch (NumberFormatException nfe) {
 								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
@@ -685,45 +663,11 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 					return;
-				} else if (iequals("tell", cmd)) {
-					if (!tok.hasMoreElements()) {
-						con.getIRCIO().privmsg(recipient, "Tell who what?");
-						return;
-					}
-
-					String target = tok.nextToken(" ");
-					String sender = nick;
-					target = data.removePunctuation(target, ".!,");
-					//If the target is logged in and using an unregistered nick
-					User targetUser = data.getUserByNick(connections, target);
-					if (targetUser == null)
-						//If the target is a registered nick
-						targetUser = data.getUserByName(target);
-					if (targetUser != null)
-						target = targetUser.userName;
-					//If the sending user is logged in, send the message as his username instead so that all the messages are sent by the same user.
-					User senderUser = data.getUserByHost(host);
-					if (senderUser != null)
-						sender = senderUser.userName;
-
-					if (!tok.hasMoreElements()) {
-						con.getIRCIO().privmsg(recipient, "Tell " + target + " what?");
-						return;
-					}
-					String message = tok.nextToken("");
-					//If the target was "everybody" or "everyone" then send the message to every user.
-					if (data.getUserByHost(host) != null && (iequals("everybody", target) || iequals("everyone", target)))
-						data.sendMessageToAllUsers(message, sender);
-					else
-						data.addMessage(target, message, sender);
-					data.writeData();
-					con.getIRCIO().privmsg(recipient, "Okay, I'll make sure to let them know.");
-					return;
-				} else if (iequals("remind", cmd)) {
+				} else if (iregex("^(remind|tell)$", cmd)) {
 					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that OR about] [something]
 					// Bit, remind [person] [to OR that OR about] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
-						con.getIRCIO().privmsg(recipient, "Remind who what when?");
+						con.getIRCIO().privmsg(recipient, "Tell who what when?");
 						return;
 					}
 					String target = tok.nextToken(" ");
@@ -747,16 +691,14 @@ class SephiaBot implements IRCConnectionListener {
 					if (senderUser != null)
 						sender = senderUser.userName;
 					if (!tok.hasMoreElements()) {
-						con.getIRCIO().privmsg(recipient, "Remind " + target + " when what?");
+						con.getIRCIO().privmsg(recipient, "Tell " + target + " when what?");
 						return;
 					}
 					try {
 						Reminder reminder = data.addReminder(target, tok.nextToken("").substring(1), sender);
 
-						con.getIRCIO().privmsg(recipient, "Okay, I'll remind " + 
+						con.getIRCIO().privmsg(recipient, "I'll tell " + 
 							(myself?"you":target) +" "+ reminder.getTimeExpression());
-					} catch (WTFException wtf) {
-						con.getIRCIO().privmsg(recipient, wtf.getMessage().substring(14));
 					} catch (NumberFormatException nfe) {
 						con.getIRCIO().privmsg(recipient, nfe.getMessage());
 					}
@@ -909,35 +851,8 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					data.writeData();
 					return;
-				} else if (iequals("messages", cmd)) {
-					User user = data.getUserByHost(host);
-					int lastIndex, firstIndex = 0;
-					if (tok.hasMoreElements()) {
-						try {
-							firstIndex = Integer.parseInt(tok.nextToken())-1;
-							if (firstIndex < 1)
-								firstIndex = 1;
-						} catch (NumberFormatException nfe) {
-						}
-					}
-					Message messages[] = data.getMessagesBySender(nick, user);
-					if (messages.length == 0) {
-						con.getIRCIO().privmsg(recipient, "You havent sent any messages.");
-						return;
-					}
-					if (firstIndex >= messages.length) {
-						con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
-						return;
-					}
-					lastIndex = firstIndex + 5;
-					if (lastIndex >= messages.length)
-						lastIndex = messages.length-1;
-					con.getIRCIO().privmsg(nick, "You have sent the following messages:");
-					for (int i = firstIndex; i <= lastIndex; i++) {
-						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": To " + messages[i].target + " " + makeTime(messages[i].time) + " ago:" + messages[i].message);
-					}
-					return;
-				} else if (iequals("reminders", cmd)) {
+				} else if (iregex("^(messages|reminders)$", cmd)) {
+					cmd = cmd.toLowerCase();
 					User user = data.getUserByHost(host);
 					int lastIndex, firstIndex = 0;
 					if (tok.hasMoreElements()) {
@@ -950,17 +865,17 @@ class SephiaBot implements IRCConnectionListener {
 					}
 					Reminder reminders[] = data.getRemindersBySender(nick, user);
 					if (reminders.length == 0) {
-						con.getIRCIO().privmsg(recipient, "You haven't sent any reminders.");
+						con.getIRCIO().privmsg(recipient, "You haven't sent any messages.");
 						return;
 					}
 					if (firstIndex >= reminders.length) {
-						con.getIRCIO().privmsg(recipient, "You don't have that many reminders.");
+						con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 						return;
 					}
 					lastIndex = firstIndex + 5;
 					if (lastIndex >= reminders.length)
 						lastIndex = reminders.length-1;
-					con.getIRCIO().privmsg(nick, "You have sent the following reminders:");
+					con.getIRCIO().privmsg(nick, "You have sent the following messages:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
 						Reminder reminder = reminders[i];
 						String target = reminder.target;
@@ -971,7 +886,7 @@ class SephiaBot implements IRCConnectionListener {
 							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
 						else
 							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(nick, "Reminder " + (i+1) + ": For " + target + ", " + timeToArrive + ": " + reminder.message);
+						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": For " + target + ", " + timeToArrive + ": " + reminder.message);
 					}
 					return;
 				} else if (iregex("^(say|do|emote)$", cmd)) {
