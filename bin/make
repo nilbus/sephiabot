@@ -1,3 +1,4 @@
 #!/bin/bash
-javac -d ~/sephiabot $* SephiaBot.java
 cp excuses.txt wordsofwisdom.txt ~/sephiabot/
+javac -d ~/sephiabot $* SephiaBot.java
+exit $?
