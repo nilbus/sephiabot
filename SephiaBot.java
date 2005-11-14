@@ -882,11 +882,13 @@ class SephiaBot implements IRCConnectionListener {
 						if (iequals(reminder.target, nick))
 							target = "you";
 						String timeToArrive;
-						if (System.currentTimeMillis() > reminder.timeToArrive)
-							timeToArrive = makeTime(reminder.timeToArrive) + " ago";
+						if (reminder.timeToArrive == 0) // No destination time; regular message
+							timeToArrive = "";
+						else if (System.currentTimeMillis() > reminder.timeToArrive)
+							timeToArrive = ", " + makeTime(reminder.timeToArrive) + " ago";
 						else
-							timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": For " + target + ", " + timeToArrive + ": " + reminder.message);
+							timeToArrive = ", " + makeTime(reminder.timeToArrive) + " from now";
+						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": For " + target + timeToArrive + ": " + reminder.message);
 					}
 					return;
 				} else if (iregex("^(say|do|emote)$", cmd)) {

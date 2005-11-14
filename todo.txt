@@ -1,33 +1,29 @@
+Common:
 Multithread connection attempts
 
+
 Ed:
+send a quit message on shutdown
 "Thanks bit" not just "Bit, thanks"
+"Bit, hi" not just "Hi Bit"
 track channel traffic, and re-remind appropriately
 parrot per channel, not server
+pong when pinged
+auto-bring back from away if you speak after being gone for a while.
 accept stdin commands
 finish reminders
-merge remind and tell
 bot remembers things you tell it?
 make mode setting colloquial - op nilbus, etc
 
 
-Heather:
-who am I = who is (me)
-pinch?
-auto-bring back from away if you speak after being gone for a while.
-karma
-ask
-"bit is cool" -> I'm cool. (cool|is t(he|eh) man|is awesome|rocks)
-pong when pinged
-
-
 Jorge:
 Commits to bsbhd.com svn repositories are informed about in the appropriate
-channels. http://cia.navi.cx/doc/clients
-kali remembers the last thing someone said and says it when someone asks where you are
+ channels. http://cia.navi.cx/doc/clients
+kali remembers the last thing someone said and says it when someone asks where
+ you are
 kick for spamming
 person.
-kali kill person bans for 30s to avoid autorejoiners.
+Kali kill person bans for 30s to avoid autorejoiners.
 Kali where am I? / Kali where is vino? (same person who said it.)
 make backups of the data file to load in case kali crashes while writing
 Have kali keep track of pings and pongs and print out round trip time. ->
