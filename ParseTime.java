@@ -78,6 +78,8 @@ public class ParseTime {
 			throw new WTFException("I can't figure out when to send that.");
 		originalTimeExpression = matcher.group();
 		timeExpression = originalTimeExpression.replaceAll("about ", "");
+
+		// In some duration
 		if (iregex("^in ", timeExpression)) {
 			long unit = 0;
 			String unitWord = "";
@@ -115,6 +117,11 @@ public class ParseTime {
 			timeExpression = "in " + duration + " " + unitWord;
 
 			return System.currentTimeMillis() + unit * dur;
+
+		// When he gets back
+		} else if (iregex("^"+onReturn+"$", timeExpression)) {
+			// Should be caught and never seen
+			throw new WTFException("when j00 get back");
 		}
 
 		try {

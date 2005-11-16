@@ -42,10 +42,18 @@ class Reminder {
 			this.timeExpression = pt.getTimeExpression();
 			this.originalTimeExpression = pt.getOriginalTimeExpression();
 		} catch (WTFException e) {
-			// This is a reminder with no time
+			// This is a reminder with no time expression
 			this.timeToArrive = 0;
-			this.timeExpression = ".";
-			this.originalTimeExpression = null;
+			if (SephiaBotData.iequals(target, sender))
+				this.timeExpression = "when you get back";
+			else
+				this.timeExpression = "when they get back";
+			// No need to strip out a time expression, unless we got here because of the "when I get back" case
+			if (pt.getOriginalTimeExpression() != null &&
+					SephiaBotData.iregex(pt.onReturn, pt.getOriginalTimeExpression()))
+				this.originalTimeExpression = pt.getOriginalTimeExpression();
+			else
+				this.originalTimeExpression = null;
 			this.notified = true;
 		}
 		if (this.originalTimeExpression != null)

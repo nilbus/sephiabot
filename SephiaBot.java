@@ -643,16 +643,18 @@ class SephiaBot implements IRCConnectionListener {
 								User user = data.getUserByHost(host);
 								Reminder reminders[] = data.getRemindersBySender(nick, user);
 								if (msgIndex >= reminders.length || msgIndex < 0) {
-									con.getIRCIO().privmsg(recipient, "You don't have that many " + killed + "s.");
+									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 									return;
 								}
 								Reminder reminder = reminders[msgIndex];
 								String timeToArrive;
-								if (System.currentTimeMillis() > reminder.timeToArrive)
-									timeToArrive = makeTime(reminder.timeToArrive) + " ago";
+								if (reminder.timeToArrive == 0)
+									timeToArrive = "";
+								else if (System.currentTimeMillis() > reminder.timeToArrive)
+									timeToArrive = " for " + makeTime(reminder.timeToArrive) + " ago";
 								else
-									timeToArrive = makeTime(reminder.timeToArrive) + " from now";
-								con.getIRCIO().privmsg(recipient, killed + " removed for " + reminder.target + " " + makeTime(reminder.timeSent) + " ago for " + timeToArrive + ": " + reminder.message);
+									timeToArrive = " for " + makeTime(reminder.timeToArrive) + " from now";
+								con.getIRCIO().privmsg(recipient, "Message removed for " + reminder.target + timeToArrive + ": " + reminder.message);
 								data.removeReminder(reminder);
 							} catch (NumberFormatException nfe) {
 								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
