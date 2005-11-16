@@ -218,7 +218,7 @@ class SephiaBot implements IRCConnectionListener {
 			String sender = reminder.sender;
 			if (iequals(reminder.sender, reminder.target))
 				sender = "yourself";
-			con.getIRCIO().privmsg(recipient, "Reminder from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
+			con.getIRCIO().privmsg(recipient, "Message from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
 			data.removeReminder(reminder);
 		}
 	}

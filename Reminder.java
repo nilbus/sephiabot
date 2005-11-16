@@ -44,7 +44,7 @@ class Reminder {
 		} catch (WTFException e) {
 			// This is a reminder with no time
 			this.timeToArrive = 0;
-			this.timeExpression = "when I see them.";
+			this.timeExpression = ".";
 			this.originalTimeExpression = null;
 			this.notified = true;
 		}
