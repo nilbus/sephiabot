@@ -1310,6 +1310,9 @@ hostFinder:
 	}
 	
 	public void shutdown(boolean reboot) {
+		for (int i = 0; i < connections.length; i++) {
+			connections[i].getIRCIO().quit(reboot?"Rebooting":"Quitting");
+		}
 		data.writeData();
 		System.exit(reboot?1:0);
 	}

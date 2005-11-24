@@ -63,6 +63,24 @@ class IRCIO {
 		} catch (IOException ioe) {}
 		connected = false;
 	}
+
+	public void quit(String quitMessage) {
+		if (!connected) return;
+		
+		try {
+			String msg = "QUIT";
+			if (quitMessage != null)
+				msg += " :" + quitMessage;
+			msg += "\n";
+			out.write(msg, 0, msg.length());
+			out.flush();
+			System.out.println(msg);
+			try {
+				Thread.sleep(1000);
+			} catch (java.lang.InterruptedException e) {}
+			disconnect();
+		} catch (IOException e) {System.out.println(e.getMessage());}
+	}
 	
 	public boolean isConnected() {
 		return connected;
@@ -424,9 +442,9 @@ class IRCIO {
 		if (!connected) return;
 		
 		try {
-	String msg = "MODE " + inchannel + " " + mode + " " + recipient + "\n";
-	out.write(msg, 0, msg.length());
-				out.flush();
+			String msg = "MODE " + inchannel + " " + mode + " " + recipient + "\n";
+			out.write(msg, 0, msg.length());
+			out.flush();
 			System.out.println(msg);
 		} catch (IOException e) {System.out.println(e.getMessage());}
 	}
