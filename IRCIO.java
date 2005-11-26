@@ -75,9 +75,6 @@ class IRCIO {
 			out.write(msg, 0, msg.length());
 			out.flush();
 			System.out.println(msg);
-			try {
-				Thread.sleep(1000);
-			} catch (java.lang.InterruptedException e) {}
 			disconnect();
 		} catch (IOException e) {System.out.println(e.getMessage());}
 	}
