@@ -1050,6 +1050,10 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
 					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
 				}
+
+				// We were spoken to, but don't understand what was said.
+				if (pm)
+					con.getIRCIO().privmsg(recipient, "What?");
 			}
 		//Wasn't talking to the bot
 		} else if (con.parrotOK()) {
