@@ -3,12 +3,10 @@ Multithread connection attempts
 
 
 Ed:
-send a quit message on shutdown
 "Thanks bit" not just "Bit, thanks"
 "Bit, hi" not just "Hi Bit"
 track channel traffic, and re-remind appropriately
 parrot per channel, not server
-pong when pinged
 auto-bring back from away if you speak after being gone for a while.
 accept stdin commands
 finish reminders

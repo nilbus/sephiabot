@@ -979,6 +979,9 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "Last time I saw " + target.userName + " was " + makeTime(target.lastTalked) + " ago.");
 					
 					return;
+				} else if (iequals("ping", cmd)) {
+					con.getIRCIO().privmsg(recipient, nick + ", pong");
+					return;
 				}
 
 			}	
