@@ -600,6 +600,9 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
+			} else if (iregex("^ping\\W*$", msg)) {
+				con.getIRCIO().privmsg(recipient, nick + ", pong");
+				return;
 				
 			//BEGIN COMMAND SECTION.
 			//These are one-word commands only. The command is the first thing you say after the bot name. botname, command arguments.
@@ -978,9 +981,6 @@ class SephiaBot implements IRCConnectionListener {
 					else
 						con.getIRCIO().privmsg(recipient, "Last time I saw " + target.userName + " was " + makeTime(target.lastTalked) + " ago.");
 					
-					return;
-				} else if (iequals("ping", cmd)) {
-					con.getIRCIO().privmsg(recipient, nick + ", pong");
 					return;
 				}
 
