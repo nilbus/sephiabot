@@ -302,6 +302,9 @@ class SephiaBot implements IRCConnectionListener {
 	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg) {
 		String log;
 		
+		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient))
+			recipient = nick;
+
 		log = "* " + nick + " " + msg;
 
 		con.logfile(recipient, log);
