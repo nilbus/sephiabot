@@ -558,16 +558,18 @@ lineLoop:
 	
 	//Adds a reminder to the list, and returns a "pointer" to it.
 	Reminder addReminder(String target, String message, String nick) throws NumberFormatException {
+		Reminder last;
 		if (firstReminder == null) {
-			firstReminder = new Reminder(target, message, nick);
+			last = firstReminder = new Reminder(target, message, nick);
 		} else {
-			Reminder curr = new Reminder(target, message, nick);
-			curr.next = firstReminder;
-			firstReminder = curr;
+			Reminder curr = firstReminder;
+			while (curr.next != null)
+				curr = curr.next;
+			last = curr.next = new Reminder(target, message, nick);
 		}
 		findNextReminderTime();
 		writeData();
-		return firstReminder;
+		return last;
 	}
 	
 	void findNextReminderTime() {
