@@ -645,9 +645,12 @@ class SephiaBot implements IRCConnectionListener {
 								return;
 							}
 							try {
+								// Index starts at 0, first displayed message is 1
 								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
 								User user = data.getUserByHost(host);
 								Reminder reminders[] = data.getRemindersBySender(nick, user);
+								if (msgIndex < 0) // try looping around once
+									msgIndex += reminders.length + 1; // +1 adjust for skipping 0
 								if (msgIndex >= reminders.length || msgIndex < 0) {
 									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 									return;
