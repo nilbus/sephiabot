@@ -3,6 +3,7 @@ Multithread connection attempts
 
 
 Ed:
+makeTime redo, hopefully using calendar
 "Thanks bit" not just "Bit, thanks"
 "Bit, hi" not just "Hi Bit"
 track channel traffic, and re-remind appropriately
