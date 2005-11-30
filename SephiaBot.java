@@ -358,6 +358,8 @@ class SephiaBot implements IRCConnectionListener {
 		boolean pm = false;
 		String log;
 		String msg = origmsg;
+		// This will be null, unless the message is to a channel.  Always check.
+		IRCChannel channel = con.getServer().findChannel(recipient);
 
 		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient)) {
 			recipient = nick;
@@ -374,7 +376,8 @@ class SephiaBot implements IRCConnectionListener {
 		data.updateUserTimes(nick, host, con.getServer(), recipient);
 		checkForMessages(con, nick, host, recipient);
 		checkForBlacklist(con, nick, host, recipient);
-		con.updateHistory(nick, msg);
+		if (channel != null)
+			channel.updateHistory(nick, msg);
 		
 		String name = data.getName(con.getIndex());
 
@@ -927,30 +930,28 @@ class SephiaBot implements IRCConnectionListener {
 						everythingElse = tok.nextToken("");
 					
 					//Check recipient
-					IRCChannel channel = null;
+					IRCChannel chan = null;
 					IRCConnection sayCon = con;
-					channel = sayCon.getServer().findChannel(targetChannel); //first try the same server
-					if (channel == null)
+					chan = sayCon.getServer().findChannel(targetChannel); //first try the same server
+					if (chan == null)
 						for (int i = 0; i < connections.length; i++) { //search other servers
 							if (connections[i] != sayCon) { //the current one has already been searched
-								channel = connections[i].getServer().findChannel(targetChannel);
-								if (channel != null) {
+								chan = connections[i].getServer().findChannel(targetChannel);
+								if (chan != null) {
 									sayCon = connections[i];
 									break;
 								}
 							}
 						}
-					if (channel == null) {
+					if (chan == null) {
 						con.getIRCIO().privmsg(recipient, "I'm not in that channel.");
 						return;
 					}
 					
 					if (iequals("say", cmd))
-						sayCon.getIRCIO().privmsg(channel.name, firstWord + everythingElse);
+						sayCon.getIRCIO().privmsg(chan.name, firstWord + everythingElse);
 					else
-						sayCon.getIRCIO().privemote(channel.name, firstWord + everythingElse);
-					return;
-				//TODO: Make mode setting colloquial
+						sayCon.getIRCIO().privemote(chan.name, firstWord + everythingElse); return; //TODO: Make mode setting colloquial
 				} else if (iequals("mode", cmd)) {
 					if (!data.isAdmin(host)) {
 						con.getIRCIO().privmsg(recipient, "No.");
@@ -1059,11 +1060,12 @@ class SephiaBot implements IRCConnectionListener {
 					con.getIRCIO().privmsg(recipient, "What?");
 			}
 		//Wasn't talking to the bot
-		} else if (con.parrotOK()) {
-			con.setLastRepeat(con.getHistory(0));
-			con.getIRCIO().privmsg(recipient, con.getHistory(0));
+		} else if (!pm && channel != null && channel.parrotOK()) {
+				channel.setLastRepeat(channel.getHistory(0));
+				con.getIRCIO().privmsg(recipient, channel.getHistory(0));
 		}
 	}
+
 	public boolean talkingToMe(String msg, String name) {
 		int nameEnd = name.length() < 4 ? name.length() : 4;
 		return iregex("^"+name.substring(0, nameEnd), msg);

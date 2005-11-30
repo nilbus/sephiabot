@@ -18,11 +18,20 @@
 
 class IRCChannel {
 
+	private int historySize;
+	private String historyNick[];
+	private String historyText[];
+	private String lastRepeat;
+
 	String name;
 	IRCUser users;
 	IRCServer myServer;
 
 	IRCChannel(String name) {
+		this.historySize = 3;
+		this.historyNick = new String[this.historySize];
+		this.historyText = new String[this.historySize];
+
 		this.name = name;
 	}
 
@@ -107,5 +116,34 @@ class IRCChannel {
 						return true;
 		}
 		return false;
+	}
+
+	public boolean parrotOK() {
+		//Act like a parrot only if the message isn't a command
+		//Only repeat when 2 people said the same thing, but not the 3rd time.
+		if (SephiaBotData.iequals(historyText[0], historyText[1])
+			&& !SephiaBotData.iequals(historyText[0], this.lastRepeat)
+			&& !SephiaBotData.iequals(historyNick[0], historyNick[1])
+			&& !historyText[0].trim().startsWith("!"))
+			return true;
+		else
+			return false;
+	}
+
+	public void updateHistory (String nick, String msg) {
+		for (int i = this.historySize - 1; i > 0; i--) {
+			historyNick[i] = historyNick[i-1];
+			historyText[i] = historyText[i-1];
+		}
+		historyNick[0] = nick;
+		historyText[0] = msg;
+	}
+
+	public String getHistory(int i) {
+		return historyText[i];
+	}
+
+	public void setLastRepeat(String lastRepeat) {
+		this.lastRepeat = lastRepeat;
 	}
 }

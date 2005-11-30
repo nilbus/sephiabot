@@ -21,11 +21,6 @@ import java.util.*;
 
 class IRCConnection implements IRCListener {
 
-	private int historySize;
-	private String historyNick[];
-	private String historyText[];
-	private String lastRepeat;
-
 	private IRCIO ircio;
 	private BufferedWriter logOut[];
 	private IRCServer server;
@@ -42,10 +37,6 @@ class IRCConnection implements IRCListener {
 
 	public IRCConnection(IRCConnectionListener listener, int index) {
 		this.listener = listener;
-
-		this.historySize = 3;
-		this.historyNick = new String[this.historySize];
-		this.historyText = new String[this.historySize];
 
 		this.nextWho = 0;
 		this.nextHi = 0;
@@ -100,15 +91,6 @@ class IRCConnection implements IRCListener {
 		if (ircio == null)
 			return false;
 		return ircio.isConnected();
-	}
-
-	public void updateHistory (String nick, String msg) {
-		for (int i = this.historySize - 1; i > 0; i--) {
-			historyNick[i] = historyNick[i-1];
-			historyText[i] = historyText[i-1];
-		}
-		historyNick[0] = nick;
-		historyText[0] = msg;
 	}
 
 	public int getAccess(String user, int channum) {
@@ -208,25 +190,5 @@ class IRCConnection implements IRCListener {
 
 	public void messageWho(String userchannel, String usernick, String username, String host, String realname) {
 		listener.messageWho(this, userchannel, usernick, username, host, realname);
-	}
-
-	public boolean parrotOK() {
-		//Act like a parrot only if the message isn't a command
-		//Only repeat when 2 people said the same thing, but not the 3rd time.
-		if (SephiaBotData.iequals(historyText[0], historyText[1])
-			&& !SephiaBotData.iequals(historyText[0], this.lastRepeat)
-			&& !SephiaBotData.iequals(historyNick[0], historyNick[1])
-			&& !historyText[0].trim().startsWith("!"))
-			return true;
-		else
-			return false;
-	}
-
-	public String getHistory(int i) {
-		return historyText[i];
-	}
-
-	public void setLastRepeat(String lastRepeat) {
-		this.lastRepeat = lastRepeat;
 	}
 }
