@@ -10,7 +10,7 @@ makeTime redo, hopefully using calendar
 track channel traffic, and re-remind appropriately
 auto-bring back from away if you speak after being gone for a while.
 accept stdin commands
-finish reminders
+finish timed messages
 bot remembers things you tell it?
 make mode setting colloquial - op nilbus, etc
 

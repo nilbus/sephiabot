@@ -195,51 +195,51 @@ class SephiaBot implements IRCConnectionListener {
 		return SephiaBotData.iequals(str1, str2);
 	}
 
-	//Check if this person has any messages, or missed reminders.
+	//Check if this person has any messages
 	public void checkForMessages(IRCConnection con, String nick, String host, String recipient) {
 		User user = data.getUserByHost(host);
-		int totalReminders = 0;
+		int totalMessages = 0;
 
-		// Don't remind again if they just saw it < REMINDER_STALE_DUR ago
-		data.removeRecentReminders(nick, user);
-		Reminder reminders[] = data.getRemindersByReceiver(nick, user, true);
-		if (reminders.length == 0)
+		// Don't remind again if they just saw it < MESSAGE_STALE_DUR ago
+		data.removeRecentMessages(nick, user);
+		Message messages[] = data.getMessagesByReceiver(nick, user, true);
+		if (messages.length == 0)
 			return;
 
-		for (int i = 0; i < reminders.length; i++) {
-			Reminder reminder = reminders[i];
-			if (!reminder.notified)
+		for (int i = 0; i < messages.length; i++) {
+			Message message = messages[i];
+			if (!message.notified)
 				continue;
-			if (totalReminders >= 5) {
+			if (totalMessages >= 5) {
 				con.getIRCIO().privmsg(recipient, "You have more messages.");
 				return;
 			}
-			totalReminders++;
-			String sender = reminder.sender;
-			if (iequals(reminder.sender, reminder.target))
+			totalMessages++;
+			String sender = message.sender;
+			if (iequals(message.sender, message.target))
 				sender = "yourself";
-			con.getIRCIO().privmsg(recipient, "Message from " + sender + " [" + makeTime(reminder.timeSent) + " ago]: " + reminder.message);
-			data.removeReminder(reminder);
+			con.getIRCIO().privmsg(recipient, "Message from " + sender + " [" + makeTime(message.timeSent) + " ago]: " + message.message);
+			data.removeMessage(message);
 		}
 	}
 
-	//Announce any reminders that have just happened or that haven't been
+	//Announce any messages that have just happened or that haven't been
 	// announced yet.
 	//This function is called in the poll loop. It must not take long.
 	public void checkForTimedMessages(IRCConnection[] connections) {
-		Reminder reminders[] = data.getPendingReminders();
-		if (reminders.length <= 0)
+		Message messages[] = data.getPendingMessages();
+		if (messages.length <= 0)
 			return;
 
-		for (int i = 0; i < reminders.length; i++) {
-			Reminder reminder = reminders[i];
+		for (int i = 0; i < messages.length; i++) {
+			Message message = messages[i];
 			IRCChannel channel = null;
-			//Find the User this reminder's target nick belongs to, if any
-			User target = data.getUserByName(reminder.target); // Might be null
+			//Find the User this message's target nick belongs to, if any
+			User target = data.getUserByName(message.target); // Might be null
 			IRCConnection con = null;
 
-			String sender = reminder.sender;
-			if (iequals(reminder.sender, reminder.target))
+			String sender = message.sender;
+			if (iequals(message.sender, message.target))
 				sender = "yourself";
 
 			//Leave a message in the user's Home, if specified,
@@ -280,21 +280,21 @@ class SephiaBot implements IRCConnectionListener {
 					con = connections[k];
 					IRCChannel[] channels = con.getServer().channels;
 					for (int j = 0; j < channels.length; j++)
-						if (channels[j].userInChannel(target, reminder.target)) {
+						if (channels[j].userInChannel(target, message.target)) {
 							channel = channels[j];
 							break search;
 						}
 				}
 			}
-			// Don't send the reminder if they're not in a channel
+			// Don't send the message if they're not in a channel
 			if (con != null && channel != null) {
-				con.getIRCIO().privmsg(channel.name, reminder.target +
+				con.getIRCIO().privmsg(channel.name, message.target +
 					", message from " + sender + " [" +
-					makeTime(reminder.timeSent) + " ago]: " + reminder.message);
-				reminder.notified = true;
-				reminder.timeNotified = System.currentTimeMillis();
+					makeTime(message.timeSent) + " ago]: " + message.message);
+				message.notified = true;
+				message.timeNotified = System.currentTimeMillis();
 				data.writeData();
-				data.findNextReminderTime();
+				data.findNextMessageTime();
 			}
 		}
 	}
@@ -644,30 +644,30 @@ class SephiaBot implements IRCConnectionListener {
 						} else if (iregex("^(reminder|message)$", killed)) {
 							killed = killed.toLowerCase();
 							if (!tok.hasMoreElements()) {
-								con.getIRCIO().privmsg(recipient, "Which reminder? I need a number");
+								con.getIRCIO().privmsg(recipient, "Which message? I need a number");
 								return;
 							}
 							try {
 								// Index starts at 0, first displayed message is 1
 								int msgIndex = Integer.parseInt(tok.nextToken()) - 1;
 								User user = data.getUserByHost(host);
-								Reminder reminders[] = data.getRemindersBySender(nick, user);
+								Message messages[] = data.getMessagesBySender(nick, user);
 								if (msgIndex < 0) // try looping around once
-									msgIndex += reminders.length + 1; // +1 adjust for skipping 0
-								if (msgIndex >= reminders.length || msgIndex < 0) {
+									msgIndex += messages.length + 1; // +1 adjust for skipping 0
+								if (msgIndex >= messages.length || msgIndex < 0) {
 									con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 									return;
 								}
-								Reminder reminder = reminders[msgIndex];
+								Message message = messages[msgIndex];
 								String timeToArrive;
-								if (reminder.timeToArrive == 0)
+								if (message.timeToArrive == 0)
 									timeToArrive = "";
-								else if (System.currentTimeMillis() > reminder.timeToArrive)
-									timeToArrive = " for " + makeTime(reminder.timeToArrive) + " ago";
+								else if (System.currentTimeMillis() > message.timeToArrive)
+									timeToArrive = " for " + makeTime(message.timeToArrive) + " ago";
 								else
-									timeToArrive = " for " + makeTime(reminder.timeToArrive) + " from now";
-								con.getIRCIO().privmsg(recipient, "Message removed for " + reminder.target + timeToArrive + ": " + reminder.message);
-								data.removeReminder(reminder);
+									timeToArrive = " for " + makeTime(message.timeToArrive) + " from now";
+								con.getIRCIO().privmsg(recipient, "Message removed for " + message.target + timeToArrive + ": " + message.message);
+								data.removeMessage(message);
 							} catch (NumberFormatException nfe) {
 								con.getIRCIO().privmsg(recipient, "...if you can call that a number.");
 							}
@@ -692,7 +692,7 @@ class SephiaBot implements IRCConnectionListener {
 						myself = true;
 						target = nick;
 					}
-					//If the target is logged in, send the reminder to his username instead so he will always get it if he is logged in.
+					//If the target is logged in, send the message to his username instead so he will always get it if he is logged in.
 					User targetUser = data.getUserByNick(connections, target);
 					//if that didn't work, try by name
 					if (targetUser == null)
@@ -700,7 +700,7 @@ class SephiaBot implements IRCConnectionListener {
 					//did we find a user?
 					if (targetUser != null)
 						target = targetUser.userName;
-					//If the sending user is logged in, send the reminders as his username instead so that all the reminders are sent by the same user.
+					//If the sending user is logged in, send the messages as his username instead so that all the messages are sent by the same user.
 					User senderUser = data.getUserByHost(host);
 					if (senderUser != null)
 						sender = senderUser.userName;
@@ -709,10 +709,10 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 					try {
-						Reminder reminder = data.addReminder(target, tok.nextToken("").substring(1), sender);
+						Message message = data.addMessage(target, tok.nextToken("").substring(1), sender);
 
 						con.getIRCIO().privmsg(recipient, "I'll tell " + 
-							(myself?"you":target) +" "+ reminder.getTimeExpression());
+							(myself?"you":target) +" "+ message.getTimeExpression());
 					} catch (NumberFormatException nfe) {
 						con.getIRCIO().privmsg(recipient, nfe.getMessage());
 					}
@@ -877,32 +877,32 @@ class SephiaBot implements IRCConnectionListener {
 						} catch (NumberFormatException nfe) {
 						}
 					}
-					Reminder reminders[] = data.getRemindersBySender(nick, user);
-					if (reminders.length == 0) {
+					Message messages[] = data.getMessagesBySender(nick, user);
+					if (messages.length == 0) {
 						con.getIRCIO().privmsg(recipient, "You haven't sent any messages.");
 						return;
 					}
-					if (firstIndex >= reminders.length) {
+					if (firstIndex >= messages.length) {
 						con.getIRCIO().privmsg(recipient, "You don't have that many messages.");
 						return;
 					}
 					lastIndex = firstIndex + 5;
-					if (lastIndex >= reminders.length)
-						lastIndex = reminders.length-1;
+					if (lastIndex >= messages.length)
+						lastIndex = messages.length-1;
 					con.getIRCIO().privmsg(nick, "You have sent the following messages:");
 					for (int i = firstIndex; i <= lastIndex; i++) {
-						Reminder reminder = reminders[i];
-						String target = reminder.target;
-						if (iequals(reminder.target, nick))
+						Message message = messages[i];
+						String target = message.target;
+						if (iequals(message.target, nick))
 							target = "you";
 						String timeToArrive;
-						if (reminder.timeToArrive == 0) // No destination time; regular message
+						if (message.timeToArrive == 0) // No destination time; regular message
 							timeToArrive = "";
-						else if (System.currentTimeMillis() > reminder.timeToArrive)
-							timeToArrive = ", " + makeTime(reminder.timeToArrive) + " ago";
+						else if (System.currentTimeMillis() > message.timeToArrive)
+							timeToArrive = ", " + makeTime(message.timeToArrive) + " ago";
 						else
-							timeToArrive = ", " + makeTime(reminder.timeToArrive) + " from now";
-						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": For " + target + timeToArrive + ": " + reminder.message);
+							timeToArrive = ", " + makeTime(message.timeToArrive) + " from now";
+						con.getIRCIO().privmsg(nick, "Message " + (i+1) + ": For " + target + timeToArrive + ": " + message.message);
 					}
 					return;
 				} else if (iregex("^(say|do|emote)$", cmd)) {

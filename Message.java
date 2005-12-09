@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-class Reminder {
+class Message {
 	String target;
 	String sender;
 	String message;
@@ -25,11 +25,11 @@ class Reminder {
 	long timeNotified;
 	String timeExpression;
 	String originalTimeExpression;
-	Reminder next;
+	Message next;
 	boolean notified;
 
 	//This constructor will figure out the timeToArrive itself, or throw a WTFException
-	Reminder(String target, String message, String sender) {
+	Message(String target, String message, String sender) {
 		System.out.println("Message: '"+message+"'\n");
 		this.target = target;
 		this.sender = sender;
@@ -42,7 +42,7 @@ class Reminder {
 			this.timeExpression = pt.getTimeExpression();
 			this.originalTimeExpression = pt.getOriginalTimeExpression();
 		} catch (WTFException e) {
-			// This is a reminder with no time expression
+			// This is a message with no time expression
 			this.timeToArrive = 0;
 			if (SephiaBotData.iequals(target, sender))
 				this.timeExpression = "when you get back";
@@ -62,7 +62,7 @@ class Reminder {
 		this.next = null;
 	}
 
-	Reminder(String target, String message, String sender, long timeToArrive) {
+	Message(String target, String message, String sender, long timeToArrive) {
 		this.target = target;
 		this.message = message;
 		this.sender = sender;
@@ -72,7 +72,7 @@ class Reminder {
 		this.next = null;
 	}
 
-	Reminder(String target, String message, String sender, boolean notified, long timeToArrive, long timeSent) {
+	Message(String target, String message, String sender, boolean notified, long timeToArrive, long timeSent) {
 		this.target = target;
 		this.message = message;
 		this.sender = sender;
