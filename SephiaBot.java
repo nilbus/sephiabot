@@ -1112,7 +1112,8 @@ class SephiaBot implements IRCConnectionListener {
 		if (user != null && ircchan != null)
 			user.lastChannel = ircchan;
 
-		//blacklist
+		//blacklist, check for messages
+		checkForMessages(con, nick, host, channelName);
 		checkForBlacklist(con, nick, host, channelName);
 
 		//Add user to channel's user list

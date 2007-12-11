@@ -266,6 +266,7 @@ class IRCIO {
 			
 		}
 
+//:david_J!n=david@cpe-70-123-166-72.hot.res.rr.com PRIVMSG #ubuntu :+marnanel: odd.. 
 		if (buf.equals("PRIVMSG")) {
 			recipient = tok.nextToken();
 			String chat = tok.nextToken("");
