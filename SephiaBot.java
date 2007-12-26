@@ -218,7 +218,7 @@ class SephiaBot implements IRCConnectionListener {
 			String sender = message.sender;
 			if (iequals(message.sender, message.target))
 				sender = "yourself";
-			con.getIRCIO().privmsg(recipient, "Message from " + sender + " [" + makeTime(message.timeSent) + " ago]: " + message.message);
+			con.getIRCIO().privmsg(recipient, nick + ", message from " + sender + " [" + makeTime(message.timeSent) + " ago]: " + message.message);
 			data.removeMessage(message);
 		}
 	}
