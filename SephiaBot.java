@@ -1053,6 +1053,7 @@ class SephiaBot implements IRCConnectionListener {
 					if (Custard.getMonth() == -1)
 						con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
 					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
+                    return;
 				}
 
 				// We were spoken to, but don't understand what was said.
