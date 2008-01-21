@@ -155,8 +155,10 @@ public class ParseTime {
 					cal.add(Calendar.HOUR, increment);
 				int newHour = cal.get(Calendar.HOUR);
 				if (newHour == 0) newHour += 12;
-				timeExpression = "" + newHour + ":" + cal.get(Calendar.MINUTE)+
-					(cal.get(Calendar.AM_PM)==Calendar.AM ? "a" : "p");
+                int newMinute = cal.get(Calendar.MINUTE);
+                String leadingZero = (newMinute < 10 ? "0" : "");
+				timeExpression = "" + newHour + ":" + leadingZero + newMinute +
+					(cal.get(Calendar.AM_PM)==Calendar.AM ? "am" : "pm");
 				return cal.getTimeInMillis();
 			}
 			//TODO: do other date operations if there are multiple expressions
