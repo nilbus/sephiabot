@@ -157,7 +157,7 @@ public class ParseTime {
 				if (newHour == 0) newHour += 12;
                 int newMinute = cal.get(Calendar.MINUTE);
                 String leadingZero = (newMinute < 10 ? "0" : "");
-				timeExpression = "" + newHour + ":" + leadingZero + newMinute +
+				timeExpression = "at " + newHour + ":" + leadingZero + newMinute +
 					(cal.get(Calendar.AM_PM)==Calendar.AM ? "am" : "pm");
 				return cal.getTimeInMillis();
 			}
