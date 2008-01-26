@@ -1002,6 +1002,7 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(nick, "Server: " + server.getNetwork());
 						for (int j = 0; j < channels.length; j++)
 							con.getIRCIO().privmsg(nick, "  " + channels[j]);
+						con.getIRCIO().privmsg(nick, "And that's all!");
 					}
 					return;
 				}
