@@ -597,6 +597,8 @@ class SephiaBot implements IRCConnectionListener {
 					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
 						con.getIRCIO().privmsg(recipient, "Your excuse is: " + excuse);
+          else
+						con.getIRCIO().privmsg(recipient, "I can't think of one. :(");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
