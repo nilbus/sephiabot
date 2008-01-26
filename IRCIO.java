@@ -42,6 +42,9 @@ class IRCIO {
 	public String getName() {return name;}
 	public void setName(String newName) {name = newName;}
 
+	public String getNetwork() {return network;}
+	public String[] getChannels() {return channels;}
+
 	public IRCIO(IRCListener listener, String network, int port) throws IOException {
 
 		this.listener = listener;

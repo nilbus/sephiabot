@@ -989,10 +989,22 @@ class SephiaBot implements IRCConnectionListener {
 						con.getIRCIO().privmsg(recipient, "I wasn't really paying attention to " + nick + ".");
 					else
 						con.getIRCIO().privmsg(recipient, "Last time I saw " + target.userName + " was " + makeTime(target.lastTalked) + " ago.");
-					
+					return;
+				} else if (iequals("channels", cmd)) {
+					User user = data.getUserByHost(host);
+					if (user == null) {
+						con.getIRCIO().privmsg(nick, "It's a secret.");
+						return;
+					}
+					for (int i = 0; i < connections.length; i++) {
+						IRCIO server = connections[i].getIRCIO();
+						String[] channels = server.getChannels();
+						con.getIRCIO().privmsg(nick, "Server: " + server.getNetwork());
+						for (int j = 0; j < channels.length; j++)
+							con.getIRCIO().privmsg(nick, "  " + channels[j]);
+					}
 					return;
 				}
-
 			}	
 			//Everything above here should return if it does something.
 	
