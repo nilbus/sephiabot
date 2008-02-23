@@ -1,1 +1,1 @@
-~/svn/sephiabot/trunk/bin/make -g && jdb -classpath ~/sephiabot/ -sourcepath ~/svn/sephiabot/trunk/ SephiaBot
+bin/make -g && jdb -classpath ~/sephiabot/ -sourcepath ~/svn/sephiabot/trunk/ SephiaBot
