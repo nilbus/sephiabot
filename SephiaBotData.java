@@ -49,6 +49,7 @@ class SephiaBotData {
 	private BufferedWriter syslog;
 
 	private String dataFileName;
+	private String announceFileName;
 	private String usersFileName;
 	
 	public static final int MESSAGE_STALE_DUR = 10 * 60 * 1000; //10 min
@@ -100,9 +101,68 @@ class SephiaBotData {
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
 		this.dataFileName = "sephiabot.dat";
+		this.announceFileName = "announce.dat";
 		this.usersFileName = "users.xml";
 		this.blacklist = new String[] {};
 		this.nextMessage = 0;
+	}
+
+	void checkAnnouncements(IRCConnection[] connections) {
+		String filename = announceFileName;
+		BufferedReader announceReader;
+		LinkedList recipientList = new LinkedList();
+		LinkedList messageList = new LinkedList();
+
+		try {
+			announceReader = new BufferedReader(new FileReader(new File(sephiadir, filename)));
+		} catch (IOException ioe) {
+			return;	//Assume no announce file has been created if it doesn't exist
+		}
+		try {
+			while (announceReader.ready()) {
+				String line = announceReader.readLine();
+				StringTokenizer tok = new StringTokenizer(line, " ");
+				if (!tok.hasMoreElements())
+					continue;
+				String channel = tok.nextToken().trim();
+				if (!iregex("^#", channel)) {
+					logerror("Invalid target channel: " + channel);
+					continue;
+				}
+				if (!tok.hasMoreElements()) {
+					logerror("Announcement to " + channel + " in " + filename +
+							"had an blank message.");
+					continue;
+				}
+				recipientList.add(channel);
+				messageList.add(tok.nextToken("").trim());
+			}
+			announceReader.close();
+		} catch (IOException ioe) {
+			logerror("Couldn't read announce file " + filename + ".");
+		}
+		try {
+			// Clear the file
+			new FileWriter(new File(sephiadir, filename)).close();
+		} catch (IOException ioe) {
+			logerror("Couldn't read announce file " + filename + ".");
+		}
+
+		while (recipientList.size() > 0 && messageList.size() > 0) {
+			String targetChannel = (String) recipientList.removeFirst();
+			String message = (String) messageList.removeFirst();
+			IRCConnection con = null;
+			for (int i = 0; i < connections.length; i++) {
+				if (connections[i].getServer().findChannel(targetChannel) != null) {
+					con = connections[i];
+					break;
+				}
+			}
+			if (con != null)
+				con.getIRCIO().privmsg(targetChannel, message);
+			else
+				logerror("I'm not in the channel " + targetChannel);
+		}
 	}
 	
 	void loadData() {

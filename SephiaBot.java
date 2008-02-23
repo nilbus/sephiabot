@@ -28,7 +28,9 @@ class SephiaBot implements IRCConnectionListener {
 
 	private long nextWho;
 	private long nextHi;
-	private long SPAM_WAIT = 1000;
+	private final long SPAM_WAIT = 1000; // ms
+	private final long CHECK_ANNOUNCE_WAIT = 5000; // ms
+	private long lastCheckAnnounce;
 	private boolean greet = true;
 
 	private long lastNickAttempt = 0;
@@ -181,6 +183,10 @@ class SephiaBot implements IRCConnectionListener {
 			}
 		}
 		checkForTimedMessages(connections);
+		if (System.currentTimeMillis() > CHECK_ANNOUNCE_WAIT + lastCheckAnnounce) {
+			data.checkAnnouncements(connections);
+			lastCheckAnnounce = System.currentTimeMillis();
+		}
 		
 		try {
 			Thread.sleep(100);
@@ -597,7 +603,7 @@ class SephiaBot implements IRCConnectionListener {
 					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
 						con.getIRCIO().privmsg(recipient, "Your excuse is: " + excuse);
-          else
+					else
 						con.getIRCIO().privmsg(recipient, "I can't think of one. :(");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
@@ -1068,7 +1074,7 @@ class SephiaBot implements IRCConnectionListener {
 					if (Custard.getMonth() == -1)
 						con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
 					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
-                    return;
+					return;
 				}
 
 				// We were spoken to, but don't understand what was said.
