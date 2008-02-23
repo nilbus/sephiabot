@@ -1,7 +1,6 @@
 Common:
 Multithread connection attempts
 
-
 Ed:
 PM me when I get new mail
 Quit message (mkzelda) in log-#nilbus
