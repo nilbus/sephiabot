@@ -3,11 +3,18 @@ Multithread connection attempts
 
 
 Ed:
+PM me when I get new mail
+Quit message (mkzelda) in log-#nilbus
+Remind me to call mom => call mom
+Remind me in  4 min (2 spaces)
+remind me at Time seems screwed up; tomorrow
+open files if logdir changes on config reload
 bit, please do this
 makeTime redo, hopefully using calendar
 modularize commands and responses with "function pointers"
 -"Thanks bit" not just "Bit, thanks"
 -"Bit, hi" not just "Hi Bit"
+SQLite for sephiabot's data
 track channel traffic, and re-remind appropriately
 auto-bring back from away if you speak after being gone for a while.
 accept stdin commands
