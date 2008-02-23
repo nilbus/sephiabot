@@ -292,7 +292,7 @@ class SephiaBot implements IRCConnectionListener {
 						}
 				}
 			}
-			// Don't send the message if they're not in a channel
+			// Send the message unless they're not in a channel
 			if (con != null && channel != null) {
 				con.getIRCIO().privmsg(channel.name, message.target +
 					", message from " + sender + " [" +
