@@ -1,5 +1,5 @@
 cd ~/sephiabot
-java SephiaBot $* 2>> ~/sephiabot/syslog.txt
+java SephiaBot $* 2>> ~/sephiabot/syslog.txt |tee ~/sephiabot/sephiabot.log
 retval=$?
 
 while true; do
