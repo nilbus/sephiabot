@@ -29,7 +29,7 @@ class SephiaBot implements IRCConnectionListener {
 	private long nextWho;
 	private long nextHi;
 	private final long SPAM_WAIT = 1000; // ms
-	private final long CHECK_ANNOUNCE_WAIT = 5000; // ms
+	private final long CHECK_ANNOUNCE_WAIT = 1000; // ms
 	private long lastCheckAnnounce;
 	private boolean greet = true;
 
