@@ -1,8 +1,8 @@
 Common:
 Multithread connection attempts
 
-
 Ed:
+Bit, why...
 PM me when I get new mail
 Quit message (mkzelda) in log-#nilbus
 Remind me to call mom => call mom
