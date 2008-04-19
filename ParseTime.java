@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+import java.io.IOException;
 import java.util.regex.*;
 import java.util.*;
 
@@ -43,8 +44,9 @@ public class ParseTime {
 	public static String duration = "("+counter+" ?("+secondUnit+"|"+minuteUnit+"|"+hourUnit+"|"+dayUnit+"|"+weekUnit+"|"+monthUnit+"|"+yearUnit+")|[0-9]+)";
 	public static String date = "("+days+"|(the )?"+dateNumber+" of "+months+"|("+months+"( the)?|the) "+dateNumber+")"; //Wed|the 4th of july|Jul 4th|the 4th
 	public static String onReturn = "(when (I'm back|\\w+ ((gets?|comes?) (in|here|back|on(line)?)|returns?)))";
-
-	public static String timeExpressionPattern = "\\b(at (ab(ou)?t )?"+time+ampm+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+")\\b";
+	public static String general = "(tomorrow?)";
+	
+	public static String timeExpressionPattern = "\\b(at (ab(ou)?t )?"+time+ampm+"|in (ab(ou)?t )?"+duration+"|on "+date+"|"+onReturn+"|"+general+")\\b";
 	//Add within, sometime, after, before, later
 	//Add 'general' specifics like tonight, tomorrow, next week, a while
 	//Add remind me about
@@ -122,6 +124,12 @@ public class ParseTime {
 		} else if (iregex("^"+onReturn+"$", timeExpression)) {
 			// Should be caught and never seen
 			throw new WTFException("when j00 get back");
+		} else if (iregex("^"+general+"$", timeExpression)) {
+			GregorianCalendar cal = new GregorianCalendar();
+			cal.add(Calendar.DAY_OF_YEAR, 1);
+			String buf = "Added yesterday reminder: "+ cal.get(Calendar.DATE) +"\n";
+			System.out.println(buf);
+			return cal.getTimeInMillis();
 		}
 
 		try {
@@ -160,7 +168,7 @@ public class ParseTime {
 				timeExpression = "at " + newHour + ":" + leadingZero + newMinute +
 					(cal.get(Calendar.AM_PM)==Calendar.AM ? "am" : "pm");
 				return cal.getTimeInMillis();
-			}
+			} 
 			//TODO: do other date operations if there are multiple expressions
 		} catch (NumberFormatException nfe) {
 			throw new WTFException("Woah - some weird time I couldn't understand. WTF!");
