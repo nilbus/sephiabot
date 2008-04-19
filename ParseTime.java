@@ -125,6 +125,7 @@ public class ParseTime {
 			// Should be caught and never seen
 			throw new WTFException("when j00 get back");
 		} else if (iregex("^"+general+"$", timeExpression)) {
+			//We are assuming all general times are for tomorrow. this will change as we add more.
 			GregorianCalendar cal = new GregorianCalendar();
 			cal.add(Calendar.DAY_OF_YEAR, 1);
 			String buf = "Added yesterday reminder: "+ cal.get(Calendar.DATE) +"\n";
