@@ -6,7 +6,6 @@ PM me when I get new mail
 Quit message (mkzelda) in log-#nilbus
 Remind me to call mom => call mom
 Remind me in  4 min (2 spaces)
-remind me at Time seems screwed up; tomorrow
 open files if logdir changes on config reload
 bit, please do this
 makeTime redo, hopefully using calendar

@@ -121,7 +121,7 @@ public class ParseTime {
 			return System.currentTimeMillis() + unit * dur;
 
 		// When he gets back
-		} else if (iregex("^"+onReturn+"$", timeExpression)) {
+		} else if (iregex("^"+onReturn+" ", timeExpression)) {
 			// Should be caught and never seen
 			throw new WTFException("when j00 get back");
 		} else if (iregex("^"+general+"$", timeExpression)) {
@@ -135,8 +135,10 @@ public class ParseTime {
 
 		try {
 			//The rest of these will use a calendar object
-			GregorianCalendar now = new GregorianCalendar();
-			GregorianCalendar cal = new GregorianCalendar();
+			
+			// GregorianCalendar doesn't take take into account DST, so pass a TimeZone
+			GregorianCalendar now = new GregorianCalendar(TimeZone.getTimeZone("EST"));
+			GregorianCalendar cal = new GregorianCalendar(TimeZone.getTimeZone("EST"));
 			if (iregex("^at ", timeExpression)) {
 				String strAmpm = iregexFind(ampm, timeExpression);
 				String strTime = iregexFind(time, timeExpression);
@@ -148,23 +150,35 @@ public class ParseTime {
 					intMins = Integer.parseInt(strMins);
 				else
 					intMins = 0; 
-				cal.set(Calendar.HOUR, intHrs);
-				cal.set(Calendar.MINUTE, intMins);
-
+				
 				int increment = 6;
 				if (strAmpm.length() > 0) {
 					increment = 12;
 					if (iregex("\\bam?|in the morning?\\b", strAmpm))
 						cal.set(Calendar.AM_PM, Calendar.AM);
-					else if (iregex("\\b(pm?|in the evening?|at ni(ght|te))\\b", strAmpm))
+					else if (iregex("\\b(pm?|in the evening?|at ni(ght|te))\\b", strAmpm)) 
 						cal.set(Calendar.AM_PM, Calendar.PM);
 				}
+				
+				// If it's Midnight set the hour to 0 -- Michael
+				if ((intHrs == 12) && (cal.get(Calendar.AM_PM) == Calendar.AM ))
+					intHrs = 0;
+				
+				cal.set(Calendar.HOUR, intHrs);
+				cal.set(Calendar.MINUTE, intMins);
+				
+				System.out.println("now: " + now.get(Calendar.HOUR) + ":" + now.get(Calendar.MINUTE) + " - time parsed: " + cal.get(Calendar.HOUR) + ":" + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.AM_PM) + "\n");
 
-				while (cal.before(now))
+				while (cal.before(now)) {
 					cal.add(Calendar.HOUR, increment);
+					System.out.println("Hour Incremented!" + cal.get(Calendar.HOUR) + "\n");
+				}
 				int newHour = cal.get(Calendar.HOUR);
 				if (newHour == 0) newHour += 12;
                 int newMinute = cal.get(Calendar.MINUTE);
+                
+                System.out.println("new time: " + newHour + ":" + newMinute + "\n");
+                
                 String leadingZero = (newMinute < 10 ? "0" : "");
 				timeExpression = "at " + newHour + ":" + leadingZero + newMinute +
 					(cal.get(Calendar.AM_PM)==Calendar.AM ? "am" : "pm");
