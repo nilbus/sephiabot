@@ -1029,19 +1029,19 @@ class SephiaBot implements IRCConnectionListener {
 			//Bot has been mentioned?
 			if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
 				if (!censor(con)) {
-					if (iregex("fuck you", msg)) {
+					if (iregex("fuck you", origmsg)) {
 						if (System.currentTimeMillis() > nextWho) {	//!spam
 							con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
 							nextWho = System.currentTimeMillis() + SPAM_WAIT;
 							return;
 						}
-					} else if (iregex("screw you", msg)) {
+					} else if (iregex("screw you", origmsg)) {
 						if (System.currentTimeMillis() > nextWho) {	//!spam
 							con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
 							nextWho = System.currentTimeMillis() + SPAM_WAIT;
 							return;
 						}
-					} else if (iregex("you suck", msg)) {
+					} else if (iregex("you suck", origmsg)) {
 						if (System.currentTimeMillis() > nextWho) {	//!spam
 							con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
 							nextWho = System.currentTimeMillis() + SPAM_WAIT;
@@ -1049,25 +1049,25 @@ class SephiaBot implements IRCConnectionListener {
 						}
 					}
 				}
-				if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
+				if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", origmsg)) {
 					if (System.currentTimeMillis() > nextWho) { //!spam
 						con.getIRCIO().privmsg(recipient, "No problem.");
 						nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						return;
 					}
-				} else if (iregex("bounc[ye]", msg)) {
+				} else if (iregex("bounc[ye]", origmsg)) {
 					if (System.currentTimeMillis() > nextWho) { //!spam
 						con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
 						nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						return;
 					}
-				} else if (iregex("(right|correct)", msg)) {
+				} else if (iregex("(right|correct)", origmsg)) {
 					if (System.currentTimeMillis() > nextWho) { //!spam
 						con.getIRCIO().privmsg(recipient, "Absolutely.");
 						nextWho = System.currentTimeMillis() + SPAM_WAIT;
 						return;
 					}
-				} else if (iregex("(custard|flavor( of? the? day)?|fotd)", msg)) {
+				} else if (iregex("(custard|flavor( of? the? day)?|fotd)", origmsg)) {
 					int offset = 0;
 					if (iregex("tomorrow", msg)) {
 						offset++;
@@ -1101,7 +1101,7 @@ class SephiaBot implements IRCConnectionListener {
 
 	public boolean talkingToMe(String msg, String name) {
 		int nameEnd = name.length() < 4 ? name.length() : 4;
-		return iregex("^"+name.substring(0, nameEnd), msg);
+		return iregex(name.substring(0, nameEnd), msg);
 	}
 
 	public void checkForBlacklist(IRCConnection con, String nick, String host, String channelName) {
