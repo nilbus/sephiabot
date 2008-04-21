@@ -387,18 +387,6 @@ class SephiaBot implements IRCConnectionListener {
 		
 		String name = data.getName(con.getIndex());
 
-		//Say hello!
-		int nameEnd = name.length() < 4 ? name.length() : 4;
-		if (iregex(name.substring(0, nameEnd), msg)) {
-			if (data.matchHellos(msg)) {
-				if (System.currentTimeMillis() > nextHi) {  //!spam
-					con.getIRCIO().privmsg(recipient, data.getRandomHelloReply());
-					nextHi = System.currentTimeMillis() + 500;
-					return;
-				}
-			}
-		}
-
 		StringTokenizer tok = new StringTokenizer(msg, ",: ");
 		String botname;
 		if (!pm && tok.hasMoreElements()) {
@@ -1029,6 +1017,15 @@ class SephiaBot implements IRCConnectionListener {
 			//Bot has been mentioned?
 			if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
 				if (!censor(con)) {
+					//Say hello!
+					if (data.matchHellos(origmsg)) {
+						if (System.currentTimeMillis() > nextHi) {  //!spam
+							con.getIRCIO().privmsg(recipient, data.getRandomHelloReply());
+							nextHi = System.currentTimeMillis() + 500;
+							return;
+						}
+					}
+					
 					if (iregex("fuck you", origmsg)) {
 						if (System.currentTimeMillis() > nextWho) {	//!spam
 							con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");

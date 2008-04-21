@@ -744,7 +744,7 @@ lineLoop:
 	
 	boolean matchHellos(String msg) {
 		for (int i = 0; i < hellos.length; i++) {
-			if (iregex("^"+hellos[i], msg)) {
+			if (iregex(hellos[i], msg)) {
 				return true;
 			}
 		}
