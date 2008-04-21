@@ -10,7 +10,6 @@ open files if logdir changes on config reload
 bit, please do this
 makeTime redo, hopefully using calendar
 modularize commands and responses with "function pointers"
--"Bit, hi" not just "Hi Bit"
 SQLite for sephiabot's data
 track channel traffic, and re-remind appropriately
 auto-bring back from away if you speak after being gone for a while.
