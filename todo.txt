@@ -2,7 +2,7 @@ Common:
 Multithread connection attempts
 
 Ed:
-Bit doesn't repeat morning sometimes after long delays
+Bit, where's vino?  He's not logged in so I won't tell you.
 Quit message (mkzelda) in log-#nilbus
 Remind me to call mom => call mom
 Remind me in  4 min (2 spaces)

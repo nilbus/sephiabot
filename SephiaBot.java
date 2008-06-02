@@ -684,7 +684,7 @@ class SephiaBot implements IRCConnectionListener {
 						return;
 					}
 					return;
-				} else if (iregex("^(remind|tell)$", cmd)) {
+				} else if (iregex("^(remind|tell|ask)$", cmd)) {
 					// Bit, remind [person] ([at time] || [on day]) OR ([in duration]) [to OR that OR about] [something]
 					// Bit, remind [person] [to OR that OR about] [something] ([at time] || [on day]) OR ([in duration])
 					if (!tok.hasMoreElements()) {
