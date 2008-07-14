@@ -128,8 +128,6 @@ public class ParseTime {
 			//We are assuming all general times are for tomorrow. this will change as we add more.
 			GregorianCalendar cal = new GregorianCalendar();
 			cal.add(Calendar.DAY_OF_YEAR, 1);
-			String buf = "Added yesterday reminder: "+ cal.get(Calendar.DATE) +"\n";
-			System.out.println(buf);
 			return cal.getTimeInMillis();
 		}
 
@@ -167,17 +165,12 @@ public class ParseTime {
 				cal.set(Calendar.HOUR, intHrs);
 				cal.set(Calendar.MINUTE, intMins);
 				
-				System.out.println("now: " + now.get(Calendar.HOUR) + ":" + now.get(Calendar.MINUTE) + " - time parsed: " + cal.get(Calendar.HOUR) + ":" + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.AM_PM) + "\n");
-
-				while (cal.before(now)) {
+				while (cal.before(now))
 					cal.add(Calendar.HOUR, increment);
-					System.out.println("Hour Incremented!" + cal.get(Calendar.HOUR) + "\n");
-				}
+
 				int newHour = cal.get(Calendar.HOUR);
 				if (newHour == 0) newHour += 12;
                 int newMinute = cal.get(Calendar.MINUTE);
-                
-                System.out.println("new time: " + newHour + ":" + newMinute + "\n");
                 
                 String leadingZero = (newMinute < 10 ? "0" : "");
 				timeExpression = "at " + newHour + ":" + leadingZero + newMinute +

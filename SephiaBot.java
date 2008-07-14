@@ -606,8 +606,7 @@ class SephiaBot implements IRCConnectionListener {
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
 				}
 				return;
-			}
-			else if (iregex("bot[ -]*snack", msg)) {
+			} else if (iregex("bot[ -]*snack", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
 					con.getIRCIO().privmsg(recipient, "Yaaaaaay!");
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
