@@ -1015,7 +1015,7 @@ class SephiaBot implements IRCConnectionListener {
 		//Everything above here should return if it does something.
 
 		//Commands where the bot's name can appear at the end
-		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name + "$", msg)) {
+		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name + "[^a-zA-Z]*$", msg)) {
 			if (!censor(con)) {
 				if (iregex("fuck you", msg)) {
 					if (System.currentTimeMillis() > nextWho) {	//!spam
