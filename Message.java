@@ -56,7 +56,7 @@ class Message {
 				this.originalTimeExpression = null;
 			this.notified = true;
 		}
-		this.message = message.trim().replaceFirst("^(that|to|about) ", "").trim();
+		this.message = message.trim().replaceFirst("^ *(that|to|about) ", "").trim();
 		if (this.originalTimeExpression != null)
 			this.message = message.replaceAll(this.originalTimeExpression, "");
 		this.next = null;
