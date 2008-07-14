@@ -387,18 +387,6 @@ class SephiaBot implements IRCConnectionListener {
 		
 		String name = data.getName(con.getIndex());
 
-		//Say hello!
-		int nameEnd = name.length() < 4 ? name.length() : 4;
-		if (iregex(name.substring(0, nameEnd), msg)) {
-			if (data.matchHellos(msg)) {
-				if (System.currentTimeMillis() > nextHi) {  //!spam
-					con.getIRCIO().privmsg(recipient, data.getRandomHelloReply());
-					nextHi = System.currentTimeMillis() + 500;
-					return;
-				}
-			}
-		}
-
 		StringTokenizer tok = new StringTokenizer(msg, ",: ");
 		String botname;
 		if (!pm && tok.hasMoreElements()) {
@@ -1023,74 +1011,82 @@ class SephiaBot implements IRCConnectionListener {
 					return;
 				}
 			}	
-			//Everything above here should return if it does something.
-	
-			//Bot has been mentioned?
-			if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name, msg)) {
-				if (!censor(con)) {
-					if (iregex("fuck you", msg)) {
-						if (System.currentTimeMillis() > nextWho) {	//!spam
-							con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
-							nextWho = System.currentTimeMillis() + SPAM_WAIT;
-							return;
-						}
-					} else if (iregex("screw you", msg)) {
-						if (System.currentTimeMillis() > nextWho) {	//!spam
-							con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
-							nextWho = System.currentTimeMillis() + SPAM_WAIT;
-							return;
-						}
-					} else if (iregex("you suck", msg)) {
-						if (System.currentTimeMillis() > nextWho) {	//!spam
-							con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
-							nextWho = System.currentTimeMillis() + SPAM_WAIT;
-							return;
-						}
+		}
+		//Everything above here should return if it does something.
+
+		//Commands where the bot's name can appear at the end
+		if (pm || talkingToMe(origmsg, data.getName(con.getIndex())) || iregex(name + "$", msg)) {
+			if (!censor(con)) {
+				if (iregex("fuck you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						con.getIRCIO().privmsg(recipient, "Fuck you too, buddy.");
+						nextWho = System.currentTimeMillis() + SPAM_WAIT;
+						return;
+					}
+				} else if (iregex("screw you", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						con.getIRCIO().privmsg(recipient, "Screw you too, buddy.");
+						nextWho = System.currentTimeMillis() + SPAM_WAIT;
+						return;
+					}
+				} else if (iregex("you suck", msg)) {
+					if (System.currentTimeMillis() > nextWho) {	//!spam
+						con.getIRCIO().privmsg(recipient, "I suck, but you swallow, bitch.");
+						nextWho = System.currentTimeMillis() + SPAM_WAIT;
+						return;
 					}
 				}
-				if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
-					if (System.currentTimeMillis() > nextWho) { //!spam
-						con.getIRCIO().privmsg(recipient, "No problem.");
-						nextWho = System.currentTimeMillis() + SPAM_WAIT;
-						return;
-					}
-				} else if (iregex("bounc[ye]", msg)) {
-					if (System.currentTimeMillis() > nextWho) { //!spam
-						con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
-						nextWho = System.currentTimeMillis() + SPAM_WAIT;
-						return;
-					}
-				} else if (iregex("(right|correct)", msg)) {
-					if (System.currentTimeMillis() > nextWho) { //!spam
-						con.getIRCIO().privmsg(recipient, "Absolutely.");
-						nextWho = System.currentTimeMillis() + SPAM_WAIT;
-						return;
-					}
-				} else if (iregex("(custard|flavor( of? the? day)?|fotd)", msg)) {
-					int offset = 0;
-					if (iregex("tomorrow", msg)) {
-						offset++;
-					} else {
-						ParseTime pt = new ParseTime();
-						try {
-							pt.textToTime(msg);
-							// If time expression is found, our answer might be wrong.
-							con.getIRCIO().privmsg(recipient, "I don't know. Ask me " + pt.getTimeExpression() + ".");
-							return;
-						} catch (WTFException e) {
-							// Continue as normal if no time expression found
-						}
-					}
-					if (Custard.getMonth() == -1)
-						con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
-					con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
+			}
+			if (data.matchHellos(msg)) {
+				if (System.currentTimeMillis() > nextHi) {	//!spam
+					con.getIRCIO().privmsg(recipient, data.getRandomHelloReply());
+					nextHi = System.currentTimeMillis() + 500;
 					return;
 				}
-
-				// We were spoken to, but don't understand what was said.
-				if (pm)
-					con.getIRCIO().privmsg(recipient, "What?");
+			} else if (iregex("(thank( ?(yo)?u|[sz])\\b|\\bt(y|hn?x)\\b)", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					con.getIRCIO().privmsg(recipient, "No problem.");
+					nextWho = System.currentTimeMillis() + SPAM_WAIT;
+					return;
+				}
+			} else if (iregex("bounc[ye]", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					con.getIRCIO().privmsg(recipient, "Bouncy, bouncy, bouncy!");
+					nextWho = System.currentTimeMillis() + SPAM_WAIT;
+					return;
+				}
+			} else if (iregex("(right|correct)", msg)) {
+				if (System.currentTimeMillis() > nextWho) { //!spam
+					con.getIRCIO().privmsg(recipient, "Absolutely.");
+					nextWho = System.currentTimeMillis() + SPAM_WAIT;
+					return;
+				}
+			} else if (iregex("(custard|flavor( of? the? day)?|fotd)", msg)) {
+				int offset = 0;
+				if (iregex("tomorrow", msg)) {
+					offset++;
+				} else {
+					ParseTime pt = new ParseTime();
+					try {
+						pt.textToTime(msg);
+						// If time expression is found, our answer might be wrong.
+						con.getIRCIO().privmsg(recipient, "I don't know. Ask me " + pt.getTimeExpression() + ".");
+						return;
+					} catch (WTFException e) {
+						// Continue as normal if no time expression found
+					}
+				}
+				if (Custard.getMonth() == -1)
+					con.getIRCIO().privmsg(recipient, "Hold on, I'll check.");
+				con.getIRCIO().privmsg(recipient, Custard.flavorOfTheDay(offset));
+				return;
 			}
+
+			// We were spoken to, but don't understand what was said.
+			// If this appears on a real command, then we forgot a return statement
+			// with that command.
+			if (pm)
+				con.getIRCIO().privmsg(recipient, "What?");
 		//Wasn't talking to the bot
 		} else if (!pm && channel != null && channel.parrotOK()) {
 				channel.setLastRepeat(channel.getHistory(0));
