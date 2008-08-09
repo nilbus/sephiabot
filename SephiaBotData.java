@@ -158,10 +158,13 @@ class SephiaBotData {
 					break;
 				}
 			}
-			if (con != null)
+			if (con != null) {
+				if (message.length() > 512)
+					message = message.substring(0,512);
 				con.getIRCIO().privmsg(targetChannel, message);
-			else
+			} else {
 				logerror("I'm not in the channel " + targetChannel);
+			}
 		}
 	}
 	
