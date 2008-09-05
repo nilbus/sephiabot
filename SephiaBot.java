@@ -307,6 +307,11 @@ class SephiaBot implements IRCConnectionListener {
 	
 	public void messagePrivEmote(IRCConnection con, String nick, String host, String recipient, String msg) {
 		String log;
+		// This will be null, unless the message is to a channel.  Always check.
+		IRCChannel channel = con.getServer().findChannel(recipient);
+
+    if (channel != null)
+      channel.lastActivity = System.currentTimeMillis(); // now
 		
 		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient))
 			recipient = nick;
@@ -366,6 +371,9 @@ class SephiaBot implements IRCConnectionListener {
 		String msg = origmsg;
 		// This will be null, unless the message is to a channel.  Always check.
 		IRCChannel channel = con.getServer().findChannel(recipient);
+
+    if (channel != null)
+      channel.lastActivity = System.currentTimeMillis(); // now
 
 		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient)) {
 			recipient = nick;
