@@ -93,19 +93,19 @@ public class XMLParser {
 			if (parseConfigGlobal(node, -1, -1))
 				continue;
 			else if (node.getNodeName().equals("Logdir")) {
-				logdir = node.getChildNodes().item(0).toString();
+				logdir = node.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (node.getNodeName().equals("Sephiadir")) {
-				sephiadir = node.getChildNodes().item(0).toString();
+				sephiadir = node.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (node.getNodeName().equals("DataFileName")) {
-				dataFileName = node.getChildNodes().item(0).toString();
+				dataFileName = node.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (node.getNodeName().equals("UsersFileName")) {
-				usersFileName = node.getChildNodes().item(0).toString();
+				usersFileName = node.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (node.getNodeName().equals("Blacklist")) {
-				data.addToBlacklist(node.getChildNodes().item(0).toString());
+				data.addToBlacklist(node.getChildNodes().item(0).getNodeValue());
 				continue;
 			} else if (node.getNodeName().equals("Server")) {
 				parseConfigServer(node);
@@ -118,17 +118,17 @@ public class XMLParser {
 
 	boolean parseConfigGlobal(Node node, int server, int channel) {
 		if (node.getNodeName().equals("Hello")) {
-			data.setHellos(node.getChildNodes().item(0).toString(), server, channel);
+			data.setHellos(node.getChildNodes().item(0).getNodeValue(), server, channel);
 			return true;
 		} else if (node.getNodeName().equals("Censor")) {
-			data.setCensor(data.stringToBoolean(node.getChildNodes().item(0).toString()), server, channel);
+			data.setCensor(data.stringToBoolean(node.getChildNodes().item(0).getNodeValue()), server, channel);
 			return true;
 		} else if (node.getNodeName().equals("Greeting")) {
 			if (node.getChildNodes().item(0) != null)
-				data.setGreeting(node.getChildNodes().item(0).toString(), server, channel);
+				data.setGreeting(node.getChildNodes().item(0).getNodeValue(), server, channel);
 			return true;
 		} else if (node.getNodeName().equals("HelloReplies")) {
-			data.setHelloReplies(node.getChildNodes().item(0).toString(), server, channel);
+			data.setHelloReplies(node.getChildNodes().item(0).getNodeValue(), server, channel);
 			return true;
 		}
 		return false;
@@ -143,13 +143,13 @@ public class XMLParser {
 			if (parseConfigGlobal(subNode, server, -1))
 				continue;
 			if (subNode.getNodeName().equals("Host")) {
-				host = subNode.getChildNodes().item(0).toString();
+				host = subNode.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (subNode.getNodeName().equals("Nick")) {
-				nick = subNode.getChildNodes().item(0).toString();
+				nick = subNode.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (subNode.getNodeName().equals("Port")) {
-				port = subNode.getChildNodes().item(0).toString();
+				port = subNode.getChildNodes().item(0).getNodeValue();
 				continue;
 			} else if (subNode.getNodeName().equals("Channel")) {
 				parseConfigChannel(server, subNode);
@@ -167,7 +167,7 @@ public class XMLParser {
 			if (parseConfigGlobal(subNode, server, channel))
 				continue;
 			if (subNode.getNodeName().equals("Name")) {
-				data.setChannelInfo(server, channel, subNode.getChildNodes().item(0).toString());
+				data.setChannelInfo(server, channel, subNode.getChildNodes().item(0).getNodeValue());
 				continue;
 			}
 		}
@@ -194,9 +194,9 @@ public class XMLParser {
 			for (int j = 0; j < groupSubNodes.getLength(); j++) {
 				Node subNode = groupSubNodes.item(j);
 				if (subNode.getNodeName().equals("Name"))
-					groupName = subNode.getChildNodes().item(0).toString();
+					groupName = subNode.getChildNodes().item(0).getNodeValue();
 				else if (subNode.getNodeName().equals("Permissions"))
-					groupPermissions = subNode.getChildNodes().item(0).toString();
+					groupPermissions = subNode.getChildNodes().item(0).getNodeValue();
 			}
 			if (groupPermissions == null || groupName == null)
 				continue;
@@ -230,17 +230,17 @@ public class XMLParser {
 			for (int j = 0; j < groupSubNodes.getLength(); j++) {
 				Node subNode = groupSubNodes.item(j);
 				if (subNode.getNodeName().equals("Nick"))
-					userName = subNode.getChildNodes().item(0).toString();
+					userName = subNode.getChildNodes().item(0).getNodeValue();
 				else if (subNode.getNodeName().equals("Password"))
-					password = subNode.getChildNodes().item(0).toString();
+					password = subNode.getChildNodes().item(0).getNodeValue();
 				else if (subNode.getNodeName().equals("Groups"))
-					groupNames = subNode.getChildNodes().item(0).toString();
+					groupNames = subNode.getChildNodes().item(0).getNodeValue();
 				else if (subNode.getNodeName().equals("Description"))
-					description = subNode.getChildNodes().item(0).toString();
+					description = subNode.getChildNodes().item(0).getNodeValue();
 				else if (subNode.getNodeName().equals("Alias"))
-					aliasList.add(subNode.getChildNodes().item(0).toString());
+					aliasList.add(subNode.getChildNodes().item(0).getNodeValue());
 				else if (subNode.getNodeName().equals("Home"))
-					home = subNode.getChildNodes().item(0).toString();
+					home = subNode.getChildNodes().item(0).getNodeValue();
 			}
 			if (userName == null || password == null || groupNames == null)
 				continue;
