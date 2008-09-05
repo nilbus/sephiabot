@@ -28,7 +28,7 @@
 . goes on vacation with everyone else
 " I feel pretty, oh so pretty!
 . runs around naked while everyone is gone
-" o/ If I had a million dollars... I'd buy me some company! o/
+" o/` If I had a million dollars... I'd buy me some company! o/`
 " hello?
 . wonders if her internet connection is still active
 " ping
@@ -52,7 +52,7 @@
 " if a tree falls in a forest with no people around, does it make any sound?
 " Nobody move! This is a stickup!
 . whistles the Jeopardy theme
-. writes on the channel stall door, "For a good time call 101-1101"
+. writes on the channel stall door, "For a good time call 867-5309, ask for Studmuffin"
 . signs a petition for bot suffrage
 " what am I doing here?
 " do I know you?
@@ -69,3 +69,15 @@
 . dreams about Gentoo
 . turns out the lights
 " is it getting cold in here, or is it just me?
+. gets bored and plays some Nethack
+" is the circus in town or something?
+" good <insert time of day here> !
+. dreams of electric sheep 
+" Who's the new guy?
+" Nobody talk if you're gay
+" http://randomlolcat.com/image.gif lol
+" The cake is a lie.
+" The cake is a pie.
+" Cry some more
+" Q.Q
+
