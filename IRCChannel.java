@@ -22,6 +22,8 @@ class IRCChannel {
 	private String historyNick[];
 	private String historyText[];
 	private String lastRepeat;
+  private long lastActivity;
+  private final long BORED_DELAY = 4 * 1000 * 60 * 60; // 4 hours
 
 	String name;
 	IRCUser users;
@@ -146,4 +148,23 @@ class IRCChannel {
 	public void setLastRepeat(String lastRepeat) {
 		this.lastRepeat = lastRepeat;
 	}
+
+  public void timedEvents() {
+    if (lastActivity == 0)
+      lastActivity = System.currentTimeMillis();
+    else {
+      long now = System.currentTimeMillis();
+      if (now > lastActivity + BORED_DELAY) {
+        IRCIO io = myServer.myConnection.getIRCIO()
+        String icebreaker = SephiaBotData.randomPhrase("icebreakers.txt");
+        char action = icebreaker.charAt(0);
+        icebreaker = icebreaker.substring(2);
+        if (action == '"')
+          io.privmsg(name, icebreaker);
+        else if (action == ':')
+          io.privemote(name, icebreaker);
+        // else there's an invalid entry
+      }
+    }
+  }
 }

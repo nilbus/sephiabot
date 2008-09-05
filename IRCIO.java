@@ -23,7 +23,7 @@ import java.util.*;
 class IRCIO {
 
 	private Socket socket;
-	private IRCListener listener;
+	private IRCListener listener; // IRCConnection
 	private String network;
 	private int port;
 	private String channels[];
@@ -179,6 +179,8 @@ class IRCIO {
 			out.write(outmsg);
 			out.flush();
 		}
+
+    listener.server.timedEvents();
 	}
 
 	boolean pong(String msg) throws IOException {
