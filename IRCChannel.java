@@ -24,6 +24,7 @@ class IRCChannel {
 	private String lastRepeat;
   private long lastActivity;
   private final long BORED_DELAY = 4 * 1000 * 60 * 60; // 4 hours
+  //private final long BORED_DELAY = 1000 * 5; // 5s
 
 	String name;
 	IRCUser users;
@@ -155,15 +156,22 @@ class IRCChannel {
     else {
       long now = System.currentTimeMillis();
       if (now > lastActivity + BORED_DELAY) {
-        IRCIO io = myServer.myConnection.getIRCIO()
-        String icebreaker = SephiaBotData.randomPhrase("icebreakers.txt");
-        char action = icebreaker.charAt(0);
-        icebreaker = icebreaker.substring(2);
-        if (action == '"')
-          io.privmsg(name, icebreaker);
-        else if (action == ':')
-          io.privemote(name, icebreaker);
-        // else there's an invalid entry
+        lastActivity = now;
+        IRCIO io = myServer.myConnection.getIRCIO();
+        SephiaBotData data = ((SephiaBot)myServer.myConnection.getListener()).getData();
+        String icebreaker = data.randomPhrase("icebreakers.txt");
+        if (icebreaker != null) {
+          char action = icebreaker.charAt(0);
+          icebreaker = icebreaker.substring(2);
+          if (action == '"')
+            io.privmsg(name, icebreaker);
+          else if (action == '.')
+            io.privemote(name, icebreaker);
+          else
+            data.log("Invalid entry in icebreakers: " + icebreaker);
+        } else {
+          data.log("Could not open icebreakers.txt");
+        }
       }
     }
   }

@@ -180,7 +180,7 @@ class IRCIO {
 			out.flush();
 		}
 
-    listener.server.timedEvents();
+    ((IRCConnection)listener).getServer().timedEvents();
 	}
 
 	boolean pong(String msg) throws IOException {

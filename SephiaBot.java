@@ -560,7 +560,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (!censor(con) && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String phrase = SephiaBotData.randomPhrase("wordsofwisdom.txt");
+					String phrase = data.randomPhrase("wordsofwisdom.txt");
 					if (phrase != null)
 						con.getIRCIO().privmsg(recipient, phrase);
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
@@ -588,7 +588,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (iregex("excuse", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String excuse = SephiaBotData.randomPhrase("excuses.txt");
+					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
 						con.getIRCIO().privmsg(recipient, "Your excuse is: " + excuse);
 					else
@@ -598,7 +598,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (iregex("^why", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String why = SephiaBotData.randomPhrase("excuses.txt");
+					String why = data.randomPhrase("excuses.txt");
 					if (why != null)
 						con.getIRCIO().privmsg(recipient, why);
 					else
@@ -1360,4 +1360,8 @@ hostFinder:
 		data.writeData();
 		System.exit(reboot?1:0);
 	}
+  
+  public SephiaBotData getData() {
+    return data;
+  }
 }
