@@ -60,8 +60,8 @@ class IRCServer {
 	}
 
   public void timedEvents() {
-    for (IRCChannel channel: channels) {
-      channel.timedEvents();
+    for (int i = 0; i < channels.length; i++) {
+      channels[i].timedEvents();
     }
   }
 }

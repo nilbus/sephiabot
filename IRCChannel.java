@@ -23,7 +23,7 @@ class IRCChannel {
 	private String historyText[];
 	private String lastRepeat;
   long lastActivity;
-  private final long BORED_DELAY = 4 * 1000 * 60 * 60; // 4 hours
+  private final long BORED_DELAY = 6 * 1000 * 60 * 64; // 6+_hours
   //private final long BORED_DELAY = 1000 * 5; // 5s
 
 	String name;
@@ -152,26 +152,25 @@ class IRCChannel {
 
   public void timedEvents() {
     if (lastActivity == 0)
-      lastActivity = System.currentTimeMillis();
-    else {
-      long now = System.currentTimeMillis();
-      if (now > lastActivity + BORED_DELAY) {
-        lastActivity = now;
-        IRCIO io = myServer.myConnection.getIRCIO();
-        SephiaBotData data = ((SephiaBot)myServer.myConnection.getListener()).getData();
-        String icebreaker = data.randomPhrase("icebreakers.txt");
-        if (icebreaker != null) {
-          char action = icebreaker.charAt(0);
-          icebreaker = icebreaker.substring(2);
-          if (action == '"')
-            io.privmsg(name, icebreaker);
-          else if (action == '.')
-            io.privemote(name, icebreaker);
-          else
-            data.log("Invalid entry in icebreakers: " + icebreaker);
-        } else {
-          data.log("Could not open icebreakers.txt");
-        }
+      return; // This means that no one has spoken since last icebreaker or boot
+
+    long now = System.currentTimeMillis();
+    if (now > lastActivity + BORED_DELAY) {
+      lastActivity = 0; // This gets set again later once someone speaks.
+      IRCIO io = myServer.myConnection.getIRCIO();
+      SephiaBotData data = ((SephiaBot)myServer.myConnection.getListener()).getData();
+      String icebreaker = data.randomPhrase("icebreakers.txt");
+      if (icebreaker != null) {
+        char action = icebreaker.charAt(0);
+        icebreaker = icebreaker.substring(2);
+        if (action == '"')
+          io.privmsg(name, icebreaker);
+        else if (action == '.')
+          io.privemote(name, icebreaker);
+        else
+          data.log("Invalid entry in icebreakers: " + icebreaker);
+      } else {
+        data.log("Could not open icebreakers.txt");
       }
     }
   }
