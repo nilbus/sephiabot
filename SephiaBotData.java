@@ -874,7 +874,7 @@ lineLoop:
 	}
 
 	void setHelloReplies(String helloreplies, int server, int channel) {
-		if (server != -1 || channel != -1)
+		if (server != -1 || channel != -1)  //TODO: Set channel/server-specifc values
 			return;
 		log("helloreplies changed to " + helloreplies);
 		StringTokenizer tok = new StringTokenizer(helloreplies, " ");
@@ -935,7 +935,7 @@ lineLoop:
 	}
 
 	void setHellos(String hellos, int server, int channel) {
-		if (server != -1 || channel != -1)
+		if (server != -1 || channel != -1)  //TODO: Set channel/server-specifc values
 			return;
 		log("hellos changed to " + hellos);
 		StringTokenizer tok = new StringTokenizer(hellos, " ");
