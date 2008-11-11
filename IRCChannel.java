@@ -23,7 +23,7 @@ class IRCChannel {
 	private String historyText[];
 	private String lastRepeat;
   long lastActivity;
-  private final long BORED_DELAY = 6 * 1000 * 60 * 64; // 6+_hours
+  private final long BORED_DELAY = 12 * 1000 * 60 * 64; // 12+_hours
   //private final long BORED_DELAY = 1000 * 5; // 5s
 
 	String name;
