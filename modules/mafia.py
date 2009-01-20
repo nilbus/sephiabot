@@ -161,6 +161,7 @@ class MafiaGame:
 		for player in self.players:
 			playersalive += ' ' + player.nick
 		self.phenny.msg(self.channel, "Players alive:" + playersalive)
+		self.phenny.msg(self.channel, "With %d alive, it takes %d to lynch." % (self.numplayers(), self.numplayers()/2+1))
 
 	def vote(self, context):
 		if not context.sender.startswith('#'):
@@ -421,6 +422,13 @@ class MafiaGame:
 
 		self.phenny.msg(self.channel, "Official vote count:" + output)
 
+	def queryalive(self):
+		output = ''
+		for player in self.players:
+			output += ' ' + player.nick
+
+		self.phenny.msg(self.channel, "Players alive:" + output)
+
 	def playerbynick(self, nick):
 		if not nick:
 			return None
@@ -552,6 +560,17 @@ def mafiaspecial(phenny, context):
 
 mafiaspecial.rule = r'^(protect|investigate) ?([^ ]*) *$'
 mafiaspecial.priority = 'low'
+
+def mafiaalive(phenny, context):
+	"""Query the bot to see who is alive"""
+
+	game = findmafia(context.sender)
+	if not game: return
+
+	game.queryalive()
+
+mafiaalive.rule = ('$nick', '.*(alive).*$')
+mafiaalive.priority = 'low'
 
 def quitmafia(phenny, context): 
 	"""Quit a game of mafia"""
