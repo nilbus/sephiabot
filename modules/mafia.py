@@ -51,12 +51,12 @@ class MafiaGame:
 	def startgame(self):
 		if self.state != 'ins': return False
 
-		# Prevent people from saying /in while the PMs are sent
-		self.state = 'insover'
-
 		if self.numplayers() < 4:
 			self.phenny.msg(self.channel, "We need at least 4 players to start.")
 			return False
+
+		# Prevent people from saying /in while the PMs are sent
+		self.state = 'insover'
 
 		self.phenny.msg(self.channel, "Starting the game with %d players." % self.numplayers())
 
@@ -90,7 +90,7 @@ class MafiaGame:
 
 		for i,index in enumerate(scrambled):
 			if i < nummafia:
-				self.players[index].team = 'mafia1'
+				self.players[index].team = 'mafia'
 				if i == 0:
 					self.players[index].role = 'godfather'
 				else:
@@ -156,7 +156,7 @@ class MafiaGame:
 		self.state = 'day'
 		self.actions = []
 		self.phenny.msg(self.channel, "Now moving to day phase. Discussion may resume. All votes have been reset.")
-		self.phenny.msg(self.channel, "To vote for a player to lynch, say 'vote (name)'")
+		self.phenny.msg(self.channel, "To vote for a player to lynch, say 'vote (name)' or 'pass' to vote to lynch nobody.")
 		playersalive = ''
 		for player in self.players:
 			playersalive += ' ' + player.nick
@@ -220,18 +220,21 @@ class MafiaGame:
 
 		if not player: return
 
-		if player.team.startswith('mafia'):
-			if self.state == 'night':
+		if self.state == 'night':
+			if player.team.startswith('mafia'):
 				if player.role == 'godfather':
 					self.removeactionsby(player)
 					self.addaction(player, None, 'pass')
 					self.phenny.msg(player.nick, "You have chosen to take no action in this phase.")
-		elif player.team == 'town':
-			if self.state == 'night':
+			elif player.team == 'town':
 				if player.role == 'doc' or player.role == 'cop':
 					self.removeactionsby(player)
 					self.addaction(player, None, 'pass')
 					self.phenny.msg(player.nick, "You have chosen to take no action in this phase.")
+		elif self.state == 'day':
+			self.removeactionsby(player)
+			self.addaction(player, None, 'pass')
+			self.votecount()
 
 	def specialaction(self, context):
 		player = self.playerbynick(context.nick)
@@ -326,6 +329,7 @@ class MafiaGame:
 		elif self.state == 'day':
 			satisfied = False
 
+			nolynch = 0
 			votes = []
 			# Why doesn't zeros() work?
 			for i in range(len(self.players)):
@@ -334,12 +338,18 @@ class MafiaGame:
 			for action in self.actions:
 				if action.action == 'vote':
 					votes[self.players.index(action.target)] += 1
+				elif action.action == 'pass':
+					nolynch += 1
 
 			for i,player in enumerate(self.players):
 				if votes[i] > self.numplayers()/2:
 					satisfied = True
 					self.phenny.msg(self.channel, "The town has spoken! " + player.nick + " is to be hung by the neck until dead.")
 					self.killplayer(player, None, None)
+					break
+				elif nolynch > self.numplayers()/2:
+					satisfied = True
+					self.phenny.msg(self.channel, "The town has decided not to lynch anybody.")
 					break
 
 		self.checkwinconditions()
@@ -359,7 +369,7 @@ class MafiaGame:
 				self.phenny.msg(self.channel, "BUG: I'm not in day or night, but I'm supposed to change game state!")
 
 	def checkwinconditions(self):
-		teamplayers = {'town': 0, 'mafia1': 0}
+		teamplayers = {'town': 0, 'mafia': 0}
 
 		for player in self.players:
 			teamplayers[player.team] += 1
@@ -406,6 +416,7 @@ class MafiaGame:
 		if self.state != 'day':
 			return;
 
+		nolynch = 0
 		votes = []
 		# Why doesn't zeros() work?
 		for i in range(len(self.players)):
@@ -414,11 +425,16 @@ class MafiaGame:
 		for action in self.actions:
 			if action.action == 'vote':
 				votes[self.players.index(action.target)] += 1
+			elif action.action == 'pass':
+				nolynch += 1
 
 		output = ''
 		for i,player in enumerate(self.players):
 			if votes[i]:
 				output += '  ' + player.nick + ': ' + "%d" % votes[i]
+
+		if nolynch:
+			output += '  No lynch: %d' % nolynch
 
 		self.phenny.msg(self.channel, "Official vote count:" + output)
 
