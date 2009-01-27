@@ -396,7 +396,7 @@ class MafiaGame:
 
 	def killplayer(self, player, killer, action):
 		if self.actionisblocked(action):
-			self.phenny.msg(self.channel, player.nick + " is SAVED from death by an anonymous doctor!")
+			pass
 		else:
 			self.phenny.msg(self.channel, player.nick + " is DEAD!!! He was a " + player.team + " " + player.role + ".")
 			self.players.remove(player)
