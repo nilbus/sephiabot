@@ -96,7 +96,7 @@ class SephiaBotData {
 		globals.greeting = "Hello, I am %n, the channel bot. You all suck.";
 		globals.censor = new Boolean(true);
 		this.servers = new ServerConfig[0];
-		this.hellos = new String[] {"hi[hy2]?", "yo[^u]", "hey", "greetings\\b", "kon{1,2}ichiwa", "hola\\b", "sup", "morning\\b", "(y\\s)?h[aeu]l{1,2}o"};
+		this.hellos = new String[] {"hi", "yo", "hey", "greetings", "konn?ichiwa", "hola", "sup", "morning", "(y\\s)?h[aeu]ll?o"};
 		this.helloreplies = new String[] {"Yo."};
 		this.logdir = "/var/log/sephiabot"; //not a very good default unless documented, incase we actually released this someday (haha)
 		this.sephiadir = "/var/lib/sephiabot"; //ditto
@@ -746,7 +746,7 @@ lineLoop:
 	
 	boolean matchHellos(String msg) {
 		for (int i = 0; i < hellos.length; i++) {
-			if (iregex(hellos[i], msg)) {
+			if (iregex("\\b" + hellos[i] + "\\b", msg)) {
 				return true;
 			}
 		}
