@@ -173,7 +173,7 @@ class MafiaGame:
 		if not voter: return
 
 		if not victim:
-			self.phenny.msg(self.channel, "Who? Make sure you typed the name right.")
+			self.phenny.msg(self.channel, "Who? No one with that nick is playing.")
 			return
 
 		if self.state == 'day':
