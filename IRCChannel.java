@@ -127,7 +127,8 @@ class IRCChannel {
 		if (SephiaBotData.iequals(historyText[0], historyText[1])
 			&& !SephiaBotData.iequals(historyText[0], this.lastRepeat)
 			&& !SephiaBotData.iequals(historyNick[0], historyNick[1])
-			&& !historyText[0].trim().startsWith("!"))
+			&& !historyText[0].trim().startsWith("!")
+			&& !historyText[0].trim().startsWith("."))
 			return true;
 		else
 			return false;
