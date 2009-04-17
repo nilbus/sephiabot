@@ -2,6 +2,7 @@ Common:
 Multithread connection attempts
 
 Ed:
+Respond to /invite
 Startup failure if dns of one server fails.
 I love you
 Weather, time in different places
