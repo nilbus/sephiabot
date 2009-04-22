@@ -1,4 +1,5 @@
 mafia.py:
 Case insensitive bot nick matching
-stop (playing) mafia
+stop (playing) mafia syntax
+stop mafia by either: originator, vote, admin, timeout
 no votes in PMs
