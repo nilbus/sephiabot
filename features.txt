@@ -1,0 +1,41 @@
+- excuses/reasons why
+- russian roulette
+. config file
+. cross-server messaging
+. force say/emote
+. kill
+. last seen
+. messages
+. nick recovery
+. reconnect on network fail
+. reload settings
+. reminders (timed)
+. respond to botsnack
+. respond to emote: botsnack
+. respond to emote: hug back
+. respond to emote: pets/pats -> purr
+. respond to emote: slaps|smacks|hits|punches|kicks back harder
+. respond to emote: tickles -> giggles or slap
+. respond to knock knock
+. respond to ping
+. respond to where is __
+. respond to who are you
+. respond to who is __
+. respond to who's your daddy
+. respond to you are awesome
+. salute people
+. save settings
+. see my name and respond to bounce
+. see my name and respond to insults
+. see my name and respond to right?
+. shutdown/reboot with a comment, or reload modules
+. time summary (n hrs ago)
+x Custard
+x buttsex
+x channel mode setting
+x icebreakers
+x kickban via bot
+x list servers, channels
+x logins for privileges
+x optional vulgarity
+x words of wisdom
