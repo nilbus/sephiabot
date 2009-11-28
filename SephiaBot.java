@@ -650,8 +650,8 @@ class SephiaBot implements IRCConnectionListener {
 							con.getIRCIO().kick(recipient, killed, "This kick was compliments of " + killerUser.userName + ". Have a nice day.");
 						} else if (iequals("yourself", killed))	{ //reboot
 							if (data.isAdmin(host)) {
-								shutdown(true);
 								con.getIRCIO().privemote(recipient, "gags and passes out.");
+								shutdown(true);
 							} else {
 								con.getIRCIO().privmsg(recipient, "No.");
 							}
