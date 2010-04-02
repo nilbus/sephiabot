@@ -153,6 +153,7 @@ class SephiaBot implements IRCConnectionListener {
 				} catch (IOException ioe) {
 					log("Connection attempt " + (j+1) + " failed: " + ioe.getMessage() + ". " +
 							(j < IRCConnection.CONNECT_ATTEMPTS-1?"Trying again.":"Giving up."));
+					log(ioe.toString());
 					connections[i].disconnect();
 				}
 		}

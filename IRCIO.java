@@ -126,7 +126,7 @@ class IRCIO {
 		listener.log(msg);
 		out.flush();
 		
-		for (int i = 0; i < 100; i++) {   // wait at least 10 sec before giving up 
+		for (int i = 0; i < 250; i++) {   // wait at least 25 sec before giving up 
 			if (registered)
 				break;
 			poll();
