@@ -692,7 +692,7 @@ lineLoop:
 		writeData();
 	}
 	
-	String randomPhrase(String filename) {
+	static String randomPhrase(String filename) {
 		try {
 			Vector phrases = new Vector();
 			BufferedReader in = new BufferedReader(new FileReader(new File(sephiadir, filename)));
@@ -705,6 +705,7 @@ lineLoop:
 			Random rnd = new Random();
 			return (String)phrases.get(rnd.nextInt(phrases.size()));
 		} catch (IOException ioe) {
+			logerror("Couldn't open excuse file: " + ioe.getMessage());
 			return null;
 		}
 	}

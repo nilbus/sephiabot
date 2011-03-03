@@ -58,10 +58,4 @@ class IRCServer {
 				return channels[i];
 		return null;
 	}
-
-  public void timedEvents() {
-    for (int i = 0; i < channels.length; i++) {
-      channels[i].timedEvents();
-    }
-  }
 }

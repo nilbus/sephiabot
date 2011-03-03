@@ -179,8 +179,6 @@ class IRCIO {
 			out.write(outmsg);
 			out.flush();
 		}
-
-    ((IRCConnection)listener).getServer().timedEvents();
 	}
 
 	boolean pong(String msg) throws IOException {

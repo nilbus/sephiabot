@@ -59,10 +59,6 @@ class IRCConnection implements IRCListener {
 	public IRCServer getServer() {
 		return server;
 	}
-
-  public IRCConnectionListener getListener() {
-    return listener;
-  }
 	
 	void initLogs(String channels[]) {
 		try {
