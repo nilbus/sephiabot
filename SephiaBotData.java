@@ -692,7 +692,7 @@ lineLoop:
 		writeData();
 	}
 	
-	static String randomPhrase(String filename) {
+	String randomPhrase(String filename) {
 		try {
 			Vector phrases = new Vector();
 			BufferedReader in = new BufferedReader(new FileReader(new File(sephiadir, filename)));

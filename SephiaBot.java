@@ -151,7 +151,7 @@ class SephiaBot implements IRCConnectionListener {
 					connections[i].disconnect();
 					break;
 				} catch (IOException ioe) {
-					log("Connection attempt " + (j+1) + " failed: " + ioe.getMessage() + ". " +
+					log("Connection attempt " + (j+1) + " failed: " + ioe.toString() + ". " +
 							(j < IRCConnection.CONNECT_ATTEMPTS-1?"Trying again.":"Giving up."));
 					log(ioe.toString());
 					connections[i].disconnect();
@@ -311,9 +311,6 @@ class SephiaBot implements IRCConnectionListener {
 		// This will be null, unless the message is to a channel.  Always check.
 		IRCChannel channel = con.getServer().findChannel(recipient);
 
-    if (channel != null)
-      channel.lastActivity = System.currentTimeMillis(); // now
-		
 		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient))
 			recipient = nick;
 
@@ -372,9 +369,6 @@ class SephiaBot implements IRCConnectionListener {
 		String msg = origmsg;
 		// This will be null, unless the message is to a channel.  Always check.
 		IRCChannel channel = con.getServer().findChannel(recipient);
-
-    if (channel != null)
-      channel.lastActivity = System.currentTimeMillis(); // now
 
 		if (iregex("^"+data.getName(con.getIndex())+"-*$", recipient)) {
 			recipient = nick;
@@ -569,7 +563,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (!censor(con) && iregex("words of wisdom", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String phrase = SephiaBotData.randomPhrase("wordsofwisdom.txt");
+					String phrase = data.randomPhrase("wordsofwisdom.txt");
 					if (phrase != null)
 						con.getIRCIO().privmsg(recipient, phrase);
 					nextWho = System.currentTimeMillis() + SPAM_WAIT;
@@ -597,7 +591,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (iregex("excuse", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String excuse = SephiaBotData.randomPhrase("excuses.txt");
+					String excuse = data.randomPhrase("excuses.txt");
 					if (excuse != null)
 						con.getIRCIO().privmsg(recipient, "Your excuse is: " + excuse);
 					else
@@ -607,7 +601,7 @@ class SephiaBot implements IRCConnectionListener {
 				return;
 			} else if (iregex("^why", msg)) {
 				if (System.currentTimeMillis() > nextWho) {	//!spam
-					String why = SephiaBotData.randomPhrase("excuses.txt");
+					String why = data.randomPhrase("excuses.txt");
 					if (why != null)
 						con.getIRCIO().privmsg(recipient, why);
 					else
