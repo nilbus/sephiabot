@@ -165,8 +165,9 @@ class SephiaBot implements IRCConnectionListener {
 			IRCIO io = connections[i].getIRCIO();
 			try {
 				if (!data.getName(i).equals(io.getName()) &&
-						System.currentTimeMillis() > lastNickAttempt + 60000) { //If we didn't get the nick we wanted
+						System.currentTimeMillis() > lastNickAttempt + 10000) { //If we didn't get the nick we wanted
 					lastNickAttempt = System.currentTimeMillis();
+					io.ghostNick(data.getName(i));
 					io.changeNick(data.getName(i));
 				}
 				io.poll();

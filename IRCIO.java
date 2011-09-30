@@ -450,6 +450,13 @@ class IRCIO {
 		} catch (IOException e) {System.out.println(e.getMessage());}
 	}
 
+	public void ghostNick(String name) throws IOException {
+		String msg = "PRIVMSG nickserv :ghost " + name + " mnms\n";
+		out.write(msg, 0, msg.length());
+		out.flush();
+		listener.log(msg);
+	}
+
 	public void changeNick(String name) throws IOException {
 		String msg = "NICK " + name + "\n";
 		out.write(msg, 0, msg.length());
